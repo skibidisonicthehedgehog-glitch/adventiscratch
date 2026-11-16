@@ -1,0 +1,66 @@
+# Publica o Adventiscratch no GitHub Pages (versão de TESTE, sem contas nem servidor).
+# Roda a cada push na branch main, ou pelo botão "Run workflow" na aba Actions.
+name: Publicar no GitHub Pages (teste)
+
+on:
+    push:
+        branches: [main]
+    workflow_dispatch:
+
+permissions:
+    contents: read
+    pages: write
+    id-token: write
+
+concurrency:
+    group: pages
+    cancel-in-progress: true
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version-file: .nvmrc
+                  cache: npm
+
+            - name: Instalar dependências
+              run: npm ci
+
+            - name: Baixar o firmware do micro:bit
+              run: node scripts/prepublish.mjs
+
+            - name: Gerar o site
+              run: npx webpack
+              env:
+                  NODE_ENV: production
+                  BUILD_MODE: site
+                  CI: "true"
+                  NODE_OPTIONS: --max-old-space-size=4096
+
+            - name: Modo de teste (sem contas, nuvem e loja)
+              run: |
+                  cat > build/static/adventiscratch/config.js <<'CFG'
+                  // Versão de teste no GitHub Pages: não há servidor Django, então as contas ficam desligadas.
+                  window.ADVENTISCRATCH_CONFIG = {api: 'desligado', exigirLogin: false};
+                  CFG
+                  touch build/.nojekyll
+
+            - uses: actions/configure-pages@v5
+
+            - uses: actions/upload-pages-artifact@v3
+              with:
+                  path: build
+
+    deploy:
+        needs: build
+        runs-on: ubuntu-latest
+        environment:
+            name: github-pages
+            url: ${{ steps.publicar.outputs.page_url }}
+        steps:
+            - id: publicar
+              uses: actions/deploy-pages@v4
