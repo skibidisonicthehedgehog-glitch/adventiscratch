@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Adventiscratch – Programação em blocos para estudantes Adventistas</title>
+  <meta name="description" content="Adventiscratch é uma versão mais avançada do Scratch, em português, feita para estudantes Adventistas.">
+  <link rel="icon" href="static/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --roxo: #6D4FC2;
+      --roxo-escuro: #4A3290;
+      --azul: #4C97FF;
+      --amarelo: #FFD54A;
+      --tinta: #1E1B3A;
+      --texto: #4A4766;
+      --fundo: #F7F5FF;
+      --branco: #fff;
+      --raio: 20px;
+      --sombra: 0 10px 30px rgba(46, 30, 110, .12);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Nunito', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: var(--texto);
+      background: var(--fundo);
+      line-height: 1.6;
+    }
+    a { color: inherit; }
+    .container { width: min(1120px, 92%); margin: 0 auto; }
+
+    /* Cabeçalho */
+    header {
+      position: sticky; top: 0; z-index: 10;
+      background: #855CD6;
+      box-shadow: 0 2px 0 rgba(0,0,0,.08);
+    }
+    .nav { display: flex; align-items: center; justify-content: space-between; height: 64px; gap: 16px; }
+    .nav .marca img { height: 38px; display: block; }
+    .nav ul { display: flex; gap: 6px; list-style: none; align-items: center; }
+    .nav ul a {
+      text-decoration: none; color: #fff; font-weight: 700;
+      padding: 8px 14px; border-radius: 999px; transition: background .2s;
+    }
+    .nav ul a:hover { background: rgba(255,255,255,.18); }
+    .nav ul a.botao-nav { background: #fff; color: #855CD6; }
+    .nav ul a.botao-nav:hover { background: var(--amarelo); color: var(--tinta); }
+
+    /* Hero */
+    .hero {
+      background: linear-gradient(135deg, var(--roxo) 0%, #5b6ff0 55%, var(--azul) 100%);
+      color: #fff; overflow: hidden; position: relative;
+    }
+    .hero::after {
+      content: ""; position: absolute; inset: auto 0 -1px 0; height: 70px;
+      background: var(--fundo);
+      clip-path: ellipse(70% 100% at 50% 100%);
+    }
+    .hero .container {
+      display: grid; grid-template-columns: 1.15fr .85fr; align-items: center;
+      gap: 40px; padding: 72px 0 110px;
+    }
+    .selo {
+      display: inline-block; background: rgba(255,255,255,.18);
+      border: 1px solid rgba(255,255,255,.35);
+      padding: 6px 14px; border-radius: 999px; font-weight: 700; font-size: .9rem;
+      margin-bottom: 18px;
+    }
+    .hero h1 { font-size: clamp(2.2rem, 5vw, 3.6rem); line-height: 1.08; font-weight: 900; margin-bottom: 18px; }
+    .hero h1 span { color: var(--amarelo); }
+    .hero p.lead { font-size: 1.2rem; max-width: 34em; opacity: .95; margin-bottom: 30px; }
+    .acoes { display: flex; gap: 14px; flex-wrap: wrap; }
+    .botao {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 15px 28px; border-radius: 999px; font-weight: 800; font-size: 1.08rem;
+      text-decoration: none; transition: transform .15s, box-shadow .15s;
+    }
+    .botao:hover { transform: translateY(-2px); }
+    .botao.primario { background: var(--amarelo); color: var(--tinta); box-shadow: 0 6px 0 #d9a91a; }
+    .botao.primario:active { transform: translateY(3px); box-shadow: 0 2px 0 #d9a91a; }
+    .botao.secundario { color: #fff; border: 2px solid rgba(255,255,255,.7); }
+    .mascote { display: flex; justify-content: center; }
+    .mascote img { width: min(340px, 80%); filter: drop-shadow(0 18px 30px rgba(0,0,0,.25)); animation: flutuar 4s ease-in-out infinite; }
+    @keyframes flutuar { 50% { transform: translateY(-12px) rotate(-2deg); } }
+
+    /* Seções */
+    section { padding: 72px 0; }
+    .titulo-secao { text-align: center; max-width: 720px; margin: 0 auto 44px; }
+    .titulo-secao h2 { color: var(--tinta); font-size: clamp(1.8rem, 3.5vw, 2.5rem); font-weight: 900; line-height: 1.2; margin-bottom: 12px; }
+    .titulo-secao p { font-size: 1.1rem; }
+
+    .intro {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center;
+    }
+    .intro h2 { color: var(--tinta); font-size: clamp(1.8rem, 3.5vw, 2.4rem); font-weight: 900; line-height: 1.2; margin-bottom: 16px; }
+    .intro p { font-size: 1.08rem; margin-bottom: 14px; }
+    .blocos { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+    .bloco {
+      color: #fff; font-weight: 800; padding: 12px 18px; border-radius: 10px;
+      box-shadow: inset 0 -4px 0 rgba(0,0,0,.15); font-size: 1rem;
+    }
+    .bloco .slot { background: #fff; color: var(--tinta); border-radius: 999px; padding: 2px 12px; margin: 0 4px; }
+    .bloco.evento { background: #FFBF00; border-radius: 24px 24px 10px 10px; }
+    .bloco.aparencia { background: #9966FF; margin-left: 18px; }
+    .bloco.extra { background: var(--roxo); margin-left: 18px; }
+    .bloco.controle { background: #FFAB19; margin-left: 18px; }
+
+    .grade { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+    .cartao {
+      background: #fff; border-radius: var(--raio); padding: 28px; box-shadow: var(--sombra);
+      transition: transform .2s;
+    }
+    .cartao:hover { transform: translateY(-4px); }
+    .icone {
+      width: 54px; height: 54px; border-radius: 16px; display: grid; place-items: center;
+      font-size: 1.6rem; margin-bottom: 16px;
+    }
+    .cartao h3 { color: var(--tinta); font-size: 1.2rem; font-weight: 800; margin-bottom: 8px; }
+
+    .faixa { background: #fff; }
+    .passos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; counter-reset: passo; }
+    .passo { position: relative; padding: 30px 26px 26px; border-radius: var(--raio); background: var(--fundo); }
+    .passo::before {
+      counter-increment: passo; content: counter(passo);
+      position: absolute; top: -18px; left: 26px;
+      width: 40px; height: 40px; border-radius: 50%;
+      background: var(--roxo); color: #fff; font-weight: 900; display: grid; place-items: center;
+    }
+    .passo h3 { color: var(--tinta); font-weight: 800; margin-bottom: 6px; }
+    kbd {
+      background: var(--tinta); color: #fff; border-radius: 6px; padding: 1px 7px; font-family: inherit; font-size: .9em;
+    }
+
+    .aviso {
+      display: flex; gap: 22px; align-items: flex-start;
+      background: #FFF7DB; border: 2px solid #FFE08A; border-radius: var(--raio); padding: 26px 30px;
+    }
+    .aviso .emoji { font-size: 2.2rem; line-height: 1; }
+    .aviso h3 { color: var(--tinta); font-weight: 800; margin-bottom: 6px; font-size: 1.2rem; }
+
+    .chamada {
+      text-align: center; color: #fff; border-radius: 28px; padding: 56px 24px;
+      background: linear-gradient(135deg, var(--roxo), var(--azul));
+    }
+    .chamada h2 { font-size: clamp(1.8rem, 3.5vw, 2.4rem); font-weight: 900; margin-bottom: 10px; }
+    .chamada p { font-size: 1.1rem; margin-bottom: 26px; opacity: .95; }
+
+    footer { background: var(--tinta); color: #C9C5E8; padding: 40px 0; font-size: .95rem; }
+    footer .container { display: flex; justify-content: space-between; gap: 30px; flex-wrap: wrap; }
+    footer img { height: 34px; margin-bottom: 10px; }
+    footer p { max-width: 560px; }
+    footer a { color: #fff; }
+
+    @media (max-width: 860px) {
+      .hero .container, .intro { grid-template-columns: 1fr; }
+      .hero .container { text-align: center; padding-top: 48px; }
+      .hero p.lead { margin-left: auto; margin-right: auto; }
+      .acoes { justify-content: center; }
+      .mascote { order: -1; }
+      .mascote img { width: 200px; }
+      .grade, .passos { grid-template-columns: 1fr; }
+      .nav ul li:not(:last-child) { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .mascote img { animation: none; }
+      html { scroll-behavior: auto; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <nav class="container nav" aria-label="Principal">
+      <a class="marca" href="index.html" aria-label="Adventiscratch – início">
+        <img src="static/adventiscratch/logo.svg" alt="Adventiscratch">
+      </a>
+      <ul>
+        <li><a href="#sobre">Sobre</a></li>
+        <li><a href="#recursos">Recursos</a></li>
+        <li><a href="#comecar">Como começar</a></li>
+        <li><a class="botao-nav" href="editor.html">Criar</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <div class="hero">
+      <div class="container">
+        <div>
+          <span class="selo">🎓 Para estudantes Adventistas</span>
+          <h1>Programe, crie e aprenda com o <span>Adventiscratch</span></h1>
+          <p class="lead">Uma versão mais avançada do Scratch, toda em português, feita para estudantes Adventistas criarem jogos, animações e histórias interativas, direto no navegador.</p>
+          <div class="acoes">
+            <a class="botao primario" href="editor.html">▶ Começar a criar</a>
+            <a class="botao secundario" href="#sobre">Saiba mais</a>
+          </div>
+        </div>
+        <div class="mascote">
+          <img src="static/adventiscratch/mascote.svg" alt="Coruja estudante de capelo e livro, mascote do Adventiscratch">
+        </div>
+      </div>
+    </div>
+
+    <section id="sobre">
+      <div class="container intro">
+        <div>
+          <h2>O que é o Adventiscratch?</h2>
+          <p>O Adventiscratch é um editor de programação em blocos: em vez de digitar código, você encaixa peças coloridas para dar vida aos seus personagens. Ele é baseado no Scratch 3.0, criado pelo MIT, e foi adaptado para a sala de aula da rede Adventista.</p>
+          <p>Tudo o que você já conhece do Scratch continua aqui. A diferença está nos <strong>blocos extras</strong>, que liberam ideias mais avançadas, como potência, raiz, comparações como ≠, ≥ e ≤, e manipulação de textos. É o próximo passo para quem já domina o básico.</p>
+        </div>
+        <div class="blocos" aria-hidden="true">
+          <div class="bloco evento">quando ⚑ for clicado</div>
+          <div class="bloco aparencia">diga <span class="slot">Olá, turma!</span> por <span class="slot">2</span> segundos</div>
+          <div class="bloco aparencia">diga <span class="slot">🦉 2 elevado a 10</span></div>
+          <div class="bloco controle">se <span class="slot">pontos ≥ 100</span> então</div>
+          <div class="bloco extra">🦉 substitua <span class="slot">mundo</span> por <span class="slot">turma</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="recursos" class="faixa">
+      <div class="container">
+        <div class="titulo-secao">
+          <h2>Mais recursos para ir mais longe</h2>
+          <p>Tudo pensado para estudantes que querem aprender lógica de programação de verdade.</p>
+        </div>
+        <div class="grade">
+          <article class="cartao">
+            <div class="icone" style="background:#EDE7FF">🦉</div>
+            <h3>Blocos extras</h3>
+            <p>A extensão <strong>Extras Adventiscratch</strong> traz potência, raiz, verdadeiro/falso, ≠ ≥ ≤, "se/senão" como valor, maiúsculas/minúsculas e mais.</p>
+          </article>
+          <article class="cartao">
+            <div class="icone" style="background:#E3F0FF">🇧🇷</div>
+            <h3>Tudo em português</h3>
+            <p>Menus, blocos e mensagens em português do Brasil desde o primeiro clique, sem precisar configurar nada.</p>
+          </article>
+          <article class="cartao">
+            <div class="icone" style="background:#FFF3D6">🧩</div>
+            <h3>Extensões prontas</h3>
+            <p>Música, Caneta, Tradutor, Texto para Fala, Detecção de Vídeo, micro:bit e outras extensões já estão disponíveis.</p>
+          </article>
+          <article class="cartao">
+            <div class="icone" style="background:#E2F8EC">💾</div>
+            <h3>Seus projetos com você</h3>
+            <p>Salve e abra arquivos <strong>.sb3</strong> no seu computador ou pendrive. São compatíveis com o Scratch original.</p>
+          </article>
+          <article class="cartao">
+            <div class="icone" style="background:#FFE6EC">🎮</div>
+            <h3>Jogos e animações</h3>
+            <p>Crie jogos, histórias, apresentações e simulações para trabalhos de matemática, ciências e muito mais.</p>
+          </article>
+          <article class="cartao">
+            <div class="icone" style="background:#EAE8F5">🏫</div>
+            <h3>Feito para a escola</h3>
+            <p>Não precisa de cadastro, e-mail nem senha. É só abrir o editor e começar a aula.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="comecar">
+      <div class="container">
+        <div class="titulo-secao">
+          <h2>Como começar</h2>
+          <p>Em três passos você já está programando.</p>
+        </div>
+        <div class="passos">
+          <div class="passo">
+            <h3>Abra o editor</h3>
+            <p>Clique em <strong>Começar a criar</strong>. O editor abre no navegador, já em português.</p>
+          </div>
+          <div class="passo">
+            <h3>Adicione os blocos extras</h3>
+            <p>No canto inferior esquerdo, clique no botão de <strong>extensões</strong> e escolha <strong>Extras Adventiscratch</strong>.</p>
+          </div>
+          <div class="passo">
+            <h3>Salve seu projeto</h3>
+            <p>Use <kbd>Arquivo</kbd> → <kbd>Salvar no seu computador</kbd> para guardar o arquivo .sb3 e continuar depois.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section style="padding-top:0">
+      <div class="container">
+        <div class="aviso" role="note">
+          <div class="emoji">ℹ️</div>
+          <div>
+            <h3>Sobre contas e compartilhamento</h3>
+            <p>O Adventiscratch não tem contas de usuário, perfil nem galeria online. Seus projetos não ficam salvos no site: lembre-se sempre de <strong>salvar no seu computador</strong> antes de fechar a página. Para entregar um trabalho, envie o arquivo .sb3 para o seu professor.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section style="padding-top:0">
+      <div class="container">
+        <div class="chamada">
+          <h2>Pronto para criar algo incrível?</h2>
+          <p>Sua próxima ideia começa com um bloco.</p>
+          <a class="botao primario" href="editor.html">▶ Abrir o editor</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <div>
+        <img src="static/adventiscratch/logo.svg" alt="Adventiscratch">
+        <p>Adventiscratch é um projeto independente baseado no <a href="https://github.com/scratchfoundation/scratch-gui" target="_blank" rel="noopener">Scratch 3.0</a>, software livre distribuído sob a licença AGPL-3.0. Não é afiliado, patrocinado nem endossado pela Scratch Foundation ou pelo MIT.</p>
+      </div>
+      <div>
+        <p><a href="editor.html">Editor</a> · <a href="#recursos">Recursos</a> · <a href="#comecar">Como começar</a></p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

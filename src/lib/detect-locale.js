@@ -12,18 +12,9 @@ import queryString from 'query-string';
  * @return {string} the preferred locale
  */
 const detectLocale = supportedLocales => {
-    let locale = 'en'; // default
-    let browserLocale = window.navigator.userLanguage || window.navigator.language;
-    browserLocale = browserLocale.toLowerCase();
-    // try to set locale from browserLocale
-    if (supportedLocales.includes(browserLocale)) {
-        locale = browserLocale;
-    } else {
-        browserLocale = browserLocale.split('-')[0];
-        if (supportedLocales.includes(browserLocale)) {
-            locale = browserLocale;
-        }
-    }
+    // Adventiscratch: sempre começa em português do Brasil.
+    // Ainda é possível trocar pelo menu de idiomas ou com ?locale=xx na URL.
+    const locale = supportedLocales.includes('pt-br') ? 'pt-br' : 'en';
 
     const queryParams = queryString.parse(location.search);
     // Flatten potential arrays and remove falsy values

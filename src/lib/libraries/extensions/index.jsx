@@ -1,6 +1,8 @@
 import React from 'react';
 import {FormattedMessage} from 'react-intl';
 
+import adventiscratchIconURL from '../../adventiscratch/capa.png';
+import adventiscratchInsetIconURL from '../../adventiscratch/icone.svg';
 import musicIconURL from './music/music.png';
 import musicInsetIconURL from './music/music-small.svg';
 
@@ -47,6 +49,14 @@ import gdxforConnectionIconURL from './gdxfor/gdxfor-illustration.svg';
 import gdxforConnectionSmallIconURL from './gdxfor/gdxfor-small.svg';
 
 export default [
+    {
+        name: 'Extras Adventiscratch',
+        extensionId: 'adventiscratch',
+        iconURL: adventiscratchIconURL,
+        insetIconURL: adventiscratchInsetIconURL,
+        description: 'Potência, raiz, verdadeiro/falso, ≠ ≥ ≤, textos e datas.',
+        featured: true
+    },
     {
         name: (
             <FormattedMessage
