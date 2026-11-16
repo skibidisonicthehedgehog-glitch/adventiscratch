@@ -1,11 +1,16 @@
 /**
- * Modelos 3D importados no projeto atual.
- * Eles são salvos dentro do arquivo .asp (pasta "adventiscratch/models/").
+ * Modelos 3D importados no projeto atual, com seus arquivos auxiliares (texturas, .mtl, .bin).
+ * Tudo é salvo dentro do arquivo .asp (pasta "adventiscratch/models/").
  */
 
 export const MODEL_EXTENSIONS = ['glb', 'gltf', 'fbx', 'obj', 'stl', 'dae', 'ply'];
 
-const models = new Map(); // nome -> {name, fileName, ext, data: ArrayBuffer}
+/**
+ * Cada modelo:
+ * {name, fileName, originalFileName, ext, data: ArrayBuffer,
+ *  resources: {nome-em-minúsculas: {name, data: ArrayBuffer}}, missing: string[]}
+ */
+const models = new Map();
 const listeners = new Set();
 
 const notify = () => listeners.forEach(fn => fn());
@@ -24,24 +29,50 @@ export const extOf = fileName => {
 };
 
 /**
- * Adiciona um modelo ao projeto. Se o nome já existir, ganha um número no fim.
+ * Adiciona um modelo ao projeto.
+ * Se já existir um modelo importado do MESMO arquivo, ele é substituído (útil para reimportar com texturas).
+ * Se só o nome coincidir, o novo ganha um número no fim.
  * @param {string} fileName nome original do arquivo
  * @param {ArrayBuffer} data conteúdo
- * @param {boolean} [silent] não avisa os ouvintes (usado ao abrir projeto)
- * @returns {string} nome final do modelo no projeto
+ * @param {object} [options] opções
+ * @param {boolean} [options.silent] não avisa os ouvintes (usado ao abrir projeto)
+ * @param {object} [options.resources] arquivos auxiliares: nome-em-minúsculas -> {name, data}
+ * @param {string[]} [options.missing] arquivos auxiliares que o modelo pede e não foram encontrados
+ * @param {string} [options.name] nome fixo (usado ao abrir projeto)
+ * @returns {{name: string, replaced: boolean}} nome final e se substituiu um existente
  */
-export const addModel = (fileName, data, silent) => {
+export const addModel = (fileName, data, options = {}) => {
     const ext = extOf(fileName);
     if (!MODEL_EXTENSIONS.includes(ext)) {
         throw new Error(`Formato não suportado: .${ext}`);
     }
-    const base = fileName.replace(/\.[^.]+$/, '').trim() || 'modelo';
-    let name = base;
-    let n = 2;
-    while (models.has(name)) name = `${base} ${n++}`;
-    models.set(name, {name, fileName: `${name}.${ext}`, ext, data});
-    if (!silent) notify();
-    return name;
+    let name = options.name;
+    let replaced = false;
+    if (!name) {
+        const existing = Array.from(models.values()).find(
+            m => m.originalFileName.toLowerCase() === fileName.toLowerCase()
+        );
+        if (existing) {
+            name = existing.name;
+            replaced = true;
+        } else {
+            const base = fileName.replace(/\.[^.]+$/, '').trim() || 'modelo';
+            name = base;
+            let n = 2;
+            while (models.has(name)) name = `${base} ${n++}`;
+        }
+    }
+    models.set(name, {
+        name,
+        fileName: `${name}.${ext}`,
+        originalFileName: fileName,
+        ext,
+        data,
+        resources: options.resources || {},
+        missing: options.missing || []
+    });
+    if (!options.silent) notify();
+    return {name, replaced};
 };
 
 export const removeModel = name => {

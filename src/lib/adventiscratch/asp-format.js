@@ -4,6 +4,7 @@
  * Um .asp é um .sb3 (zip com project.json + fantasias + sons) com uma pasta extra:
  *   adventiscratch/manifest.json  -> {"format": "asp", "version": 1, "models": [...]}
  *   adventiscratch/models/<arquivo>  -> modelos 3D importados
+ *   adventiscratch/models/<nome>.files/<arquivo>  -> texturas, .mtl e .bin de cada modelo
  *
  * Por isso o Adventiscratch abre .asp e .sb3, e um .asp renomeado para .sb3 ainda abre
  * no Scratch comum (os blocos 3D só não funcionam lá).
@@ -39,11 +40,23 @@ export const patchVmForAsp = (vm, onProjectChanged) => {
         const zip = await JSZip.loadAsync(blob);
         zip.file(`${ASP_DIR}manifest.json`, JSON.stringify({
             format: 'asp',
-            version: 1,
+            version: 2,
             editor: 'Adventiscratch',
-            models: models.map(m => ({name: m.name, file: m.fileName, ext: m.ext}))
+            models: models.map(m => ({
+                name: m.name,
+                file: m.fileName,
+                originalFile: m.originalFileName,
+                ext: m.ext,
+                resources: Object.values(m.resources).map(r => r.name),
+                missing: m.missing
+            }))
         }, null, 2));
-        models.forEach(m => zip.file(`${ASP_DIR}models/${m.fileName}`, m.data));
+        models.forEach(m => {
+            zip.file(`${ASP_DIR}models/${m.fileName}`, m.data);
+            Object.values(m.resources).forEach(r => {
+                zip.file(`${ASP_DIR}models/${m.name}.files/${r.name}`, r.data);
+            });
+        });
         return zip.generateAsync({
             type: 'blob',
             mimeType: 'application/x.adventiscratch.asp',
@@ -63,7 +76,23 @@ export const patchVmForAsp = (vm, onProjectChanged) => {
                     const manifest = JSON.parse(await manifestFile.async('string'));
                     for (const m of manifest.models || []) {
                         const file = zip.file(`${ASP_DIR}models/${m.file}`);
-                        if (file) addModel(m.file, await file.async('arraybuffer'), true);
+                        if (!file) continue;
+                        const resources = {};
+                        for (const resName of m.resources || []) {
+                            const resFile = zip.file(`${ASP_DIR}models/${m.name}.files/${resName}`);
+                            if (resFile) {
+                                resources[resName.toLowerCase()] = {
+                                    name: resName,
+                                    data: await resFile.async('arraybuffer')
+                                };
+                            }
+                        }
+                        addModel(m.originalFile || m.file, await file.async('arraybuffer'), {
+                            silent: true,
+                            name: m.name,
+                            resources,
+                            missing: m.missing || []
+                        });
                     }
                 }
             } catch (e) {

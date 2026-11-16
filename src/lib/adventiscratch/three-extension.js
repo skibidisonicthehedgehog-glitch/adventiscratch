@@ -3,13 +3,15 @@
  */
 import icone from './icone-3d.svg';
 import {
-    MODEL_EXTENSIONS, addModel, getModel, getModelNames, removeModel, onModelsChanged, extOf
+    MODEL_EXTENSIONS, getModel, getModelNames, removeModel, onModelsChanged, extOf
 } from './model-store.js';
+import {importModelFiles, importModelFolder} from './model-import.js';
 
 const A = {NUMBER: 'number', STRING: 'string', COLOR: 'color'};
 const B = {COMMAND: 'command', REPORTER: 'reporter', BOOLEAN: 'Boolean', BUTTON: 'button'};
 
 export const IMPORT_MODEL_CALLBACK = 'ADVENTISCRATCH_IMPORT_MODEL';
+export const IMPORT_FOLDER_CALLBACK = 'ADVENTISCRATCH_IMPORT_FOLDER';
 
 const num = v => {
     const n = Number(v);
@@ -45,38 +47,15 @@ const withEngine = (runtime, fn) => {
     return loadEngine(runtime).then(fn);
 };
 
-/** Abre a janela de arquivos para importar um modelo 3D (botão da paleta). */
-export const importModelFromComputer = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.multiple = true;
-    input.accept = MODEL_EXTENSIONS.map(e => `.${e}`).join(',');
-    input.onchange = async () => {
-        const files = Array.from(input.files || []);
-        const added = [];
-        for (const file of files) {
-            try {
-                if (extOf(file.name) === 'gltf') {
-                    // .gltf costuma depender de arquivos externos (.bin, texturas)
-                    // eslint-disable-next-line no-alert
-                    alert(`"${file.name}": arquivos .gltf podem precisar de outros arquivos. ` +
-                        'Se o modelo não aparecer, use a versão .glb (tudo em um arquivo só).');
-                }
-                added.push(addModel(file.name, await file.arrayBuffer()));
-            } catch (e) {
-                // eslint-disable-next-line no-alert
-                alert(`Não foi possível importar "${file.name}": ${e.message}`);
-            }
-        }
-        if (added.length && currentVm) {
-            currentVm.emit('PROJECT_CHANGED');
-            // eslint-disable-next-line no-alert
-            alert(`Modelo importado: ${added.join(', ')}\n` +
-                'Use o bloco "criar modelo … chamado …" para colocá-lo na cena.');
-        }
-    };
-    input.click();
+const afterImport = results => {
+    if (currentVm && results && results.some(r => r && !r.error)) currentVm.emit('PROJECT_CHANGED');
 };
+
+/** Botão "Importar modelo 3D…" da paleta. */
+export const importModelFromComputer = () => importModelFiles().then(afterImport);
+
+/** Botão "Importar pasta do modelo…" da paleta. */
+export const importModelFromFolder = () => importModelFolder().then(afterImport);
 
 class Adventiscratch3D {
     constructor (runtime) {
@@ -100,6 +79,7 @@ class Adventiscratch3D {
             blockIconURI: icone,
             blocks: [
                 {func: IMPORT_MODEL_CALLBACK, blockType: B.BUTTON, text: 'Importar modelo 3D…'},
+                {func: IMPORT_FOLDER_CALLBACK, blockType: B.BUTTON, text: 'Importar pasta do modelo (com texturas)…'},
                 '---',
                 {opcode: 'ligar', blockType: B.COMMAND, text: 'ligar o 3D'},
                 {opcode: 'desligar', blockType: B.COMMAND, text: 'desligar o 3D'},
@@ -315,7 +295,16 @@ class Adventiscratch3D {
                     text: 'remover modelo importado [MODELO] do projeto',
                     arguments: {MODELO: {type: A.STRING, menu: 'modelos'}}
                 },
-                {opcode: 'listaModelos', blockType: B.REPORTER, text: 'modelos importados'}
+                {opcode: 'listaModelos', blockType: B.REPORTER, text: 'modelos importados'},
+                {
+                    opcode: 'texturasModelo',
+                    blockType: B.REPORTER,
+                    text: '[INFO] do modelo [MODELO]',
+                    arguments: {
+                        INFO: {type: A.STRING, menu: 'infoTexturas', defaultValue: 'texturas'},
+                        MODELO: {type: A.STRING, menu: 'modelos'}
+                    }
+                }
             ],
             menus: {
                 formas: {
@@ -353,6 +342,13 @@ class Adventiscratch3D {
                     items: [
                         {text: 'quantidade de animações', value: 'quantidade'},
                         {text: 'nomes das animações', value: 'nomes'}
+                    ]
+                },
+                infoTexturas: {
+                    acceptReporters: false,
+                    items: [
+                        {text: 'texturas', value: 'texturas'},
+                        {text: 'texturas faltando', value: 'faltando'}
                     ]
                 },
                 luzes: {
@@ -550,6 +546,13 @@ class Adventiscratch3D {
     listaModelos () {
         return getModelNames().join(', ');
     }
+    texturasModelo ({INFO, MODELO}) {
+        const model = getModel(MODELO);
+        if (!model) return '';
+        if (INFO === 'faltando') return model.missing.join(', ');
+        return Object.values(model.resources).map(r => r.name)
+            .join(', ');
+    }
 }
 
 /** Chamado quando outro projeto é aberto: limpa a cena 3D e o cache. */
@@ -568,6 +571,8 @@ export const resetForNewProject = () => {
 export const attach3DToVm = vm => {
     currentVm = vm;
     onModelsChanged(() => {
+        // um modelo pode ter sido reimportado com texturas: descarta o cache dos modelos já lidos
+        if (engine) engine.forgetTemplates();
         if (vm.extensionManager.isExtensionLoaded('adventiscratch3d')) {
             vm.extensionManager.refreshBlocks();
         }

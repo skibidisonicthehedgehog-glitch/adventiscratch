@@ -40,13 +40,21 @@ para `.sb3`, ele abre no Scratch comum (só os blocos do Adventiscratch não fun
 Clique no botão de extensões (canto inferior esquerdo) e escolha **3D (Three.js)**.
 
 - **Importar modelo 3D…** (botão no topo da paleta): aceita `.glb`, `.gltf`, `.fbx`, `.obj`, `.stl`, `.dae` e `.ply`.
-  O modelo fica salvo dentro do `.asp`. Prefira `.glb`, porque `.gltf` e `.obj` costumam depender de arquivos
-  externos (texturas, `.bin`, `.mtl`), que não são importados.
+  Você pode selecionar o modelo **junto com as texturas** (Ctrl+clique).
+- **Importar pasta do modelo (com texturas)…**: escolhe a pasta inteira; só os arquivos que o modelo usa são guardados.
+- **Detecção de texturas:** ao importar, o editor lê o modelo e descobre quais texturas (`.png`, `.jpg`, `.tga`…),
+  materiais (`.mtl`) e buffers (`.bin`) ele pede, inclusive caminhos absolutos gravados dentro do `.fbx`
+  (ex.: `C:\artista\texturas\pele.png` → procura `pele.png`). Se faltar algum, aparece uma janela listando o que
+  falta, com botões para escolher os arquivos ou a pasta. O navegador não lê arquivos do computador sozinho,
+  por isso o aluno precisa selecioná-los.
+- Reimportar o mesmo arquivo de modelo **substitui** o anterior (útil para adicionar texturas depois).
+- Modelo e texturas ficam salvos dentro do `.asp`.
 - Cena: ligar/desligar 3D, cor de fundo ou fundo transparente, apagar tudo.
 - Objetos: cubo, esfera, cilindro, cone, plano, rosca, cápsula ou um modelo importado (ou baixado de uma URL);
   mover, girar, apontar, tamanho, cor, mostrar/esconder, consultar x/y/z/giro/tamanho, tocando, distância e
   "objeto 3D sob o mouse".
 - Animações de modelos `.glb`/`.fbx`: tocar animação (por número ou nome), parar, quantidade/nomes.
+- Bloco `[texturas / texturas faltando] do modelo [ ]` para conferir o que foi importado.
 - Câmera (posição, apontar, campo de visão) e luzes (sol e ambiente: intensidade, cor, posição).
 
 A cena 3D é desenhada por cima do palco do Scratch. Com fundo transparente, os atores 2D aparecem atrás

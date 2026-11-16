@@ -10,6 +10,8 @@ import {OBJLoader} from 'three/examples/jsm/loaders/OBJLoader.js';
 import {STLLoader} from 'three/examples/jsm/loaders/STLLoader.js';
 import {ColladaLoader} from 'three/examples/jsm/loaders/ColladaLoader.js';
 import {PLYLoader} from 'three/examples/jsm/loaders/PLYLoader.js';
+import {MTLLoader} from 'three/examples/jsm/loaders/MTLLoader.js';
+import {TGALoader} from 'three/examples/jsm/loaders/TGALoader.js';
 import {clone as cloneSkinned} from 'three/examples/jsm/utils/SkeletonUtils.js';
 
 const STAGE_WIDTH = 480;
@@ -18,65 +20,180 @@ const DEG = Math.PI / 180;
 
 const textDecoder = new TextDecoder();
 
+/** Extensões de arquivos auxiliares que um modelo pode usar (texturas, materiais, buffers). */
+export const RESOURCE_EXTENSIONS = [
+    'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'tga', 'mtl', 'bin'
+];
+
+const MIME = {
+    png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif',
+    webp: 'image/webp', bmp: 'image/bmp', tga: 'image/x-tga', bin: 'application/octet-stream'
+};
+const IMAGE_EXT = /\.(png|jpe?g|gif|webp|bmp|tga)$/i;
+// imagem 1x1 cinza no lugar de uma textura que não foi encontrada (evita erros 404)
+const PLACEHOLDER = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mN89+7dfwAJdwPukgZD8AAAAABJRU5ErkJggg==';
+
 /**
- * Lê um arquivo de modelo e devolve {object, animations}.
+ * Nome do arquivo sem pastas, em minúsculas.
+ * Funciona com caminhos de Windows (C:\texturas\a.png), Unix e URLs.
+ * @param {string} url caminho ou URL
+ * @returns {string} nome base
+ */
+export const baseName = url => {
+    let clean = String(url).split(/[?#]/)[0];
+    try {
+        clean = decodeURIComponent(clean);
+    } catch (e) { /* mantém como está */ }
+    return clean.split(/[\\/]/).pop()
+        .trim()
+        .toLowerCase();
+};
+
+/** Igual a baseName, mas mantendo maiúsculas/minúsculas (para mostrar ao aluno). */
+const originalName = url => {
+    let clean = String(url).split(/[?#]/)[0];
+    try {
+        clean = decodeURIComponent(clean);
+    } catch (e) { /* mantém como está */ }
+    return clean.split(/[\\/]/).pop()
+        .trim();
+};
+
+const extOfName = name => (/\.([a-z0-9]+)$/i.exec(name) || [])[1] || '';
+
+/**
+ * Cria um LoadingManager que entrega os arquivos auxiliares (texturas etc.) a partir da memória
+ * e anota tudo o que o modelo pediu: o que foi encontrado e o que está faltando.
+ * @param {object} resources mapa nome-em-minúsculas -> {name, data: ArrayBuffer}
+ * @returns {{manager: THREE.LoadingManager, used: Set<string>, missing: Set<string>, done: Promise}} gerenciador
+ */
+const createResourceManager = resources => {
+    const manager = new THREE.LoadingManager();
+    const used = new Set();
+    const missing = new Map(); // nome-em-minúsculas -> nome como o modelo escreveu
+    const blobUrls = new Map();
+    manager.setURLModifier(url => {
+        if (/^(data|blob):/i.test(url)) return url;
+        const base = baseName(url);
+        if (!base) return url;
+        const res = resources && resources[base];
+        if (!res) {
+            missing.set(base, originalName(url));
+            return IMAGE_EXT.test(base) ? PLACEHOLDER : url;
+        }
+        used.add(base);
+        if (!blobUrls.has(base)) {
+            const blob = new Blob([res.data], {type: MIME[extOfName(base)] || 'application/octet-stream'});
+            blobUrls.set(base, URL.createObjectURL(blob));
+        }
+        return blobUrls.get(base);
+    });
+    manager.addHandler(/\.tga$/i, new TGALoader(manager));
+    // quando todas as texturas terminarem de carregar, libera as URLs temporárias
+    let started = false;
+    const done = new Promise(resolve => {
+        let settled = false;
+        const finish = () => {
+            if (settled) return;
+            settled = true;
+            setTimeout(() => blobUrls.forEach(u => URL.revokeObjectURL(u)), 1000);
+            resolve();
+        };
+        manager.onStart = () => {
+            started = true;
+        };
+        manager.onLoad = finish;
+        manager.onError = () => {}; // erro numa textura não impede o modelo de aparecer
+        // se o modelo não pedir nenhum arquivo, onLoad nunca é chamado
+        setTimeout(() => {
+            if (!started) finish();
+        }, 0);
+    });
+    return {manager, used, missing, done};
+};
+
+/**
+ * Lê um arquivo de modelo e devolve o objeto 3D, as animações e as texturas usadas/faltando.
  * @param {ArrayBuffer} data conteúdo do arquivo
  * @param {string} ext extensão em minúsculas (glb, gltf, fbx, obj, stl, dae, ply)
- * @returns {Promise<{object: THREE.Object3D, animations: THREE.AnimationClip[]}>} modelo
+ * @param {object} [resources] arquivos auxiliares: nome-em-minúsculas -> {name, data}
+ * @returns {Promise<{object, animations, used: string[], missing: string[]}>} modelo
  */
-const parseModel = (data, ext) => new Promise((resolve, reject) => {
+export const parseModel = async (data, ext, resources) => {
+    const {manager, used, missing, done} = createResourceManager(resources || {});
     const defaultMaterial = () => new THREE.MeshStandardMaterial({color: 0xcccccc, roughness: 0.6});
-    try {
-        switch (ext) {
-        case 'glb':
-        case 'gltf':
-            new GLTFLoader().parse(data, '', gltf => {
+    let result;
+    switch (ext) {
+    case 'glb':
+    case 'gltf':
+        result = await new Promise((resolve, reject) => {
+            new GLTFLoader(manager).parse(data, '', gltf => {
                 resolve({object: gltf.scene, animations: gltf.animations || []});
             }, reject);
-            return;
-        case 'fbx': {
-            const group = new FBXLoader().parse(data, '');
-            resolve({object: group, animations: group.animations || []});
-            return;
+        });
+        break;
+    case 'fbx': {
+        const group = new FBXLoader(manager).parse(data, '');
+        result = {object: group, animations: group.animations || []};
+        break;
+    }
+    case 'obj': {
+        const text = textDecoder.decode(data);
+        const loader = new OBJLoader(manager);
+        let hasMtl = false;
+        const mtllib = /^\s*mtllib\s+(.+?)\s*$/m.exec(text);
+        if (mtllib) {
+            const mtlName = baseName(mtllib[1]);
+            const mtl = resources && resources[mtlName];
+            if (mtl) {
+                used.add(mtlName);
+                const materials = new MTLLoader(manager).parse(textDecoder.decode(mtl.data), '');
+                materials.preload();
+                loader.setMaterials(materials);
+                hasMtl = true;
+            } else {
+                missing.set(mtlName, originalName(mtllib[1]));
+            }
         }
-        case 'obj': {
-            const group = new OBJLoader().parse(textDecoder.decode(data));
+        const group = loader.parse(text);
+        if (!hasMtl) {
             group.traverse(child => {
-                if (child.isMesh && (!child.material || child.material.type === 'MeshPhongMaterial')) {
+                if (child.isMesh) {
                     const color = child.material && child.material.color;
                     child.material = defaultMaterial();
                     if (color) child.material.color.copy(color);
                 }
             });
-            resolve({object: group, animations: []});
-            return;
         }
-        case 'stl': {
-            const geometry = new STLLoader().parse(data);
-            geometry.computeVertexNormals();
-            resolve({object: new THREE.Mesh(geometry, defaultMaterial()), animations: []});
-            return;
-        }
-        case 'dae': {
-            const collada = new ColladaLoader().parse(textDecoder.decode(data), '');
-            resolve({object: collada.scene, animations: collada.scene.animations || []});
-            return;
-        }
-        case 'ply': {
-            const geometry = new PLYLoader().parse(data);
-            geometry.computeVertexNormals();
-            const material = defaultMaterial();
-            if (geometry.hasAttribute('color')) material.vertexColors = true;
-            resolve({object: new THREE.Mesh(geometry, material), animations: []});
-            return;
-        }
-        default:
-            reject(new Error(`Formato de modelo não suportado: .${ext}`));
-        }
-    } catch (e) {
-        reject(e);
+        result = {object: group, animations: []};
+        break;
     }
-});
+    case 'stl': {
+        const geometry = new STLLoader().parse(data);
+        geometry.computeVertexNormals();
+        result = {object: new THREE.Mesh(geometry, defaultMaterial()), animations: []};
+        break;
+    }
+    case 'dae': {
+        const collada = new ColladaLoader(manager).parse(textDecoder.decode(data), '');
+        result = {object: collada.scene, animations: collada.scene.animations || []};
+        break;
+    }
+    case 'ply': {
+        const geometry = new PLYLoader().parse(data);
+        geometry.computeVertexNormals();
+        const material = defaultMaterial();
+        if (geometry.hasAttribute('color')) material.vertexColors = true;
+        result = {object: new THREE.Mesh(geometry, material), animations: []};
+        break;
+    }
+    default:
+        throw new Error(`Formato de modelo não suportado: .${ext}`);
+    }
+    // espera um pouco pelas texturas (o modelo já aparece mesmo se demorarem)
+    await Promise.race([done, new Promise(r => setTimeout(r, 3000))]);
+    return {...result, used: Array.from(used), missing: Array.from(missing.values())};
+};
 
 /**
  * Centraliza o modelo na origem (com a base no chão) e ajusta para caber em ~2 unidades.
@@ -252,7 +369,7 @@ class Engine {
      */
     async createModel (key, getFile, name) {
         if (!this.templates.has(key)) {
-            this.templates.set(key, getFile().then(({data, ext}) => parseModel(data, ext)));
+            this.templates.set(key, getFile().then(({data, ext, resources}) => parseModel(data, ext, resources)));
         }
         let template;
         try {
