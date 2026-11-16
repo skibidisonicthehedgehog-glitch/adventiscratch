@@ -158,6 +158,16 @@ O IP real do aluno (cabeçalho `CF-Connecting-IP`) é usado no limite de tentati
 
 Para criar mais blocos, adicione um item em `blocks` dentro de `getInfo()` e um método com o mesmo nome do `opcode`.
 
+## Jeito fácil no Windows
+
+- **`iniciar.bat`** (dois cliques): instala o que falta, prepara o banco, abre o servidor e o editor
+  e abre o navegador em http://localhost:8601.
+- **`publicar-na-internet.bat`**: compila o editor, sobe o servidor em modo produção (Waitress) e cria um
+  endereço público `https://….trycloudflare.com` com o Cloudflare (instala o `cloudflared` pelo winget se faltar).
+  Funciona enquanto o computador e a janela ficarem ligados; o endereço muda a cada vez. Para um endereço fixo,
+  use Docker + Cloudflare Tunnel com domínio próprio (seção abaixo). Nesse modo, entre no painel de moderação
+  pelo endereço público (https), não pelo localhost.
+
 ## Como rodar
 
 Pré-requisitos: **Node.js 20** (veja `.nvmrc`) e Git.
