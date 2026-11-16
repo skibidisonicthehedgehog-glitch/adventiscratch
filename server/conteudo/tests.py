@@ -192,3 +192,71 @@ class LojaTests(Base):
                     f'/moderacao/arquivo/modelo/{mid}/', f'/moderacao/arquivo/projeto/{pid}/']:
             self.assertEqual(self.client.get(url).status_code, 200, url)
         self.assertEqual(Projeto.objects.count(), 1)
+
+
+class LojaInstrumentos(Base):
+    def sf2(self, nome='Bandinha'):
+        from .sf2_teste import gerar_sf2
+        return SimpleUploadedFile('bandinha.sf2', gerar_sf2(nome))
+
+    def publicar_sf2(self, token, **extra):
+        dados = {'arquivo': self.sf2(), 'titulo': 'Bandinha da turma', 'licenca': 'meu', 'confirmo': '1',
+                 'descricao': 'Três sons simples'}
+        dados.update(extra)
+        return self.client.post('/api/instrumentos', dados, **self.h(token))
+
+    def test_publicar_listar_e_outra_turma_baixar(self):
+        r = self.publicar_sf2(self.ana)
+        self.assertEqual(r.status_code, 201, r.content)
+        inst = r.json()['instrumento']
+        self.assertEqual(inst['presets'], 3)
+        self.assertEqual(inst['nomes_presets'], ['Seno', 'Quadrada', 'Serra'])
+        lista = self.client.get('/api/instrumentos?q=bandinha', **self.h(self.caio)).json()
+        self.assertEqual([i['titulo'] for i in lista['instrumentos']], ['Bandinha da turma'])
+        self.assertEqual(lista['max_mb'], 50)
+        r = self.client.get(f'/api/instrumentos/{inst["id"]}/arquivo', **self.h(self.caio))
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(b''.join(r.streaming_content)[:4], b'RIFF')
+        self.assertEqual(self.client.get('/api/instrumentos/meus', **self.h(self.ana)).json()
+                         ['instrumentos'][0]['downloads'], 1)
+
+    def test_arquivo_que_nao_e_sf2(self):
+        r = self.publicar_sf2(self.ana, arquivo=SimpleUploadedFile('x.sf2', b'RIFF0000WAVEfmt '))
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('não é um arquivo .sf2', r.json()['erro'])
+
+    @override_settings(ADVENTISCRATCH_MAX_SF2_MB=0)
+    def test_tamanho_maximo(self):
+        r = self.publicar_sf2(self.ana)
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('grande demais', r.json()['erro'])
+
+    def test_exige_confirmacao_licenca_e_credito(self):
+        self.assertEqual(self.publicar_sf2(self.ana, confirmo='').json()['campo'], 'confirmo')
+        self.assertEqual(self.publicar_sf2(self.ana, licenca='').json()['campo'], 'licenca')
+        self.assertEqual(self.publicar_sf2(self.ana, licenca='cc-by').json()['campo'], 'credito')
+
+    def test_ocultar_denunciar_e_apagar(self):
+        iid = self.publicar_sf2(self.ana).json()['instrumento']['id']
+        r = self.client.post('/api/denuncias', json.dumps({'instrumento': iid, 'categoria': 'direitos',
+                                                           'descricao': 'Sons copiados de um jogo comercial'}),
+                             content_type='application/json', **self.h(self.caio))
+        self.assertEqual(r.status_code, 201, r.content)
+        self.assertEqual(Denuncia.objects.get().instrumento_id, iid)
+        from .models import InstrumentoSF2
+        InstrumentoSF2.objects.filter(id=iid).update(situacao=Situacao.OCULTO, nota_moderacao='Direitos autorais')
+        self.assertEqual(self.client.get('/api/instrumentos', **self.h(self.caio)).json()['instrumentos'], [])
+        self.assertEqual(self.client.get(f'/api/instrumentos/{iid}/arquivo', **self.h(self.caio)).status_code, 404)
+        meu = self.client.get('/api/instrumentos/meus', **self.h(self.ana)).json()['instrumentos'][0]
+        self.assertEqual(meu['nota_moderacao'], 'Direitos autorais')
+        self.assertEqual(self.client.post(f'/api/instrumentos/{iid}/apagar', **self.h(self.caio)).status_code, 404)
+        self.assertEqual(self.client.post(f'/api/instrumentos/{iid}/apagar', **self.h(self.ana)).status_code, 200)
+        self.assertEqual(self.client.get('/api/instrumentos/meus', **self.h(self.ana)).json()['instrumentos'], [])
+
+    def test_painel_moderacao(self):
+        iid = self.publicar_sf2(self.ana).json()['instrumento']['id']
+        self.client.force_login(self.mod)
+        self.assertEqual(self.client.get('/moderacao/conteudo/instrumentosf2/').status_code, 200)
+        self.assertEqual(self.client.get(f'/moderacao/conteudo/instrumentosf2/{iid}/change/').status_code, 200)
+        r = self.client.get(f'/moderacao/arquivo/instrumento/{iid}/')
+        self.assertEqual(r.status_code, 200)

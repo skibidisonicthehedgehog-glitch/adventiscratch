@@ -7,7 +7,7 @@ from django.utils.html import format_html
 
 from contas.admin import link_sancionar, selo
 
-from .models import Modelo3D, Projeto, Situacao
+from .models import InstrumentoSF2, Modelo3D, Projeto, Situacao
 
 CORES = {Situacao.PUBLICADO: '#16A34A', Situacao.PENDENTE: '#D97706', Situacao.OCULTO: '#DC2626'}
 
@@ -106,3 +106,20 @@ class Modelo3DAdmin(ConteudoAdmin):
             return '—'
         return format_html('<a class="button" href="{}">Baixar pacote para conferir</a>',
                            reverse('moderacao_arquivo', args=['modelo', obj.id]))
+
+
+@admin.register(InstrumentoSF2)
+class InstrumentoSF2Admin(ConteudoAdmin):
+    list_display = ('titulo', 'dono', 'presets', 'licenca', 'situacao_colorida', 'downloads', 'criado_em')
+    list_filter = ('situacao', 'licenca')
+    readonly_fields = ConteudoAdmin.readonly_fields + ('presets', 'nomes_presets', 'downloads')
+    fields = ('titulo', 'descricao', 'baixar', 'dono', 'acoes_dono', 'licenca', 'credito', 'tags', 'situacao',
+              'nota_moderacao', 'denuncias_recebidas', 'presets', 'nomes_presets', 'downloads', 'tamanho',
+              'criado_em', 'atualizado_em', 'apagado_em')
+
+    @admin.display(description='arquivo')
+    def baixar(self, obj):
+        if not obj.arquivo:
+            return '—'
+        return format_html('<a class="button" href="{}">Baixar .sf2 para conferir</a>',
+                           reverse('moderacao_arquivo', args=['instrumento', obj.id]))

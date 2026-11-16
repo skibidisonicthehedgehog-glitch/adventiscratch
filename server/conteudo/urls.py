@@ -16,4 +16,8 @@ urlpatterns = [
     path('modelos/<int:mid>/pacote', views.pacote_modelo),
     path('modelos/<int:mid>/miniatura', views.miniatura_modelo),
     path('modelos/<int:mid>/apagar', views.apagar_modelo),
+    path('instrumentos', views.instrumentos),
+    path('instrumentos/meus', views.meus_instrumentos),
+    path('instrumentos/<int:iid>/arquivo', views.arquivo_instrumento),
+    path('instrumentos/<int:iid>/apagar', views.apagar_instrumento),
 ]

@@ -19,6 +19,13 @@ Loja de modelos
   GET  /api/modelos/<id>/pacote              baixar (conta como "usado")
   GET  /api/modelos/<id>/miniatura
   POST /api/modelos/<id>/apagar
+Loja de Instrumentos Virtuais (SoundFont .sf2)
+  GET  /api/instrumentos?q=&pagina=&ordem=   instrumentos publicados (global)
+  GET  /api/instrumentos/meus
+  POST /api/instrumentos                     publicar (multipart: arquivo, titulo, descricao, licenca, credito, tags,
+                                             confirmo=1)
+  GET  /api/instrumentos/<id>/arquivo        baixar o .sf2 (conta como "usado")
+  POST /api/instrumentos/<id>/apagar
 """
 import json
 from datetime import timedelta
@@ -33,8 +40,8 @@ from django.views.decorators.http import require_http_methods
 from contas.models import sancao_atual
 from contas.views import erro, requer_login
 
-from .models import Licenca, Modelo3D, Projeto, Situacao, nome_publico
-from .validacao import ArquivoInvalido, validar_miniatura, validar_pacote_modelo, validar_projeto
+from .models import InstrumentoSF2, Licenca, Modelo3D, Projeto, Situacao, nome_publico
+from .validacao import ArquivoInvalido, validar_miniatura, validar_pacote_modelo, validar_projeto, validar_sf2
 
 POR_PAGINA = 24
 
@@ -52,7 +59,8 @@ def requer_conta_ativa(view):
 def limite_envios(usuario):
     desde = timezone.now() - timedelta(hours=1)
     n = (Projeto.objects.filter(dono=usuario, atualizado_em__gte=desde).count() +
-         Modelo3D.objects.filter(dono=usuario, criado_em__gte=desde).count())
+         Modelo3D.objects.filter(dono=usuario, criado_em__gte=desde).count() +
+         InstrumentoSF2.objects.filter(dono=usuario, criado_em__gte=desde).count())
     return n >= settings.ADVENTISCRATCH_ENVIOS_POR_HORA
 
 
@@ -98,6 +106,18 @@ def modelo_api(m, usuario):
         'texturas': m.texturas, 'downloads': m.downloads, 'tamanho': m.tamanho, 'situacao': m.situacao,
         'nota_moderacao': m.nota_moderacao if m.dono_id == usuario.id else '',
         'tem_miniatura': bool(m.miniatura), 'criado_em': m.criado_em.isoformat(),
+    }
+
+
+def instrumento_api(i, usuario):
+    return {
+        'id': i.id, 'titulo': i.titulo, 'descricao': i.descricao, 'autor': autor(i),
+        'meu': i.dono_id == usuario.id, 'licenca': i.licenca, 'licenca_nome': i.get_licenca_display(),
+        'credito': i.credito, 'tags': [t.strip() for t in i.tags.split(',') if t.strip()],
+        'presets': i.presets, 'nomes_presets': [n for n in i.nomes_presets.split('\n') if n][:12],
+        'downloads': i.downloads, 'tamanho': i.tamanho, 'situacao': i.situacao,
+        'nota_moderacao': i.nota_moderacao if i.dono_id == usuario.id else '',
+        'criado_em': i.criado_em.isoformat(),
     }
 
 
@@ -380,6 +400,94 @@ def apagar_modelo(request, mid):
     return JsonResponse({'ok': True})
 
 
+# ------------------------------------------------------------------ Loja de Instrumentos Virtuais (.sf2)
+
+def pode_ver_instrumento(i, usuario):
+    if i.apagado_em:
+        return False
+    if i.dono_id == usuario.id or usuario.is_staff:
+        return True
+    return InstrumentoSF2.objects.visiveis().filter(id=i.id).exists()
+
+
+@require_http_methods(['GET', 'POST'])
+@csrf_exempt
+@requer_conta_ativa
+def instrumentos(request):
+    if request.method == 'POST':
+        return publicar_instrumento(request)
+    qs = InstrumentoSF2.objects.visiveis().busca(request.GET.get('q')).select_related('dono__perfil')
+    ordem = '-downloads' if request.GET.get('ordem') == 'populares' else '-criado_em'
+    itens, pagina, mais = paginar(qs.order_by(ordem), request)
+    return JsonResponse({'instrumentos': [instrumento_api(i, request.usuario_api) for i in itens],
+                         'pagina': pagina, 'tem_mais': mais,
+                         'max_mb': settings.ADVENTISCRATCH_MAX_SF2_MB,
+                         'licencas': [{'id': c.value, 'nome': c.label} for c in Licenca]})
+
+
+def publicar_instrumento(request):
+    u = request.usuario_api
+    if limite_envios(u):
+        return erro('Você enviou muitos arquivos na última hora. Espere um pouco.', status=429)
+    if not sim(request.POST.get('confirmo', '')):
+        return erro('Confirme que você criou o instrumento ou tem permissão para compartilhá-lo.', campo='confirmo')
+    titulo = texto(request, 'titulo', 80)
+    if not titulo:
+        return erro('Dê um nome ao instrumento.', campo='titulo')
+    licenca = request.POST.get('licenca')
+    if licenca not in Licenca.values:
+        return erro('Escolha a licença do instrumento.', campo='licenca')
+    credito = texto(request, 'credito', 160)
+    if licenca in (Licenca.CC_BY, Licenca.PERMISSAO) and not credito:
+        return erro('Informe o autor original para dar o crédito.', campo='credito')
+    arquivo = request.FILES.get('arquivo')
+    if not arquivo:
+        return erro('Escolha o arquivo .sf2.', campo='arquivo')
+    try:
+        info = validar_sf2(arquivo)
+    except ArquivoInvalido as e:
+        return erro(str(e), campo='arquivo')
+    nomes = [f'{nome}' for banco, programa, nome in info['presets']]
+    i = InstrumentoSF2(dono=u, titulo=titulo, descricao=texto(request, 'descricao', 1000), licenca=licenca,
+                       credito=credito, tags=texto(request, 'tags', 160), presets=len(nomes),
+                       nomes_presets='\n'.join(n.replace('\n', ' ')[:40] for n in nomes[:300]),
+                       tamanho=arquivo.size,
+                       situacao=Situacao.PENDENTE if settings.ADVENTISCRATCH_APROVAR_MODELOS else Situacao.PUBLICADO)
+    i.arquivo.save('instrumento.sf2', arquivo, save=False)
+    i.save()
+    return JsonResponse({'instrumento': instrumento_api(i, u)}, status=201)
+
+
+@require_http_methods(['GET'])
+@requer_conta_ativa
+def meus_instrumentos(request):
+    qs = InstrumentoSF2.objects.ativos().filter(dono=request.usuario_api).select_related('dono__perfil')
+    return JsonResponse({'instrumentos': [instrumento_api(i, request.usuario_api) for i in qs[:200]]})
+
+
+@require_http_methods(['GET'])
+@requer_conta_ativa
+def arquivo_instrumento(request, iid):
+    i = InstrumentoSF2.objects.filter(id=iid).first()
+    if not i or not pode_ver_instrumento(i, request.usuario_api):
+        return erro('Instrumento não encontrado.', status=404)
+    if i.dono_id != request.usuario_api.id:
+        InstrumentoSF2.objects.filter(id=i.id).update(downloads=F('downloads') + 1)
+    return arquivo_resposta(i.arquivo, nome_arquivo(i.titulo, 'sf2'), 'audio/x-soundfont')
+
+
+@csrf_exempt
+@require_http_methods(['POST'])
+@requer_conta_ativa
+def apagar_instrumento(request, iid):
+    i = InstrumentoSF2.objects.ativos().filter(id=iid, dono=request.usuario_api).first()
+    if not i:
+        return erro('Instrumento não encontrado.', status=404)
+    i.apagado_em = timezone.now()
+    i.save(update_fields=['apagado_em'])
+    return JsonResponse({'ok': True})
+
+
 # ------------------------------------------------------------------ download para moderadores (painel)
 
 def arquivo_moderacao(request, tipo, oid):
@@ -390,5 +498,9 @@ def arquivo_moderacao(request, tipo, oid):
         p = Projeto.objects.filter(id=oid).first()
         return arquivo_resposta(p.arquivo if p else None, nome_arquivo(p.titulo if p else 'x', 'asp'),
                                 'application/zip')
+    if tipo == 'instrumento':
+        i = InstrumentoSF2.objects.filter(id=oid).first()
+        return arquivo_resposta(i.arquivo if i else None, nome_arquivo(i.titulo if i else 'x', 'sf2'),
+                                'audio/x-soundfont')
     m = Modelo3D.objects.filter(id=oid).first()
     return arquivo_resposta(m.pacote if m else None, nome_arquivo(m.titulo if m else 'x', 'zip'), 'application/zip')

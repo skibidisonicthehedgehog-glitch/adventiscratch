@@ -1,5 +1,6 @@
-"""Validação dos arquivos enviados (projetos .asp, pacotes de modelos e miniaturas)."""
+"""Validação dos arquivos enviados (projetos .asp, pacotes de modelos, SoundFonts .sf2 e miniaturas)."""
 import json
+import struct
 import zipfile
 
 from django.conf import settings
@@ -81,3 +82,55 @@ def validar_miniatura(arquivo):
     if arquivo.read(8) != b'\x89PNG\r\n\x1a\n':
         raise ArquivoInvalido('A miniatura precisa ser PNG.')
     arquivo.seek(0)
+
+
+def _blocos_riff(dados, pos, fim):
+    blocos = {}
+    while pos + 8 <= fim:
+        ident = dados[pos:pos + 4]
+        tam = struct.unpack_from('<I', dados, pos + 4)[0]
+        if ident == b'LIST':
+            blocos['LIST:' + dados[pos + 8:pos + 12].decode('latin-1')] = (pos + 12, tam - 4)
+        else:
+            blocos[ident.decode('latin-1')] = (pos + 8, tam)
+        pos += 8 + tam + (tam % 2)
+    return blocos
+
+
+def _nome(b):
+    return b.split(b'\0', 1)[0].decode('latin-1', 'replace').strip()
+
+
+def validar_sf2(arquivo):
+    """
+    Confere se é um SoundFont 2 de verdade e lê os nomes dos instrumentos (presets).
+    Devolve {"nome": ..., "presets": [(banco, programa, nome), ...]}.
+    """
+    limite = settings.ADVENTISCRATCH_MAX_SF2_MB
+    if arquivo.size > limite * MB:
+        raise ArquivoInvalido(f'Arquivo .sf2 grande demais (máximo {limite} MB).')
+    dados = arquivo.read()
+    arquivo.seek(0)
+    if len(dados) < 12 or dados[:4] != b'RIFF' or dados[8:12] != b'sfbk':
+        raise ArquivoInvalido('Isso não é um arquivo .sf2 (SoundFont 2).')
+    try:
+        topo = _blocos_riff(dados, 12, min(len(dados), 8 + struct.unpack_from('<I', dados, 4)[0]))
+        if 'LIST:pdta' not in topo or 'LIST:sdta' not in topo:
+            raise ArquivoInvalido('Arquivo .sf2 incompleto ou danificado.')
+        info = _blocos_riff(dados, topo['LIST:INFO'][0], sum(topo['LIST:INFO'])) if 'LIST:INFO' in topo else {}
+        sdta = _blocos_riff(dados, topo['LIST:sdta'][0], sum(topo['LIST:sdta']))
+        pdta = _blocos_riff(dados, topo['LIST:pdta'][0], sum(topo['LIST:pdta']))
+        if 'smpl' not in sdta or 'phdr' not in pdta:
+            raise ArquivoInvalido('Arquivo .sf2 sem sons ou sem instrumentos.')
+        pos, tam = pdta['phdr']
+        presets = []
+        for i in range(tam // 38 - 1):
+            p = pos + i * 38
+            programa, banco = struct.unpack_from('<HH', dados, p + 20)
+            presets.append((banco, programa, _nome(dados[p:p + 20]) or f'Preset {i + 1}'))
+    except (struct.error, UnicodeDecodeError):
+        raise ArquivoInvalido('Arquivo .sf2 incompleto ou danificado.')
+    if not presets:
+        raise ArquivoInvalido('Este .sf2 não tem nenhum instrumento.')
+    nome = _nome(dados[info['INAM'][0]:sum(info['INAM'])]) if 'INAM' in info else ''
+    return {'nome': nome, 'presets': sorted(presets)}

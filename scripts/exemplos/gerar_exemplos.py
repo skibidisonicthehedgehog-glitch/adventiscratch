@@ -83,6 +83,8 @@ class Projeto:
             self.extensoes.add('adventiscratch3d')
         elif opcode.startswith('adventiscratch2d_'):
             self.extensoes.add('adventiscratch2d')
+        elif opcode.startswith('adventiscratchmusica_'):
+            self.extensoes.add('adventiscratchmusica')
         elif opcode.startswith('adventiscratch_'):
             self.extensoes.add('adventiscratch')
         return bid
@@ -350,6 +352,16 @@ class Blocos:
     def p2(self, opcode, menus=None, tipos=None, **entradas):
         return self.p.b(f'adventiscratch2d_{opcode}', entradas, campos=dict(menus or {}), tipos=tipos or {})
 
+    # Músicas: o menu de músicas aceita reporters (sombra); os outros menus são campos do bloco
+    def mu(self, opcode, menus=None, musica=None, tipos=None, **entradas):
+        entradas = dict(entradas)
+        if musica is not None:
+            entradas['MUSICA'] = Menu('adventiscratchmusica_menu_musicas', 'musicas', musica)
+        return self.p.b(f'adventiscratchmusica_{opcode}', entradas, campos=dict(menus or {}), tipos=tipos or {})
+
+    def tamanho_mude(self, n):
+        return self.p.b('looks_changesizeby', {'CHANGE': n})
+
     # 3D
     # menus da extensão 3D que NÃO aceitam reporters: no Scratch eles são campos do próprio bloco
     MENUS_CAMPO_3D = {'eixos', 'mostrar', 'propriedades', 'infoAnimacao', 'luzes', 'tiposFisica', 'eixosVel',
@@ -392,7 +404,7 @@ def fantasia(nome, arquivo_svg, dados, cx, cy):
             'bitmapResolution': 1, 'rotationCenterX': cx, 'rotationCenterY': cy}, (f'{h}.svg', dados)
 
 
-def montar(p, nome_arquivo, atores):
+def montar(p, nome_arquivo, atores, musicas=()):
     """atores: lista de dicts {nome, fantasias:[(nome, dados, cx, cy)], sons:bool, visivel, x, y, tamanho}"""
     arquivos = {}
     pio = ler(os.path.join(PADRAO, PIO_WAV))
@@ -432,8 +444,11 @@ def montar(p, nome_arquivo, atores):
         z.writestr('project.json', json.dumps(projeto, ensure_ascii=False))
         for n, d in arquivos.items():
             z.writestr(n, d)
+        for i, m in enumerate(musicas):
+            z.writestr(f'adventiscratch/musicas/{i}.json', json.dumps(m, ensure_ascii=False))
         z.writestr('adventiscratch/manifest.json', json.dumps(
-            {'format': 'asp', 'version': 2, 'editor': 'Adventiscratch', 'models': []}))
+            {'format': 'asp', 'version': 3, 'editor': 'Adventiscratch', 'models': [], 'instrumentos': [],
+             'musicas': [{'nome': m['nome'], 'arquivo': f'musicas/{i}.json'} for i, m in enumerate(musicas)]}))
     print(f'  {nome_arquivo}: {sum(len(b) for b in p.alvos.values())} blocos')
 
 
@@ -830,6 +845,46 @@ def coruja_saltitante():
     ])
 
 
+# ------------------------------------------------------------------ 7. Show da Coruja (Músicas)
+
+def show_da_coruja():
+    p = Projeto()
+    k = Blocos(p)
+    musica = json.loads(ler(os.path.join(os.path.dirname(__file__), 'musica-tema-coruja.json')))
+    nome = musica['nome']
+
+    p.alvo('Palco')
+    p.script(20, 20, k.bandeira(),
+             k.mu('repetir', menus={'LIGA': 'sim'}),
+             k.mu('volume', V=100),
+             k.mu('tocar', musica=nome))
+    p.comentario(360, 20, 'A música "Tema da Coruja" foi feita no Criador de Músicas e está salva dentro deste projeto.\n'
+                          'Para mudar as notas: categoria Músicas → botão 🎼 Criador de Músicas…', 330, 130)
+
+    p.alvo('Coruja Sabida')
+    p.script(20, 20, k.bandeira(), k.va_para(0, -30), k.tamanho(120),
+             k.diga('Espaço pausa e continua. Setas mudam a velocidade!', 3))
+    p.script(20, 260, k.mu('aCadaBatida'),
+             k.tamanho_mude(8), k.espere(0.08), k.tamanho_mude(-8))
+    p.script(20, 420, k.mu('quandoBatida', N=9), k.diga('Agora vem o refrão! 🎶', 2))
+    p.script(20, 560, k.quando_tecla('space'),
+             k.p.b('control_if_else', {
+                 'CONDITION': k.mu('esta', menus={'ESTADO': 'tocando'}),
+                 'SUBSTACK': Pilha(k.mu('pausar'), k.diga('Pausei ⏸')),
+                 'SUBSTACK2': Pilha(k.mu('continuar'), k.diga(''))}, tipos={'CONDITION': 'bool'}))
+    p.script(480, 260, k.quando_tecla('up arrow'), k.mu('velocidade', V=150), k.diga('Mais rápido!', 1))
+    p.script(480, 400, k.quando_tecla('down arrow'), k.mu('velocidade', V=70), k.diga('Mais devagar…', 1))
+    p.script(480, 540, k.quando_tecla('right arrow'), k.mu('velocidade', V=100), k.diga('Normal', 1))
+    p.script(480, 680, k.quando_tecla('n'),
+             k.mu('nota', menus={'INST': 'sinos'}, NOTA=72, BAT=0.5),
+             k.mu('nota', menus={'INST': 'sinos'}, NOTA=79, BAT=1))
+    p.comentario(480, 20, '"a cada batida da música" faz a coruja pular no ritmo.\n'
+                          '"quando a música chegar na batida 9" avisa o refrão.\n'
+                          'Tecla N toca duas notas com o instrumento Sinos.', 320, 130)
+
+    montar(p, 'show-da-coruja.asp', [coruja(x=0, y=-30, tamanho=120)], musicas=[musica])
+
+
 if __name__ == '__main__':
     print('Gerando exemplos em', SAIDA)
     coruja_coletora()
@@ -838,3 +893,4 @@ if __name__ == '__main__':
     visualizador()
     corrida_3d()
     coruja_saltitante()
+    show_da_coruja()

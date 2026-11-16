@@ -134,6 +134,11 @@ class AdventiscratchConta extends React.Component {
                         <button
                             role="menuitem"
                             style={estilos.item}
+                            onClick={this.acao(() => abrirCentral('instrumentos'))}
+                        >{'🎹 Loja de Instrumentos Virtuais'}</button>
+                        <button
+                            role="menuitem"
+                            style={estilos.item}
                             onClick={this.acao(abrirDenuncia)}
                         >{'🚩 Denunciar um usuário…'}</button>
                         {conta.moderador && painel && (

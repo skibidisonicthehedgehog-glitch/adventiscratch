@@ -18,6 +18,8 @@ Fork do [scratch-gui oficial](https://github.com/scratchfoundation/scratch-gui) 
 | Extensão **Extras Adventiscratch** (14 blocos novos) | `src/lib/adventiscratch/extras-extension.js` |
 | Extensão **3D (Three.js)** com modelos 3D | `src/lib/adventiscratch/three-extension.js` e `three-engine.js` |
 | Extensão **Plataforma 2D** (gravidade, pulo, chão, paredes) | `src/lib/adventiscratch/plataforma2d-extension.js` |
+| **Criador de Músicas**, extensão **Músicas** e instrumentos **.sf2** | `src/lib/adventiscratch/musica/` |
+| **Loja de Instrumentos Virtuais** (.sf2) | `server/conteudo/` (`InstrumentoSF2`) e `src/lib/adventiscratch/conta/telas-nuvem.js` |
 | Formato de projeto **.asp** (AdventiScratch Project) | `src/lib/adventiscratch/asp-format.js`, `src/containers/sb3-downloader.jsx`, `src/lib/sb-file-uploader-hoc.jsx` |
 | Registro das extensões na VM | `src/lib/adventiscratch/index.js` e `src/lib/libraries/extensions/index.jsx` |
 
@@ -112,15 +114,47 @@ fantasma 100); clones herdam o tipo; a física roda uma vez por quadro, antes do
 Unidades em "passos por quadro", iguais às do "mude x por". No console (F12), `adventiscratchVM.runtime.adventiscratch2d`
 dá acesso ao motor.
 
+## Criador de Músicas e extensão Músicas
+
+Extensão **Músicas** → botão **🎼 Criador de Músicas…** abre um editor em tela cheia: grade de piano para
+**Melodia**, **Baixo** e **Acordes** (Dó2 a Dó7) e grade de **Bateria** (bumbo, caixa, chimbal, palmas, tom,
+prato). BPM, 1 a 32 compassos (4/4, passos de semicolcheia), tocar/pausar/parar/repetir, modelos prontos (Aventura,
+Calma, Chefe, Fase 8-bit) e 8 instrumentos sintetizados com Web Audio (piano, órgão, baixo, cordas, flauta, sinos,
+sintetizador, 8-bit). As músicas ficam no `.asp` em `adventiscratch/musicas/<n>.json`.
+
+Blocos: tocar música, tocar até o fim, pausar, continuar, parar, repetir sim/não, volume, velocidade, pular para a
+batida, "música está tocando/pausada/parada?", batida da música, nome da música, **quando a música chegar na
+batida N**, **a cada batida da música**, **quando a música terminar** e "tocar nota N com instrumento por B batidas".
+O ritmo usa o relógio do áudio (as notas são agendadas com antecedência), então não atrasa com o jogo pesado.
+
+### Instrumentos SoundFont (.sf2)
+
+No menu **Instrumento** de cada faixa: **Importar instrumento .sf2…**. O arquivo é lido no navegador
+(`musica/soundfont.js`: presets, zonas, faixas de notas e de força, afinação, loop e envelope); o aluno ouve e
+escolhe um preset e **só as amostras daquele preset** vão para o projeto (`adventiscratch/instrumentos/<n>.json` +
+`.pcm`, PCM 16 bits). Limite de leitura: 64 MB por .sf2. Amostras estéreo tocam em mono; moduladores e filtros do
+SF2 são ignorados.
+
+### Loja de Instrumentos Virtuais
+
+Na Central (menu da conta → **🎹 Loja de Instrumentos Virtuais**, ou pelo Criador de Músicas → Instrumento →
+**Loja de Instrumentos Virtuais…**): buscar, usar (escolhe o preset e já coloca na faixa), denunciar, **Meus
+instrumentos** e **Publicar instrumento** (.sf2 com licença, crédito e confirmação, iguais aos da loja de modelos).
+O servidor confere se o arquivo é um SoundFont de verdade e lista os presets. Tamanho máximo:
+`ADVENTISCRATCH_MAX_SF2_MB` (padrão 50). O painel de moderação ganhou **Instrumentos (.sf2) da loja**, com download
+para conferir e ação de ocultar. API: `GET/POST /api/instrumentos`, `/api/instrumentos/meus`,
+`/api/instrumentos/<id>/arquivo`, `/api/instrumentos/<id>/apagar`; denúncias aceitam `{"instrumento": id}`.
+Para testes, `python -m conteudo.sf2_teste saida.sf2` (dentro de `server/`) gera um .sf2 pequeno com 3 sons.
+
 ## Tutoriais e exemplos
 
-- **`tutoriais.html`**: 11 lições interativas em português (primeiros passos, jogo 2D, Extras, mundo 3D, modelos e
-  texturas, jogo de plataforma 2D, jogo de plataforma 3D, nuvem, detector de erros, salvar/entregar, conta e regras). Desenhos dos blocos em HTML/CSS,
+- **`tutoriais.html`**: 12 lições interativas em português (primeiros passos, jogo 2D, Extras, mundo 3D, modelos e
+  texturas, Criador de Músicas, jogo de plataforma 2D, jogo de plataforma 3D, nuvem, detector de erros, salvar/entregar, conta e regras). Desenhos dos blocos em HTML/CSS,
   progresso salvo no navegador, link direto para cada passo (`tutoriais.html#plataforma/3`). O botão "Tutoriais" do
   editor abre esta página. O conteúdo fica em `src/playground/tutoriais.html` (cada `<section>` é uma lição e cada
   `<article>` é um passo).
-- **`exemplos.html`**: 6 projetos prontos que abrem no editor com um clique (`editor.html?exemplo=nome`):
-  Coruja Coletora (2D), Calculadora da Coruja (Extras), Coruja Saltitante (Plataforma 2D), Mundo 3D, Visualizador de Modelos e Corrida 3D (plataforma
+- **`exemplos.html`**: 7 projetos prontos que abrem no editor com um clique (`editor.html?exemplo=nome`):
+  Coruja Coletora (2D), Calculadora da Coruja (Extras), Coruja Saltitante (Plataforma 2D), Show da Coruja (Músicas), Mundo 3D, Visualizador de Modelos e Corrida 3D (plataforma
   com física, câmera em 3ª pessoa e animações por estado). A Corrida 3D e o Visualizador usam **o modelo que o
   aluno importar**.
 - Os exemplos são gerados por `python scripts/exemplos/gerar_exemplos.py` (saem em `static/exemplos/*.asp`).

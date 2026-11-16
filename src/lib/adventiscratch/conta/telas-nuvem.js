@@ -1,9 +1,12 @@
 /**
- * Telas da nuvem e da loja: "Central" com abas (Meus projetos, Explorar, Loja de modelos, Meus modelos,
- * Publicar modelo) e a janela "Salvar na nuvem".
+ * Telas da nuvem e das lojas: "Central" com abas (Meus projetos, Explorar, Loja de modelos, Meus modelos,
+ * Publicar modelo, Loja de Instrumentos Virtuais, Meus instrumentos, Publicar instrumento) e a janela
+ * "Salvar na nuvem".
  */
 import {getModelNames, getModel} from '../model-store.js';
-import {chamar, urlImagem} from './api.js';
+import {baixarBinario, chamar, enviarArquivos, urlImagem} from './api.js';
+import {escolherPresetDoSF2} from '../musica/soundfont-store.js';
+import {lerSF2} from '../musica/soundfont.js';
 import {obterEstado} from './conta.js';
 import {adicionarModeloDaLoja, publicarModelo} from './loja.js';
 import {abrirDaNuvem, apagarProjeto, compartilhar, jaEstaNaNuvem, lerTitulo, obterNuvem, salvarNaNuvem} from './nuvem.js';
@@ -140,8 +143,14 @@ const ABAS = [
     {id: 'explorar', nome: '🌎 Explorar projetos'},
     {id: 'loja', nome: '🧩 Loja de modelos'},
     {id: 'meus-modelos', nome: '📦 Meus modelos'},
-    {id: 'publicar', nome: '⬆️ Publicar modelo'}
+    {id: 'publicar', nome: '⬆️ Publicar modelo'},
+    {id: 'instrumentos', nome: '🎹 Loja de Instrumentos Virtuais'},
+    {id: 'meus-instrumentos', nome: '🎚️ Meus instrumentos'},
+    {id: 'publicar-instrumento', nome: '⬆️ Publicar instrumento'}
 ];
+
+// quando a loja de instrumentos é aberta pelo Criador de Músicas: ao escolher, o instrumento já vai para a faixa
+let aoEscolherInstrumento = null;
 
 let central = null;
 
@@ -392,12 +401,175 @@ const abaPublicar = async (conteudo, modeloInicial) => {
     };
 };
 
+// ---------------------------------------------------------------- Loja de Instrumentos Virtuais (.sf2)
+
+const selosInstrumento = i => `<span class="adv-etiqueta roxa">.sf2</span><span class="adv-etiqueta laranja">${
+    i.presets} instrumento${i.presets === 1 ? '' : 's'}</span>`;
+
+const listaPresets = i => (i.nomes_presets.length ?
+    `<div style="margin-top:4px;color:#6B5FA0">🎵 ${esc(i.nomes_presets.slice(0, 6).join(', '))}${
+        i.presets > 6 ? '…' : ''}</div>` : '');
+
+const usarInstrumento = async i => {
+    const dados = await baixarBinario(`/instrumentos/${i.id}/arquivo`);
+    const id = await escolherPresetDoSF2(dados, i.titulo);
+    if (!id) return;
+    if (aoEscolherInstrumento) {
+        const cb = aoEscolherInstrumento;
+        aoEscolherInstrumento = null;
+        fecharCentral();
+        cb(id);
+        toast(`"${id.slice(4)}" está na faixa. Clique nas notas para ouvir!`, 4000);
+        return;
+    }
+    toast(`"${id.slice(4)}" foi adicionado ao projeto. Escolha ele no Criador de Músicas.`, 4500);
+};
+
+const abaInstrumentos = conteudo => listaPaginada(conteudo, {
+    placeholder: 'Buscar instrumentos (ex.: piano, violão, bateria, coral)…',
+    extraBarra: '<select data-ordem aria-label="Ordem"><option value="novos">Mais novos</option>' +
+        '<option value="populares">Mais usados</option></select>',
+    ordem: true,
+    caminho: '/instrumentos',
+    chave: 'instrumentos',
+    vazioHtml: vazio('🎹', 'A Loja de Instrumentos Virtuais ainda está vazia. Publique o primeiro .sf2 na aba ' +
+        '<b>Publicar instrumento</b>!'),
+    cartao: i => {
+        const c = document.createElement('div');
+        c.className = 'adv-item';
+        c.innerHTML = `<div class="img" style="aspect-ratio:3/1;font-size:2rem">🎹🎻🥁</div>
+          <div class="txt"><b>${esc(i.titulo)}</b>por ${esc(i.autor.nome)}
+          <div>${selosInstrumento(i)}</div>${listaPresets(i)}
+          <div title="Licença">📜 ${esc(i.licenca_nome)}${i.credito ? ` – ${esc(i.credito)}` : ''}</div>
+          <div>⬇ usado ${i.downloads}× · ${mb(i.tamanho)}</div>
+          ${i.descricao ? `<div style="margin-top:4px">${esc(i.descricao.slice(0, 120))}</div>` : ''}</div>
+          <div class="acoes"><button class="primario" data-usar>${aoEscolherInstrumento ? 'Usar nesta faixa' :
+    'Adicionar ao projeto'}</button>
+          ${i.meu ? '' : '<button data-denunciar title="Denunciar">🚩</button>'}</div>`;
+        c.querySelector('[data-usar]').onclick = e => ocupado(e.target, () => usarInstrumento(i));
+        const den = c.querySelector('[data-denunciar]');
+        if (den) den.onclick = () => formDenuncia(c, {instrumento: i.id});
+        return c;
+    }
+});
+
+const abaMeusInstrumentos = async conteudo => {
+    conteudo.innerHTML = '<div class="adv-grade" data-grade><p>Carregando…</p></div>';
+    const {instrumentos} = await chamar('/instrumentos/meus');
+    const grade = conteudo.querySelector('[data-grade]');
+    if (!instrumentos.length) {
+        grade.outerHTML = vazio('🎚️', 'Você ainda não publicou instrumentos. Use a aba <b>Publicar instrumento</b>.');
+        return;
+    }
+    grade.innerHTML = '';
+    const nomes = {publicado: ['verde', 'publicado'], pendente: ['laranja', 'aguardando aprovação'],
+        oculto: ['vermelha', 'oculto pela moderação']};
+    instrumentos.forEach(i => {
+        const [cor, rotulo] = nomes[i.situacao];
+        const c = document.createElement('div');
+        c.className = 'adv-item';
+        c.innerHTML = `<div class="img" style="aspect-ratio:3/1;font-size:2rem">🎚️</div><div class="txt"><b>${esc(i.titulo)}</b>
+          <span class="adv-etiqueta ${cor}">${rotulo}</span><div>${selosInstrumento(i)}</div>
+          <div>⬇ usado ${i.downloads}× · publicado em ${data(i.criado_em)}</div>
+          ${i.nota_moderacao ? `<div style="color:#991B1B">Moderação: ${esc(i.nota_moderacao)}</div>` : ''}</div>
+          <div class="acoes"><button class="perigo" data-apagar>Remover da loja</button></div>`;
+        const b = c.querySelector('[data-apagar]');
+        b.onclick = () => {
+            if (!b.dataset.confirmar) {
+                b.dataset.confirmar = '1';
+                b.textContent = 'Confirmar?';
+                return;
+            }
+            ocupado(b, async () => {
+                await chamar(`/instrumentos/${i.id}/apagar`, {body: {}});
+                abaMeusInstrumentos(conteudo);
+            });
+        };
+        grade.appendChild(c);
+    });
+};
+
+const abaPublicarInstrumento = async conteudo => {
+    const {licencas, max_mb: maxMb} = await chamar('/instrumentos?pagina=999');
+    conteudo.innerHTML = `<form class="adv-form" novalidate>
+      <div class="adv-msg-erro" hidden></div>
+      <label class="adv-campo"><span>Arquivo SoundFont (.sf2, até ${maxMb} MB)</span>
+        <input name="arquivo" type="file" accept=".sf2"><small data-info></small></label>
+      <label class="adv-campo"><span>Nome na loja</span><input name="titulo" maxlength="80" required></label>
+      <label class="adv-campo"><span>Descrição</span><textarea name="descricao" rows="2" maxlength="1000"
+        placeholder="Que instrumentos tem, como soa, para que tipo de música…"></textarea></label>
+      <label class="adv-campo"><span>Licença</span><select name="licenca">
+        <option value="">Escolha…</option>${licencas.map(l => `<option value="${esc(l.id)}">${esc(l.nome)}</option>`).join('')}
+      </select></label>
+      <label class="adv-campo"><span>Autor original / crédito</span><input name="credito" maxlength="160"
+        placeholder="Obrigatório se o .sf2 não foi feito por você"></label>
+      <label class="adv-campo"><span>Etiquetas</span><input name="tags" maxlength="160"
+        placeholder="ex.: piano, orquestra, bateria, 8-bit"></label>
+      <div class="adv-regras"><b>Regras da Loja de Instrumentos Virtuais</b><br>
+        • A loja é vista por <b>todas as turmas</b>.<br>
+        • Só publique SoundFonts que você fez ou que têm licença livre / permissão do autor (muitos .sf2 gratuitos
+          pedem crédito: escreva o nome do autor).<br>
+        • <b>Não</b> publique SoundFonts comprados, nem sons tirados de jogos, programas ou teclados de outras empresas.<br>
+        • Instrumentos que quebrarem as regras são removidos pela moderação.</div>
+      <label class="adv-check"><input type="checkbox" name="confirmo">
+        <span>Eu criei este SoundFont ou tenho permissão para compartilhá-lo, e ele segue as regras acima.</span></label>
+      <button class="adv-btn primario" type="submit">Publicar na loja</button>
+    </form>`;
+    const form = conteudo.querySelector('form');
+    const info = conteudo.querySelector('[data-info]');
+    let arquivoOk = null;
+    form.arquivo.onchange = async () => {
+        arquivoOk = null;
+        info.textContent = '';
+        const f = form.arquivo.files[0];
+        if (!f) return;
+        if (f.size > maxMb * 1024 * 1024) {
+            info.textContent = `⚠ Arquivo grande demais (${mb(f.size)}). O máximo é ${maxMb} MB.`;
+            return;
+        }
+        try {
+            const sf = lerSF2(await f.arrayBuffer());
+            arquivoOk = f;
+            info.textContent = `✓ ${sf.presets.length} instrumento(s): ${sf.presets.slice(0, 6).map(p => p.nome).join(', ')}${
+                sf.presets.length > 6 ? '…' : ''}`;
+            if (!form.titulo.value) form.titulo.value = (sf.nome !== 'SoundFont' ? sf.nome : f.name.replace(/\.sf2$/i, ''))
+                .slice(0, 80);
+        } catch (e) {
+            info.textContent = `⚠ ${e.message}`;
+        }
+    };
+    form.onsubmit = async e => {
+        e.preventDefault();
+        mostrarErro(conteudo, null);
+        try {
+            if (!arquivoOk) throw new Error('Escolha um arquivo .sf2 válido.');
+            await ocupado(form.querySelector('[type=submit]'), () => enviarArquivos('/instrumentos', {
+                arquivo: {blob: arquivoOk, nome: arquivoOk.name},
+                titulo: form.titulo.value,
+                descricao: form.descricao.value,
+                licenca: form.licenca.value,
+                credito: form.credito.value,
+                tags: form.tags.value,
+                confirmo: form.confirmo.checked ? '1' : ''
+            }));
+            toast('Instrumento publicado na Loja de Instrumentos Virtuais! 🎹');
+            irPara('meus-instrumentos');
+        } catch (err) {
+            mostrarErro(conteudo, err);
+            conteudo.scrollTop = 0;
+        }
+    };
+};
+
 const RENDER = {
     'meus': abaMeus,
     'explorar': abaExplorar,
     'loja': abaLoja,
     'meus-modelos': abaMeusModelos,
-    'publicar': abaPublicar
+    'publicar': abaPublicar,
+    'instrumentos': abaInstrumentos,
+    'meus-instrumentos': abaMeusInstrumentos,
+    'publicar-instrumento': abaPublicarInstrumento
 };
 
 const irPara = (aba, extra) => {
@@ -412,6 +584,7 @@ const irPara = (aba, extra) => {
 
 export const fecharCentral = () => {
     central = null;
+    aoEscolherInstrumento = null;
     fecharTela();
 };
 
@@ -501,3 +674,10 @@ export const abrirSalvar = () => {
     };
     form.titulo.focus();
 };
+
+// o Criador de Músicas pede a Loja de Instrumentos Virtuais por evento (para não depender deste arquivo)
+window.addEventListener('adventiscratch-loja-instrumentos', ev => {
+    aoEscolherInstrumento = (ev.detail && ev.detail.aoEscolher) || null;
+    abrirCentral('instrumentos');
+    if (!central) aoEscolherInstrumento = null;
+});

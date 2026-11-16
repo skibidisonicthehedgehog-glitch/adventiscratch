@@ -1,5 +1,6 @@
 """
-Conteúdo enviado pelos alunos: projetos salvos na nuvem e modelos 3D da loja.
+Conteúdo enviado pelos alunos: projetos salvos na nuvem, modelos 3D da loja e instrumentos (.sf2) da
+Loja de Instrumentos Virtuais.
 
 Tudo que é compartilhado é GLOBAL (todas as turmas veem), mas só para quem está logado neste servidor.
 Moderadores podem ocultar qualquer item; conteúdo de contas com suspensão indefinida ou permanente
@@ -26,6 +27,10 @@ def caminho_projeto(instancia, nome_original):
 
 def caminho_pacote(instancia, nome_original):
     return _caminho('modelos', 'zip')
+
+
+def caminho_sf2(instancia, nome_original):
+    return _caminho('instrumentos', 'sf2')
 
 
 def caminho_miniatura(instancia, nome_original):
@@ -137,6 +142,25 @@ class Modelo3D(Conteudo):
     @staticmethod
     def campos_arquivo():
         return ['miniatura', 'pacote']
+
+
+class InstrumentoSF2(Conteudo):
+    """SoundFont (.sf2) da Loja de Instrumentos Virtuais. O aluno escolhe o instrumento (preset) ao usar."""
+    arquivo = models.FileField('arquivo .sf2', upload_to=caminho_sf2)
+    licenca = models.CharField('licença', max_length=12, choices=Licenca.choices)
+    credito = models.CharField('crédito / autor original', max_length=160, blank=True)
+    tags = models.CharField('etiquetas', max_length=160, blank=True, help_text='Separadas por vírgula')
+    presets = models.PositiveIntegerField('instrumentos dentro do arquivo', default=0)
+    nomes_presets = models.TextField('nomes dos instrumentos', blank=True, help_text='Um por linha')
+    downloads = models.PositiveIntegerField('vezes usado', default=0)
+
+    class Meta(Conteudo.Meta):
+        verbose_name = 'instrumento (.sf2) da loja'
+        verbose_name_plural = 'instrumentos (.sf2) da loja'
+
+    @staticmethod
+    def campos_arquivo():
+        return ['miniatura', 'arquivo']
 
 
 def nome_publico(usuario):

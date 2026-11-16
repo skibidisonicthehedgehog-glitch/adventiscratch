@@ -208,12 +208,20 @@ class DenunciaAdmin(admin.ModelAdmin):
         if obj.modelo_id:
             return format_html('<a class="button" href="{}">Abrir modelo "{}"</a>',
                                reverse('admin:conteudo_modelo3d_change', args=[obj.modelo_id]), obj.modelo.titulo)
+        if obj.instrumento_id:
+            return format_html('<a class="button" href="{}">Abrir instrumento "{}"</a>',
+                               reverse('admin:conteudo_instrumentosf2_change', args=[obj.instrumento_id]),
+                               obj.instrumento.titulo)
         return 'Denúncia sobre o usuário (sem conteúdo específico)'
     actions = ['marcar_analise', 'descartar']
 
     @admin.display(description='sobre')
     def tipo_alvo(self, obj):
-        return 'Projeto' if obj.projeto_id else ('Modelo 3D' if obj.modelo_id else 'Usuário')
+        if obj.projeto_id:
+            return 'Projeto'
+        if obj.modelo_id:
+            return 'Modelo 3D'
+        return 'Instrumento .sf2' if obj.instrumento_id else 'Usuário'
 
     @admin.display(description='situação')
     def status_colorido(self, obj):

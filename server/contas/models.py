@@ -198,6 +198,8 @@ class Denuncia(models.Model):
                                 related_name='denuncias', verbose_name='projeto denunciado')
     modelo = models.ForeignKey('conteudo.Modelo3D', on_delete=models.SET_NULL, null=True, blank=True,
                                related_name='denuncias', verbose_name='modelo denunciado')
+    instrumento = models.ForeignKey('conteudo.InstrumentoSF2', on_delete=models.SET_NULL, null=True, blank=True,
+                                    related_name='denuncias', verbose_name='instrumento denunciado')
     status = models.CharField('situação', max_length=20, choices=StatusDenuncia.choices,
                               default=StatusDenuncia.ABERTA)
     criada_em = models.DateTimeField('criada em', auto_now_add=True)

@@ -132,6 +132,8 @@ MEDIA_URL = '/arquivos-internos/'
 FILE_UPLOAD_PERMISSIONS = 0o640
 ADVENTISCRATCH_MAX_PROJETO_MB = int(os.environ.get('ADVENTISCRATCH_MAX_PROJETO_MB', '50'))
 ADVENTISCRATCH_MAX_MODELO_MB = int(os.environ.get('ADVENTISCRATCH_MAX_MODELO_MB', '40'))
+# tamanho máximo de um SoundFont (.sf2) na Loja de Instrumentos Virtuais
+ADVENTISCRATCH_MAX_SF2_MB = int(os.environ.get('ADVENTISCRATCH_MAX_SF2_MB', '50'))
 ADVENTISCRATCH_MAX_PROJETOS = int(os.environ.get('ADVENTISCRATCH_MAX_PROJETOS', '100'))
 ADVENTISCRATCH_ENVIOS_POR_HORA = int(os.environ.get('ADVENTISCRATCH_ENVIOS_POR_HORA', '60'))
 # true = modelos novos da loja só aparecem depois que um moderador aprova
