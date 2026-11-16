@@ -17,6 +17,7 @@ Fork do [scratch-gui oficial](https://github.com/scratchfoundation/scratch-gui) 
 | Logo do editor volta para a página inicial | `src/playground/render-gui.jsx` |
 | Extensão **Extras Adventiscratch** (14 blocos novos) | `src/lib/adventiscratch/extras-extension.js` |
 | Extensão **3D (Three.js)** com modelos 3D | `src/lib/adventiscratch/three-extension.js` e `three-engine.js` |
+| Extensão **Plataforma 2D** (gravidade, pulo, chão, paredes) | `src/lib/adventiscratch/plataforma2d-extension.js` |
 | Formato de projeto **.asp** (AdventiScratch Project) | `src/lib/adventiscratch/asp-format.js`, `src/containers/sb3-downloader.jsx`, `src/lib/sb-file-uploader-hoc.jsx` |
 | Registro das extensões na VM | `src/lib/adventiscratch/index.js` e `src/lib/libraries/extensions/index.jsx` |
 
@@ -91,19 +92,48 @@ O Three.js é carregado só quando um bloco 3D é usado, então o editor não fi
   aluno), `ADVENTISCRATCH_ENVIOS_POR_HORA` (60) e `ADVENTISCRATCH_APROVAR_MODELOS=true` (modelos novos só
   aparecem depois de aprovados).
 
+## Extensão Plataforma 2D
+
+Física para jogos de plataforma com atores comuns. Cada ator recebe um tipo com **tornar este ator [tipo]**:
+
+- **personagem**: cai com a gravidade, anda, pula e colide. Ao virar personagem, o estilo de rotação passa para
+  "esquerda-direita" (girar de ponta-cabeça atrapalharia a colisão).
+- **sólido**: chão, paredes e blocos. Se ele se mover (deslizar, mudar x), quem está em cima anda junto.
+- **plataforma**: atravessa por baixo e pousa em cima; com a seta para baixo o personagem desce.
+
+O bloco **controlar com [setas e WASD] velocidade [5] pulo [13]** faz o controle completo (aceleração, pulo com
+"tempo de coiote", pulo mais baixo ao soltar a tecla cedo, pulo duplo com **permitir [1] pulos no ar** e descer de
+plataformas). Também há blocos de velocidade x/y, **pular com força**, **está [no chão / caindo / encostado numa
+parede…]?**, **nome do que está embaixo**, o chapéu **quando este ator [aterrissar / pular / bater numa parede / bater
+no teto]**, gravidade do mundo e de cada ator, queda máxima, caixa de colisão fixa e bordas do palco como chão/paredes.
+
+Detalhes: a colisão usa a caixa (retângulo) de cada ator; atores escondidos não colidem (parede invisível = efeito
+fantasma 100); clones herdam o tipo; a física roda uma vez por quadro, antes dos scripts, só com o projeto rodando.
+Unidades em "passos por quadro", iguais às do "mude x por". No console (F12), `adventiscratchVM.runtime.adventiscratch2d`
+dá acesso ao motor.
+
 ## Tutoriais e exemplos
 
-- **`tutoriais.html`**: 9 lições interativas em português (primeiros passos, jogo 2D, Extras, mundo 3D, modelos e
-  texturas, jogo de plataforma 3D, detector de erros, salvar/entregar, conta e regras). Desenhos dos blocos em HTML/CSS,
+- **`tutoriais.html`**: 11 lições interativas em português (primeiros passos, jogo 2D, Extras, mundo 3D, modelos e
+  texturas, jogo de plataforma 2D, jogo de plataforma 3D, nuvem, detector de erros, salvar/entregar, conta e regras). Desenhos dos blocos em HTML/CSS,
   progresso salvo no navegador, link direto para cada passo (`tutoriais.html#plataforma/3`). O botão "Tutoriais" do
   editor abre esta página. O conteúdo fica em `src/playground/tutoriais.html` (cada `<section>` é uma lição e cada
   `<article>` é um passo).
-- **`exemplos.html`**: 5 projetos prontos que abrem no editor com um clique (`editor.html?exemplo=nome`):
-  Coruja Coletora (2D), Calculadora da Coruja (Extras), Mundo 3D, Visualizador de Modelos e Corrida 3D (plataforma
+- **`exemplos.html`**: 6 projetos prontos que abrem no editor com um clique (`editor.html?exemplo=nome`):
+  Coruja Coletora (2D), Calculadora da Coruja (Extras), Coruja Saltitante (Plataforma 2D), Mundo 3D, Visualizador de Modelos e Corrida 3D (plataforma
   com física, câmera em 3ª pessoa e animações por estado). A Corrida 3D e o Visualizador usam **o modelo que o
   aluno importar**.
 - Os exemplos são gerados por `python scripts/exemplos/gerar_exemplos.py` (saem em `static/exemplos/*.asp`).
   Para mudar um exemplo, edite a função dele no script e rode de novo.
+
+### Segredo (só para professores 🤫)
+
+Digitar `EASTEREGGSEARCHING` na busca da biblioteca de **cenários** abre o **Fliperama Secreto da Coruja**, com 6
+jogos originais feitos em canvas + Web Audio (nenhum conteúdo da internet nem de outras empresas): Batalha de Ritmo
+(o Tucano DJ canta e o aluno responde com as setas; música composta na hora), Corrida Infinita, Mundo de Blocos
+(construir e quebrar, salvo no navegador), Empilha Blocos, Minhoca Faminha e Pingue-Coruja. O código fica em
+`src/lib/adventiscratch/fliperama/` e só é baixado quando alguém acha o segredo (chunk `adventiscratch-fliperama`).
+Os recordes ficam no `localStorage` do navegador.
 
 ## Detector de erros
 

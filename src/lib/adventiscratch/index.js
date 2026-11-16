@@ -4,6 +4,7 @@
  */
 import {AdventiscratchExtras} from './extras-extension.js';
 import {Adventiscratch3D, attach3DToVm, resetForNewProject} from './three-extension.js';
+import {AdventiscratchPlataforma2D} from './plataforma2d-extension.js';
 import {patchVmForAsp} from './asp-format.js';
 import {iniciarContas} from './conta/conta.js';
 import {aoCarregarProjeto, iniciarNuvem} from './conta/nuvem.js';
@@ -13,7 +14,8 @@ import {iniciarExemplos} from './exemplos.js';
 
 const EXTENSIONS = {
     adventiscratch: AdventiscratchExtras,
-    adventiscratch3d: Adventiscratch3D
+    adventiscratch3d: Adventiscratch3D,
+    adventiscratch2d: AdventiscratchPlataforma2D
 };
 
 /**

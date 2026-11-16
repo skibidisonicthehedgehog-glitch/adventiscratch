@@ -350,6 +350,57 @@
       </article>
     </section>
 
+    <section data-id="plataforma-2d" data-titulo="Jogo de plataforma 2D" data-nivel="iniciante" data-tempo="15 min" data-exemplo="coruja-saltitante">
+      <article>
+        <h3>A extensão Plataforma 2D</h3>
+        <p>Com ela você faz jogos de plataforma com atores normais: gravidade, pulo, chão, paredes e plataformas, sem precisar programar a física.</p>
+        <p>Clique no botão de extensões (canto de baixo, à esquerda) e escolha <b>Plataforma 2D</b>. Aparece a categoria laranja.</p>
+        <div class="dica azul"><b>Exemplo pronto</b>Abra a <b>Coruja Saltitante</b> na página de exemplos para ver tudo funcionando.</div>
+      </article>
+      <article>
+        <h3>Cada ator tem um tipo</h3>
+        <ul>
+          <li><b>personagem</b>: cai com a gravidade, anda, pula e bate nas coisas.</li>
+          <li><b>sólido</b>: chão, paredes e blocos. Ninguém atravessa.</li>
+          <li><b>plataforma</b>: dá para atravessar pulando por baixo e pousar em cima.</li>
+        </ul>
+        <div class="pilha">
+          <span class="bl eve chapeu">quando ⚑ for clicado</span>
+          <span class="bl p2">tornar este ator <span class="s">sólido ▾</span></span>
+        </div>
+        <p>Clones herdam o tipo: faça o chão uma vez e crie clones para montar a fase.</p>
+        <div class="dica"><b>Atenção</b>Atores escondidos não colidem. Para uma parede invisível, use o <b>efeito fantasma 100</b>.</div>
+      </article>
+      <article>
+        <h3>Controlando o personagem</h3>
+        <p>Um bloco só faz tudo: andar, pular, pulo duplo e descer das plataformas com a seta para baixo.</p>
+        <div class="pilha">
+          <span class="bl eve chapeu">quando ⚑ for clicado</span>
+          <span class="bl p2">tornar este ator <span class="s">personagem ▾</span></span>
+          <span class="bl p2">permitir <span class="s">1</span> pulos no ar</span>
+          <span class="bl ctl c">sempre
+            <span class="dentro"><span class="bl p2">controlar com <span class="s">setas e WASD ▾</span> velocidade <span class="s">5</span> pulo <span class="s">13</span></span></span><span class="fim"></span></span>
+        </div>
+        <p>Soltar a tecla de pulo cedo dá um pulinho mais baixo. Para deixar o personagem escorregadio (como no gelo), use <b>definir aceleração para 5 %</b>.</p>
+      </article>
+      <article>
+        <h3>Do seu jeito</h3>
+        <p>Quer controlar tudo? Use os blocos de velocidade e pulo:</p>
+        <div class="pilha">
+          <span class="bl ctl c">se <span class="h">tecla seta para cima pressionada?</span> então
+            <span class="dentro"><span class="bl p2">pular com força <span class="s">13</span></span></span><span class="fim"></span></span>
+          <span class="bl p2">definir velocidade <span class="s">x ▾</span> para <span class="s">5</span></span>
+        </div>
+        <p>Use <b>está no chão?</b>, <b>está caindo?</b> e <b>está encostado numa parede?</b> para trocar de fantasia. O bloco <b>quando este ator aterrissar</b> é ótimo para molas e efeitos:</p>
+        <div class="pilha">
+          <span class="bl p2 chapeu">quando este ator <span class="s">aterrissar ▾</span></span>
+          <span class="bl ctl c">se <span class="h"><span class="r">nome do que está embaixo</span> = Mola</span> então
+            <span class="dentro"><span class="bl p2">pular com força <span class="s">21</span></span></span><span class="fim"></span></span>
+        </div>
+        <div class="dica"><b>Desafios</b>• Mude a gravidade do mundo para -0,5 (fase na Lua!).<br>• Faça um inimigo que anda de um lado para o outro.<br>• Crie uma plataforma que sobe e desce.</div>
+      </article>
+    </section>
+
     <section data-id="plataforma" data-titulo="Jogo de plataforma 3D" data-nivel="avancado" data-tempo="30 min" data-exemplo="corrida-3d">
       <article>
         <h3>Corrida 3D</h3>

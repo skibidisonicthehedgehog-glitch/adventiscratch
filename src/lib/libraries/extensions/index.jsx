@@ -5,6 +5,8 @@ import adventiscratchIconURL from '../../adventiscratch/capa.png';
 import adventiscratchInsetIconURL from '../../adventiscratch/icone.svg';
 import adventiscratch3dIconURL from '../../adventiscratch/capa3d.png';
 import adventiscratch3dInsetIconURL from '../../adventiscratch/icone-3d.svg';
+import adventiscratch2dIconURL from '../../adventiscratch/capa2d.png';
+import adventiscratch2dInsetIconURL from '../../adventiscratch/icone-2d.svg';
 import musicIconURL from './music/music.png';
 import musicInsetIconURL from './music/music-small.svg';
 
@@ -65,6 +67,14 @@ export default [
         iconURL: adventiscratch3dIconURL,
         insetIconURL: adventiscratch3dInsetIconURL,
         description: 'Cenas 3D com formas, câmera, luzes e modelos .glb, .fbx, .obj, .stl, .dae e .ply.',
+        featured: true
+    },
+    {
+        name: 'Plataforma 2D',
+        extensionId: 'adventiscratch2d',
+        iconURL: adventiscratch2dIconURL,
+        insetIconURL: adventiscratch2dInsetIconURL,
+        description: 'Gravidade, pulo (e pulo duplo), chão, paredes e plataformas para jogos de plataforma.',
         featured: true
     },
     {

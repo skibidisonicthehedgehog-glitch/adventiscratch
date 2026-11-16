@@ -81,6 +81,8 @@ class Projeto:
         self.alvos[self.atual][bid] = b
         if opcode.startswith('adventiscratch3d_'):
             self.extensoes.add('adventiscratch3d')
+        elif opcode.startswith('adventiscratch2d_'):
+            self.extensoes.add('adventiscratch2d')
         elif opcode.startswith('adventiscratch_'):
             self.extensoes.add('adventiscratch')
         return bid
@@ -327,6 +329,26 @@ class Blocos:
         """Bloco da extensão Extras. O menu "modos" não aceita reporters: vira campo do próprio bloco."""
         campos = {nome: valor for nome, (menu, valor) in (menus or {}).items()}
         return self.p.b(f'adventiscratch_{opcode}', entradas, campos=campos, tipos=tipos or {})
+
+    def y_pos(self):
+        return self.p.b('motion_yposition')
+
+    def clone(self):
+        return self.p.b('control_create_clone_of',
+                        {'CLONE_OPTION': Menu('control_create_clone_of_menu', 'CLONE_OPTION', '_myself_')})
+
+    def quando_clone(self):
+        return self.p.b('control_start_as_clone')
+
+    def apague_clone(self):
+        return self.p.b('control_delete_this_clone')
+
+    def deslize(self, s, x, y):
+        return self.p.b('motion_glidesecstoxy', {'SECS': s, 'X': x, 'Y': y})
+
+    # Plataforma 2D: todos os menus da extensão são campos do próprio bloco (não aceitam reporters)
+    def p2(self, opcode, menus=None, tipos=None, **entradas):
+        return self.p.b(f'adventiscratch2d_{opcode}', entradas, campos=dict(menus or {}), tipos=tipos or {})
 
     # 3D
     # menus da extensão 3D que NÃO aceitam reporters: no Scratch eles são campos do próprio bloco
@@ -702,6 +724,112 @@ def corrida_3d():
     montar(p, 'corrida-3d.asp', [ator_jogo()])
 
 
+# ------------------------------------------------------------------ 6. Coruja Saltitante (Plataforma 2D)
+
+def svg_retangulo(l, a, cor, topo=None, raio=4):
+    faixa = f'<rect x="0" y="0" width="{l}" height="{min(6, a // 2)}" rx="{raio}" fill="{topo}"/>' if topo else ''
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{l}" height="{a}" viewBox="0 0 {l} {a}">'
+            f'<rect x="0" y="0" width="{l}" height="{a}" rx="{raio}" fill="{cor}"/>{faixa}</svg>').encode()
+
+
+MOLA_SVG = (b'<svg xmlns="http://www.w3.org/2000/svg" width="40" height="22" viewBox="0 0 40 22">'
+            b'<rect x="0" y="16" width="40" height="6" rx="2" fill="#555"/>'
+            b'<path d="M6 16 L34 12 L6 8 L34 4" fill="none" stroke="#999" stroke-width="3"/>'
+            b'<rect x="0" y="0" width="40" height="5" rx="2" fill="#E33"/></svg>')
+BANDEIRA_SVG = (b'<svg xmlns="http://www.w3.org/2000/svg" width="34" height="50" viewBox="0 0 34 50">'
+                b'<rect x="2" y="0" width="4" height="50" fill="#666"/>'
+                b'<path d="M6 2 L32 10 L6 19 Z" fill="#2CB24A"/></svg>')
+
+
+def coruja_saltitante():
+    p = Projeto()
+    k = Blocos(p)
+    p.var('estrelas', 0, {'x': 5, 'y': 5})
+    INICIO = (-200, -100)
+
+    p.alvo('Palco')
+    p.script(20, 20, k.bandeira(),
+             k.p2('gravidadeMundo', G=-1),
+             k.p2('usarBordas', menus={'MODO': 'paredes'}))
+    p.comentario(320, 20, 'Regras do mundo: gravidade -1 (puxa para baixo) e as bordas do palco viram paredes. '
+                          'Sem chão nas bordas, quem cair no buraco sai pela parte de baixo!')
+
+    p.alvo('Coruja Sabida')
+    p.script(20, 20,
+             k.bandeira(), k.va_para(*INICIO), k.tamanho(50), k.mude('estrelas', 0, 'num'),
+             k.p2('tornar', menus={'TIPO': 'personagem'}),
+             k.p2('pulosNoAr', N=1),
+             k.sempre(
+                 k.p2('controlar', menus={'TECLAS': 'ambos'}, V=5, F=13),
+                 k.se(k.menor(k.y_pos(), -170),
+                      k.va_para(*INICIO), k.p2('definirVel', menus={'EIXO': 'y'}, V=0),
+                      k.p2('definirVel', menus={'EIXO': 'x'}, V=0)),
+                 k.se(k.tocando('Bandeira'),
+                      k.diga(k.junte('Cheguei! Peguei ', k.v('estrelas'), ' estrelas!'))))
+             )
+    p.script(20, 980,
+             k.p2('quando', menus={'EVENTO': 'aterrissar'}),
+             k.se(k.igual(k.p2('nomeChao'), 'Mola'),
+                  k.p2('pular', F=21), k.toque_som('Pio')))
+    p.comentario(480, 20, 'O bloco "controlar com setas e WASD" faz tudo sozinho: anda, pula, pula de novo no ar '
+                          '(pulo duplo!) e desce das plataformas com a seta para baixo.\n'
+                          'Solte a tecla de pulo cedo para dar um pulinho mais baixo.\n\n'
+                          'Desafio: mude a velocidade 5 ou o pulo 13, ou "permitir 1 pulos no ar" para 0 ou 2.',
+                 360, 220)
+    p.comentario(480, 980, 'Quando a coruja pousa em cima da Mola, ela é lançada para cima.\n'
+                           '"nome do que está embaixo" diz em qual ator a coruja está pisando.', 360, 120)
+
+    p.alvo('Chão')
+    p.script(20, 20, k.bandeira(), k.mostre(),
+             k.p2('tornar', menus={'TIPO': 'solido'}),
+             k.va_para(-140, -160), k.clone(), k.va_para(140, -160))
+    p.comentario(320, 20, 'O chão é "sólido". O clone criado aqui herda o tipo, então os dois pedaços são chão. '
+                          'Entre eles fica um buraco!')
+
+    p.alvo('Plataforma')
+    p.script(20, 20, k.bandeira(), k.mostre(),
+             k.p2('tornar', menus={'TIPO': 'plataforma'}),
+             k.va_para(-130, -50), k.clone(), k.va_para(20, 15), k.clone(), k.va_para(-175, 90))
+    p.comentario(320, 20, 'Plataformas dão para atravessar pulando por baixo e pousar em cima. '
+                          'Para descer, aperte a seta para baixo.')
+
+    p.alvo('Elevador')
+    p.script(20, 20, k.bandeira(), k.va_para(80, 110),
+             k.p2('tornar', menus={'TIPO': 'solido'}),
+             k.sempre(k.deslize(2, 190, 110), k.deslize(2, 80, 110)))
+    p.comentario(320, 20, 'Um sólido que se move: quem estiver em cima anda junto!')
+
+    p.alvo('Mola')
+    p.script(20, 20, k.bandeira(), k.va_para(200, -131), k.p2('tornar', menus={'TIPO': 'solido'}))
+
+    p.alvo('Estrela')
+    posicoes = [(-130, -15), (20, 50), (-175, 125), (135, 150), (200, 60)]
+    criar = []
+    for (x, y) in posicoes:
+        criar += [k.va_para(x, y), k.clone()]
+    p.script(20, 20, k.bandeira(), k.esconda(), k.tamanho(60), *criar)
+    p.script(20, 420, k.quando_clone(), k.mostre(),
+             k.sempre(k.gire(4),
+                      k.se(k.tocando('Coruja Sabida'),
+                           k.adicione('estrelas', 1), k.toque_som('Pio'), k.apague_clone())))
+
+    p.alvo('Bandeira')
+    p.script(20, 20, k.bandeira(), k.va_para(-200, 122))
+
+    montar(p, 'coruja-saltitante.asp', [
+        coruja(x=INICIO[0], y=INICIO[1], tamanho=50),
+        {'nome': 'Chão', 'fantasias': [('chão', svg_retangulo(200, 40, '#A0521D', '#5BBF4A', 0), 100, 20)],
+         'x': 140, 'y': -160},
+        {'nome': 'Plataforma', 'fantasias': [('plataforma', svg_retangulo(100, 14, '#E8742C', '#F9B26B'), 50, 7)],
+         'x': -175, 'y': 90},
+        {'nome': 'Elevador', 'fantasias': [('elevador', svg_retangulo(80, 14, '#5A6CC8', '#9AA8F0'), 40, 7)],
+         'x': 80, 'y': 110},
+        {'nome': 'Mola', 'fantasias': [('mola', MOLA_SVG, 20, 11)], 'x': 200, 'y': -131},
+        {'nome': 'Estrela', 'fantasias': [('estrela', ESTRELA_SVG, 24, 24)], 'visivel': False},
+        {'nome': 'Bandeira', 'fantasias': [('bandeira', BANDEIRA_SVG, 4, 25)], 'x': -200, 'y': 122},
+    ])
+
+
 if __name__ == '__main__':
     print('Gerando exemplos em', SAIDA)
     coruja_coletora()
@@ -709,3 +837,4 @@ if __name__ == '__main__':
     mundo_3d()
     visualizador()
     corrida_3d()
+    coruja_saltitante()

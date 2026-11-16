@@ -137,6 +137,15 @@ class LibraryComponent extends React.Component {
         }
     }
     handleFilterChange (event) {
+        // Adventiscratch: segredo na busca de cenários
+        if (this.props.id === 'backdropLibrary' &&
+            event.target.value.trim().toUpperCase() === 'EASTEREGGSEARCHING') {
+            this.setState({filterQuery: ''});
+            import(/* webpackChunkName: "adventiscratch-fliperama" */ '../../lib/adventiscratch/fliperama/index.js')
+                .then(m => m.abrirFliperama());
+            this.handleClose();
+            return;
+        }
         if (this.state.playingItem === null) {
             this.setState({
                 filterQuery: event.target.value,
