@@ -9,6 +9,8 @@
  *  4. só os arquivos realmente usados são guardados no projeto (.asp).
  */
 import {MODEL_EXTENSIONS, addModel, extOf} from './model-store.js';
+import {obterEstado} from './conta/conta.js';
+import {abrirCentral} from './conta/telas-nuvem.js';
 
 const RESOURCE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'tga', 'mtl', 'bin'];
 const MAX_RESOURCE_BYTES = 50 * 1024 * 1024; // ignora arquivos auxiliares gigantes (50 MB)
@@ -361,12 +363,20 @@ const importFiles = async files => {
         const acao = r.replaced ? 'atualizado' : 'importado';
         return `<li><span class="ok">✓</span><span><b>${escapeHtml(r.name)}</b> ${acao} (${tex}${falta})</span></li>`;
     });
-    await showDialog({
+    const primeiro = results.find(r => !r.error);
+    const podePublicar = primeiro && obterEstado().fase === 'ok';
+    const fim = await showDialog({
         title: 'Importação concluída',
         html: `<ul>${linhas.join('')}</ul><p style="margin-top:10px">Use o bloco ` +
-            '<b>criar modelo … chamado …</b> para colocar o modelo na cena. Tudo fica salvo no arquivo .asp.</p>',
-        buttons: [{label: 'OK', value: 'ok', primary: true}]
+            '<b>criar modelo … chamado …</b> para colocar o modelo na cena. Tudo fica salvo no arquivo .asp.</p>' +
+            (podePublicar ? '<p>Foi você que criou este modelo? Você pode publicá-lo na <b>loja de modelos</b> ' +
+                'para todas as turmas usarem.</p>' : ''),
+        buttons: [
+            ...(podePublicar ? [{label: 'Publicar na loja…', value: 'publicar'}] : []),
+            {label: 'OK', value: 'ok', primary: true}
+        ]
     });
+    if (fim.value === 'publicar') abrirCentral('publicar', primeiro.name);
     return results;
 };
 

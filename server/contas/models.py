@@ -67,6 +67,7 @@ class CategoriaMotivo(models.TextChoices):
     COPIA = 'copia', 'Copiar trabalho de outra pessoa'
     BURLAR = 'burlar', 'Tentar burlar uma suspensão (outra conta)'
     SEGURANCA = 'seguranca', 'Risco à segurança da conta'
+    DIREITOS = 'direitos', 'Direitos autorais (conteúdo de outra pessoa ou empresa)'
     OUTRO = 'outro', 'Outro motivo'
 
 
@@ -193,6 +194,10 @@ class Denuncia(models.Model):
                                    verbose_name='denunciado')
     categoria = models.CharField('motivo', max_length=20, choices=CategoriaMotivo.choices)
     descricao = models.TextField('o que aconteceu', max_length=2000)
+    projeto = models.ForeignKey('conteudo.Projeto', on_delete=models.SET_NULL, null=True, blank=True,
+                                related_name='denuncias', verbose_name='projeto denunciado')
+    modelo = models.ForeignKey('conteudo.Modelo3D', on_delete=models.SET_NULL, null=True, blank=True,
+                               related_name='denuncias', verbose_name='modelo denunciado')
     status = models.CharField('situação', max_length=20, choices=StatusDenuncia.choices,
                               default=StatusDenuncia.ABERTA)
     criada_em = models.DateTimeField('criada em', auto_now_add=True)

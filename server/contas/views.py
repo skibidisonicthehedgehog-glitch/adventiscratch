@@ -180,6 +180,14 @@ def categorias(request):
                                         if c not in (CategoriaMotivo.BURLAR, CategoriaMotivo.SEGURANCA)]})
 
 
+@require_http_methods(['GET'])
+def config(request):
+    """Configurações que o editor precisa saber (sem login)."""
+    return JsonResponse({'nuvem': True, 'loja': True,
+                         'max_projeto_mb': settings.ADVENTISCRATCH_MAX_PROJETO_MB,
+                         'max_modelo_mb': settings.ADVENTISCRATCH_MAX_MODELO_MB})
+
+
 @csrf_exempt
 @require_http_methods(['POST'])
 @requer_login
@@ -188,7 +196,20 @@ def denunciar(request):
     if sancao_atual(autor):
         return erro('Contas suspensas não podem enviar denúncias.', status=403)
     dados = ler_json(request)
-    alvo = User.objects.filter(username=str(dados.get('usuario', '')).strip().lower()).first()
+    from conteudo.models import Modelo3D, Projeto
+    projeto = modelo = None
+    if dados.get('projeto'):
+        projeto = Projeto.objects.filter(id=dados.get('projeto')).first()
+        if not projeto:
+            return erro('Projeto não encontrado.', status=404)
+        alvo = projeto.dono
+    elif dados.get('modelo'):
+        modelo = Modelo3D.objects.filter(id=dados.get('modelo')).first()
+        if not modelo:
+            return erro('Modelo não encontrado.', status=404)
+        alvo = modelo.dono
+    else:
+        alvo = User.objects.filter(username=str(dados.get('usuario', '')).strip().lower()).first()
     if not alvo:
         return erro('Não encontrei esse usuário.', campo='usuario')
     if alvo == autor:
@@ -204,7 +225,7 @@ def denunciar(request):
                                        criada_em__gte=timezone.now() - timedelta(hours=1)).count()
     if recentes >= 5:
         return erro('Você já enviou várias denúncias na última hora. Tente mais tarde.', status=429)
-    Denuncia.objects.create(denunciante=autor, denunciado=alvo, categoria=categoria,
+    Denuncia.objects.create(denunciante=autor, denunciado=alvo, categoria=categoria, projeto=projeto, modelo=modelo,
                             descricao=descricao[:2000], status=StatusDenuncia.ABERTA)
     return JsonResponse({'ok': True}, status=201)
 

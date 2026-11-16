@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'contas',
+    'conteudo',
 ]
 
 MIDDLEWARE = [
@@ -123,6 +124,19 @@ if EDITOR_BUILD_DIR.exists():
     WHITENOISE_INDEX_FILE = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Arquivos enviados pelos alunos (projetos na nuvem, modelos da loja, miniaturas). Não são públicos:
+# só saem pela API, para quem está logado.
+MEDIA_ROOT = DATA_DIR / 'arquivos'
+MEDIA_URL = '/arquivos-internos/'
+FILE_UPLOAD_PERMISSIONS = 0o640
+ADVENTISCRATCH_MAX_PROJETO_MB = int(os.environ.get('ADVENTISCRATCH_MAX_PROJETO_MB', '50'))
+ADVENTISCRATCH_MAX_MODELO_MB = int(os.environ.get('ADVENTISCRATCH_MAX_MODELO_MB', '40'))
+ADVENTISCRATCH_MAX_PROJETOS = int(os.environ.get('ADVENTISCRATCH_MAX_PROJETOS', '100'))
+ADVENTISCRATCH_ENVIOS_POR_HORA = int(os.environ.get('ADVENTISCRATCH_ENVIOS_POR_HORA', '60'))
+# true = modelos novos da loja só aparecem depois que um moderador aprova
+ADVENTISCRATCH_APROVAR_MODELOS = env_bool('ADVENTISCRATCH_APROVAR_MODELOS', False)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
 
 # Atrás do Cloudflare Tunnel / proxy: confiar no cabeçalho de HTTPS
 if env_bool('ADVENTISCRATCH_ATRAS_DE_PROXY', False):

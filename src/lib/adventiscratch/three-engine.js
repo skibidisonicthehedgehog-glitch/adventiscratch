@@ -280,6 +280,40 @@ const normalize = object => {
     return inner;
 };
 
+/**
+ * Desenha uma miniatura (PNG) de um modelo, para a loja de modelos.
+ * @param {ArrayBuffer} data arquivo do modelo
+ * @param {string} ext extensão
+ * @param {object} resources texturas etc.
+ * @param {object} materialMaps texturas por material
+ * @returns {Promise<{png: Blob, animacoes: number}>} imagem e quantidade de animações
+ */
+export const renderMiniatura = async (data, ext, resources, materialMaps) => {
+    const modelo = await parseModel(data, ext, resources, materialMaps);
+    const renderer = new THREE.WebGLRenderer({antialias: true, alpha: false, preserveDrawingBuffer: true});
+    renderer.setSize(256, 256, false);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    const cena = new THREE.Scene();
+    cena.background = new THREE.Color(0xEEEAFB);
+    cena.add(new THREE.AmbientLight(0xffffff, 1.0));
+    const sol = new THREE.DirectionalLight(0xffffff, 2);
+    sol.position.set(3, 5, 4);
+    cena.add(sol);
+    const objeto = normalize(modelo.object);
+    cena.add(objeto);
+    const caixa = new THREE.Box3().setFromObject(objeto);
+    const centro = caixa.getCenter(new THREE.Vector3());
+    const tamanho = caixa.getSize(new THREE.Vector3()).length() || 2;
+    const camera = new THREE.PerspectiveCamera(35, 1, 0.01, 1000);
+    camera.position.set(centro.x + (tamanho * 0.9), centro.y + (tamanho * 0.45), centro.z + (tamanho * 1.3));
+    camera.lookAt(centro);
+    renderer.render(cena, camera);
+    const png = await new Promise(resolve => renderer.domElement.toBlob(resolve, 'image/png'));
+    renderer.dispose();
+    renderer.forceContextLoss();
+    return {png, animacoes: modelo.animations.length};
+};
+
 class Engine {
     /**
      * @param {Runtime} runtime runtime da VM do Scratch
@@ -291,7 +325,8 @@ class Engine {
         this.templates = new Map(); // nome do modelo importado -> Promise<{object, animations}>
         this.clock = new THREE.Clock();
 
-        this.renderer = new THREE.WebGLRenderer({antialias: true, alpha: true, preserveDrawingBuffer: false});
+        // preserveDrawingBuffer: permite tirar a miniatura do projeto com a cena 3D junto
+        this.renderer = new THREE.WebGLRenderer({antialias: true, alpha: true, preserveDrawingBuffer: true});
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
         this.renderer.setClearColor(0x000000, 0);
         const el = this.renderer.domElement;

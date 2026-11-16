@@ -193,13 +193,27 @@ class SancaoAdmin(admin.ModelAdmin):
 
 @admin.register(Denuncia)
 class DenunciaAdmin(admin.ModelAdmin):
-    list_display = ('denunciado', 'categoria', 'status_colorido', 'denunciante', 'criada_em', 'sancionar')
+    list_display = ('denunciado', 'tipo_alvo', 'categoria', 'status_colorido', 'denunciante', 'criada_em', 'sancionar')
     list_filter = ('status', 'categoria')
     search_fields = ('denunciado__username', 'denunciante__username', 'descricao')
-    readonly_fields = ('denunciante', 'denunciado', 'categoria', 'descricao', 'criada_em', 'historico')
-    fields = ('denunciado', 'historico', 'denunciante', 'categoria', 'descricao', 'criada_em',
+    readonly_fields = ('denunciante', 'denunciado', 'conteudo', 'categoria', 'descricao', 'criada_em', 'historico')
+    fields = ('denunciado', 'conteudo', 'historico', 'denunciante', 'categoria', 'descricao', 'criada_em',
               'status', 'nota_moderador', 'tratada_por')
+
+    @admin.display(description='conteúdo denunciado')
+    def conteudo(self, obj):
+        if obj.projeto_id:
+            return format_html('<a class="button" href="{}">Abrir projeto "{}"</a>',
+                               reverse('admin:conteudo_projeto_change', args=[obj.projeto_id]), obj.projeto.titulo)
+        if obj.modelo_id:
+            return format_html('<a class="button" href="{}">Abrir modelo "{}"</a>',
+                               reverse('admin:conteudo_modelo3d_change', args=[obj.modelo_id]), obj.modelo.titulo)
+        return 'Denúncia sobre o usuário (sem conteúdo específico)'
     actions = ['marcar_analise', 'descartar']
+
+    @admin.display(description='sobre')
+    def tipo_alvo(self, obj):
+        return 'Projeto' if obj.projeto_id else ('Modelo 3D' if obj.modelo_id else 'Usuário')
 
     @admin.display(description='situação')
     def status_colorido(self, obj):

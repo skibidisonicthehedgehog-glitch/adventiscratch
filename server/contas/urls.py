@@ -9,6 +9,7 @@ urlpatterns = [
     path('sair', views.sair),
     path('eu', views.eu),
     path('categorias', views.categorias),
+    path('config', views.config),
     path('advertencias/<int:sancao_id>/ciente', views.advertencia_ciente),
     path('denuncias', views.denunciar),
     path('recursos', views.pedir_revisao),

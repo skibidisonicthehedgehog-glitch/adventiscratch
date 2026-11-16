@@ -5,6 +5,10 @@ import React from 'react';
 
 import {abrirDenuncia, abrirLogin, aoMudar, obterEstado, sair} from '../../lib/adventiscratch/conta/conta.js';
 import {painelModeracao} from '../../lib/adventiscratch/conta/api.js';
+import {aoMudarNuvem, obterNuvem} from '../../lib/adventiscratch/conta/nuvem.js';
+import {abrirCentral, salvarRapido} from '../../lib/adventiscratch/conta/telas-nuvem.js';
+
+const horario = d => (d ? d.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'}) : '');
 
 const estilos = {
     raiz: {position: 'relative', display: 'flex', alignItems: 'center', height: '100%', padding: '0 0.5rem'},
@@ -17,6 +21,8 @@ const estilos = {
         width: '1.6rem', height: '1.6rem', borderRadius: '50%', background: '#FFD54A', color: '#1E1B3A',
         display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.8rem'
     },
+    salvar: {background: '#FFD54A', color: '#1E1B3A', padding: '0.3rem 0.8rem', marginRight: '0.4rem'},
+    status: {color: 'rgba(255,255,255,0.85)', fontSize: '0.72rem', marginRight: '0.5rem', whiteSpace: 'nowrap'},
     menu: {
         position: 'absolute', top: '100%', right: '0.5rem', background: '#fff', color: '#1E1B3A',
         borderRadius: '12px', boxShadow: '0 12px 30px rgba(0,0,0,0.25)', minWidth: '14rem', padding: '0.4rem',
@@ -33,16 +39,18 @@ const estilos = {
 class AdventiscratchConta extends React.Component {
     constructor (props) {
         super(props);
-        this.state = {conta: obterEstado(), aberto: false};
+        this.state = {conta: obterEstado(), nuvem: obterNuvem(), aberto: false};
         this.fecharFora = this.fecharFora.bind(this);
         this.raiz = React.createRef();
     }
     componentDidMount () {
         this.desligar = aoMudar(conta => this.setState({conta: {...conta}}));
+        this.desligarNuvem = aoMudarNuvem(nuvem => this.setState({nuvem}));
         document.addEventListener('mousedown', this.fecharFora);
     }
     componentWillUnmount () {
         if (this.desligar) this.desligar();
+        if (this.desligarNuvem) this.desligarNuvem();
         document.removeEventListener('mousedown', this.fecharFora);
     }
     fecharFora (e) {
@@ -71,11 +79,24 @@ class AdventiscratchConta extends React.Component {
         }
         const {conta} = situacao;
         const painel = painelModeracao();
+        const n = this.state.nuvem;
+        let status = '';
+        if (n.salvando) status = 'Salvando…';
+        else if (n.erro) status = 'Erro ao salvar';
+        else if (n.projetoId && n.alterado) status = 'Alterações não salvas';
+        else if (n.salvoEm) status = `Salvo às ${horario(n.salvoEm)}`;
         return (
             <div
                 ref={this.raiz}
                 style={estilos.raiz}
             >
+                {status && <span style={estilos.status}>{status}</span>}
+                <button
+                    disabled={n.salvando}
+                    style={{...estilos.botao, ...estilos.salvar}}
+                    title={n.projetoId ? 'Salvar na nuvem' : 'Salvar este projeto na nuvem'}
+                    onClick={salvarRapido}
+                >{'☁ Salvar'}</button>
                 <button
                     aria-expanded={this.state.aberto}
                     style={estilos.botao}
@@ -95,6 +116,21 @@ class AdventiscratchConta extends React.Component {
                             <div style={{color: '#6B7280'}}>{`@${conta.usuario}`}</div>
                             {conta.turma && <div style={{color: '#6B7280'}}>{`Turma: ${conta.turma}`}</div>}
                         </div>
+                        <button
+                            role="menuitem"
+                            style={estilos.item}
+                            onClick={this.acao(() => abrirCentral('meus'))}
+                        >{'📁 Meus projetos na nuvem'}</button>
+                        <button
+                            role="menuitem"
+                            style={estilos.item}
+                            onClick={this.acao(() => abrirCentral('explorar'))}
+                        >{'🌎 Explorar projetos'}</button>
+                        <button
+                            role="menuitem"
+                            style={estilos.item}
+                            onClick={this.acao(() => abrirCentral('loja'))}
+                        >{'🧩 Loja de modelos'}</button>
                         <button
                             role="menuitem"
                             style={estilos.item}

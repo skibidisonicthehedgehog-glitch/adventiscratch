@@ -72,6 +72,25 @@ A cena 3D é desenhada por cima do palco do Scratch. Com fundo transparente, os 
 dos objetos 3D. Modelos são ajustados automaticamente para caber em ~2 unidades e ficar com a base no chão.
 O Three.js é carregado só quando um bloco 3D é usado, então o editor não fica mais lento.
 
+## Nuvem, galeria e loja de modelos
+
+- **☁ Salvar** (barra do editor): salva o projeto no servidor; depois, cada clique atualiza o mesmo projeto e o
+  editor salva sozinho a cada 2 minutos. "Meus projetos na nuvem" abre, compartilha e apaga.
+- **Explorar projetos**: projetos compartilhados por **todas as turmas**. Abrir o projeto de outra pessoa e
+  salvar cria um **remix** (cópia sua, ligada ao original).
+- **Loja de modelos** (menu da conta ou botão "🧩 Loja de modelos…" na categoria 3D): modelos 3D publicados por
+  qualquer aluno, com texturas e miniatura. "Adicionar ao projeto" coloca o modelo no projeto atual.
+  Para publicar: importe o modelo e use "Publicar modelo" (ou o botão na janela de importação). É obrigatório
+  escolher a licença e confirmar autoria/permissão; modelos de jogos/filmes de outras empresas não são aceitos.
+- Tudo exige login e só é visível para quem está logado neste servidor. Cartões mostram só o nome de exibição.
+- **Moderação**: denúncias de projeto/modelo (inclui "direitos autorais"); no painel, "Projetos" e "Modelos 3D da
+  loja" têm prévia, download para conferir e as ações Ocultar/Publicar (o dono vê a "nota da moderação").
+  Conteúdo de contas com suspensão indefinida/permanente sai das listas automaticamente.
+- Arquivos ficam em `server/dados/arquivos` (no Docker, no volume `dados`). Limites ajustáveis no `.env`:
+  `ADVENTISCRATCH_MAX_PROJETO_MB` (50), `ADVENTISCRATCH_MAX_MODELO_MB` (40), `ADVENTISCRATCH_MAX_PROJETOS` (100 por
+  aluno), `ADVENTISCRATCH_ENVIOS_POR_HORA` (60) e `ADVENTISCRATCH_APROVAR_MODELOS=true` (modelos novos só
+  aparecem depois de aprovados).
+
 ## Tutoriais e exemplos
 
 - **`tutoriais.html`**: 9 lições interativas em português (primeiros passos, jogo 2D, Extras, mundo 3D, modelos e

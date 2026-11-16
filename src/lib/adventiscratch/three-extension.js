@@ -12,6 +12,7 @@ const B = {COMMAND: 'command', REPORTER: 'reporter', BOOLEAN: 'Boolean', BUTTON:
 
 export const IMPORT_MODEL_CALLBACK = 'ADVENTISCRATCH_IMPORT_MODEL';
 export const IMPORT_FOLDER_CALLBACK = 'ADVENTISCRATCH_IMPORT_FOLDER';
+export const STORE_CALLBACK = 'ADVENTISCRATCH_MODEL_STORE';
 
 const num = v => {
     const n = Number(v);
@@ -80,6 +81,7 @@ class Adventiscratch3D {
             blocks: [
                 {func: IMPORT_MODEL_CALLBACK, blockType: B.BUTTON, text: 'Importar modelo 3D…'},
                 {func: IMPORT_FOLDER_CALLBACK, blockType: B.BUTTON, text: 'Importar pasta do modelo (com texturas)…'},
+                {func: STORE_CALLBACK, blockType: B.BUTTON, text: '🧩 Loja de modelos…'},
                 '---',
                 {opcode: 'ligar', blockType: B.COMMAND, text: 'ligar o 3D'},
                 {opcode: 'desligar', blockType: B.COMMAND, text: 'desligar o 3D'},

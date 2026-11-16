@@ -5,8 +5,9 @@ import makeToolboxXML from '../lib/make-toolbox-xml';
 import PropTypes from 'prop-types';
 import React from 'react';
 import {
-    IMPORT_MODEL_CALLBACK, IMPORT_FOLDER_CALLBACK, importModelFromComputer, importModelFromFolder
+    IMPORT_MODEL_CALLBACK, IMPORT_FOLDER_CALLBACK, STORE_CALLBACK, importModelFromComputer, importModelFromFolder
 } from '../lib/adventiscratch/three-extension.js';
+import {abrirCentral} from '../lib/adventiscratch/conta/telas-nuvem.js';
 import {definirWorkspaceDetector} from '../lib/adventiscratch/detector-erros.js';
 import VMScratchBlocks from '../lib/blocks';
 import VM from 'scratch-vm';
@@ -127,6 +128,7 @@ class Blocks extends React.Component {
         // Adventiscratch: botão "Importar modelo 3D…" da extensão 3D
         toolboxWorkspace.registerButtonCallback(IMPORT_MODEL_CALLBACK, importModelFromComputer);
         toolboxWorkspace.registerButtonCallback(IMPORT_FOLDER_CALLBACK, importModelFromFolder);
+        toolboxWorkspace.registerButtonCallback(STORE_CALLBACK, () => abrirCentral('loja'));
         // Adventiscratch: detector de erros (brilho vermelho + ⚠ nos blocos com problema)
         definirWorkspaceDetector(this.workspace);
 

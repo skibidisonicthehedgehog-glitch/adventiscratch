@@ -10,7 +10,7 @@ export const esc = s => String(s === null || typeof s === 'undefined' ? '' : s).
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
 }[c]));
 
-const injetarEstilo = () => {
+export const injetarEstilo = () => {
     if (document.getElementById(ESTILO_ID)) return;
     const st = document.createElement('style');
     st.id = ESTILO_ID;
@@ -81,7 +81,7 @@ export const fecharTela = () => {
     }
 };
 
-const abrirTela = (html, classe = '') => {
+export const abrirTela = (html, classe = '') => {
     injetarEstilo();
     fecharTela();
     const tela = document.createElement('div');
@@ -96,7 +96,7 @@ const abrirTela = (html, classe = '') => {
     return tela;
 };
 
-const mostrarErro = (tela, erro) => {
+export const mostrarErro = (tela, erro) => {
     const caixa = tela.querySelector('.adv-msg-erro');
     tela.querySelectorAll('.adv-campo.erro').forEach(c => c.classList.remove('erro'));
     if (!erro) {
@@ -110,13 +110,14 @@ const mostrarErro = (tela, erro) => {
     if (erro.campo) {
         const campo = tela.querySelector(`[name="${erro.campo}"]`);
         if (campo) {
-            campo.closest('.adv-campo').classList.add('erro');
+            const caixa = campo.closest('.adv-campo');
+            if (caixa) caixa.classList.add('erro');
             campo.focus();
         }
     }
 };
 
-const ocupado = async (botao, fn) => {
+export const ocupado = async (botao, fn) => {
     const texto = botao.textContent;
     botao.disabled = true;
     botao.textContent = 'Aguarde…';

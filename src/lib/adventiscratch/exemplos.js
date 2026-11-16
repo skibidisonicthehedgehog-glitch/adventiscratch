@@ -15,6 +15,13 @@ export const iniciarExemplos = vm => {
             const resposta = await fetch(`static/exemplos/${nome}.asp`);
             if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`);
             await vm.loadProject(await resposta.arrayBuffer());
+            // mostra o código: seleciona o ator (ou o palco) que tem mais blocos
+            setTimeout(() => {
+                const alvos = vm.runtime.targets.filter(t => t.isOriginal);
+                const maior = alvos.reduce((a, t) => (Object.keys(t.blocks._blocks).length >
+                    Object.keys(a.blocks._blocks).length ? t : a), alvos[0]);
+                if (maior && vm.editingTarget !== maior) vm.setEditingTarget(maior.id);
+            }, 400);
             document.title = `Adventiscratch – Exemplo: ${nome.replace(/-/g, ' ')}`;
         } catch (e) {
             // eslint-disable-next-line no-alert

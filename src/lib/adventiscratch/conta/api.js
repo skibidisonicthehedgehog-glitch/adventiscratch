@@ -76,3 +76,71 @@ export const chamar = async (caminho, opcoes = {}) => {
     }
     return dados;
 };
+
+const cabecalhoAuth = () => {
+    const token = lerToken();
+    return token ? {Authorization: `Token ${token}`} : {};
+};
+
+const tratarResposta = async resposta => {
+    if (resposta.ok) return resposta;
+    let dados = {};
+    try {
+        dados = await resposta.json();
+    } catch (e) { /* sem JSON */ }
+    throw new ErroApi(dados.erro || `Erro ${resposta.status} no servidor.`, resposta.status, dados.campo);
+};
+
+/**
+ * Envia arquivos (multipart/form-data).
+ * @param {string} caminho ex.: '/projetos'
+ * @param {object} campos nome -> texto, Blob ou {blob, nome}
+ * @returns {Promise<object>} resposta em JSON
+ */
+export const enviarArquivos = async (caminho, campos) => {
+    const base = apiBase();
+    if (!base) throw new ErroApi('Contas desligadas.', 0);
+    const form = new FormData();
+    Object.entries(campos).forEach(([nome, valor]) => {
+        if (valor === null || typeof valor === 'undefined') return;
+        if (valor && valor.blob) form.append(nome, valor.blob, valor.nome);
+        else if (valor instanceof Blob) form.append(nome, valor, nome);
+        else form.append(nome, String(valor));
+    });
+    let resposta;
+    try {
+        resposta = await fetch(base + caminho, {method: 'POST', headers: cabecalhoAuth(), body: form});
+    } catch (e) {
+        throw new ErroApi('Não foi possível conectar ao servidor do Adventiscratch.', 0);
+    }
+    await tratarResposta(resposta);
+    return resposta.json();
+};
+
+/** Baixa um arquivo da API como ArrayBuffer. */
+export const baixarBinario = async caminho => {
+    const base = apiBase();
+    if (!base) throw new ErroApi('Contas desligadas.', 0);
+    let resposta;
+    try {
+        resposta = await fetch(base + caminho, {headers: cabecalhoAuth()});
+    } catch (e) {
+        throw new ErroApi('Não foi possível conectar ao servidor do Adventiscratch.', 0);
+    }
+    await tratarResposta(resposta);
+    return resposta.arrayBuffer();
+};
+
+const cacheImagens = new Map();
+
+/** URL local (blob:) de uma imagem protegida por login, como as miniaturas. Guarda em cache. */
+export const urlImagem = caminho => {
+    if (!cacheImagens.has(caminho)) {
+        cacheImagens.set(caminho, baixarBinario(caminho)
+            .then(buf => URL.createObjectURL(new Blob([buf], {type: 'image/png'})))
+            .catch(() => ''));
+    }
+    return cacheImagens.get(caminho);
+};
+
+export const esquecerImagem = caminho => cacheImagens.delete(caminho);

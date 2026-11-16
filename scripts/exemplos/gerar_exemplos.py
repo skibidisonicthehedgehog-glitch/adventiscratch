@@ -95,7 +95,7 @@ class Projeto:
         """Transforma um valor Python numa entrada do Scratch e liga o pai."""
         blocos = self.alvos[self.atual]
         if isinstance(valor, Menu):
-            sid = self._bloco(valor.opcode, fields={valor.campo: [valor.valor, None]}, sombra=True)
+            sid = self._bloco(valor.opcode, fields={valor.campo: [valor.valor, valor.vid]}, sombra=True)
             blocos[sid]['parent'] = pai
             return [1, sid]
         if isinstance(valor, Cor):
@@ -166,8 +166,8 @@ class Pilha:
 
 
 class Menu:
-    def __init__(self, opcode, campo, valor):
-        self.opcode, self.campo, self.valor = opcode, campo, valor
+    def __init__(self, opcode, campo, valor, vid=None):
+        self.opcode, self.campo, self.valor, self.vid = opcode, campo, valor, vid
 
 
 class Cor:
@@ -194,7 +194,8 @@ class Blocos:
         return self.p.b('event_whenbroadcastreceived', campos={'BROADCAST_OPTION': [nome, self.p.msg(nome)]})
 
     def envie(self, nome):
-        return self.p.b('event_broadcast', {'BROADCAST_INPUT': Menu('event_broadcast_menu', 'BROADCAST_OPTION', nome)})
+        return self.p.b('event_broadcast', {'BROADCAST_INPUT': Menu('event_broadcast_menu', 'BROADCAST_OPTION', nome,
+                                                                    self.p.msg(nome))})
 
     # controle
     def sempre(self, *corpo):
@@ -323,17 +324,24 @@ class Blocos:
 
     # Extras Adventiscratch
     def x(self, opcode, menus=None, tipos=None, **entradas):
-        entradas = dict(entradas)
-        for nome, (menu, valor) in (menus or {}).items():
-            entradas[nome] = Menu(f'adventiscratch_menu_{menu}', menu, valor)
-        return self.p.b(f'adventiscratch_{opcode}', entradas, tipos=tipos or {})
+        """Bloco da extensão Extras. O menu "modos" não aceita reporters: vira campo do próprio bloco."""
+        campos = {nome: valor for nome, (menu, valor) in (menus or {}).items()}
+        return self.p.b(f'adventiscratch_{opcode}', entradas, campos=campos, tipos=tipos or {})
 
     # 3D
+    # menus da extensão 3D que NÃO aceitam reporters: no Scratch eles são campos do próprio bloco
+    MENUS_CAMPO_3D = {'eixos', 'mostrar', 'propriedades', 'infoAnimacao', 'luzes', 'tiposFisica', 'eixosVel',
+                      'infoTexturas'}
+
     def d(self, opcode, menus=None, tipos=None, **entradas):
         """Bloco da extensão 3D. menus: ARG -> (nome_do_menu, valor). Cores: use Cor('#hex')."""
         entradas = dict(entradas)
         tipos = dict(tipos or {})
+        campos = {}
         for nome, (menu, valor) in (menus or {}).items():
+            if menu in self.MENUS_CAMPO_3D:
+                campos[nome] = valor
+                continue
             m = Menu(f'adventiscratch3d_menu_{menu}', menu, valor)
             if isinstance(entradas.get(nome), Bloco):
                 tipos[nome] = m  # reporter encaixado num menu que aceita reporters
@@ -342,12 +350,18 @@ class Blocos:
         for nome, valor in entradas.items():
             if isinstance(valor, str) and nome not in tipos:
                 tipos[nome] = 'txt'
-        return self.p.b(f'adventiscratch3d_{opcode}', entradas, tipos=tipos)
+        return self.p.b(f'adventiscratch3d_{opcode}', entradas, campos=campos, tipos=tipos)
 
 
 # ------------------------------------------------------------------ montagem do arquivo .asp
 
 ESTRELA_SVG = ler(os.path.join(os.path.dirname(__file__), 'estrela.svg'))
+JOGO_SVG = ler(os.path.join(os.path.dirname(__file__), 'jogo.svg'))
+
+
+def ator_jogo():
+    """Ator invisível que guarda o código dos exemplos 3D (abre selecionado no editor)."""
+    return {'nome': 'Jogo', 'fantasias': [('controle', JOGO_SVG, 32, 24)], 'visivel': False}
 
 
 def fantasia(nome, arquivo_svg, dados, cx, cy):
@@ -482,7 +496,7 @@ def calculadora():
 def mundo_3d():
     p = Projeto()
     k = Blocos(p)
-    p.alvo('Palco')
+    p.alvo('Jogo')
     t = lambda: k.p.b('sensing_timer')  # noqa: E731
     p.script(20, 20,
              k.bandeira(),
@@ -510,7 +524,7 @@ def mundo_3d():
     p.comentario(420, 20, 'Mundo 3D: cria formas, pinta, gira e faz a câmera dar a volta usando seno e cosseno '
                           'do cronômetro.\nESPAÇO apaga o sol, L acende de novo.\nDesafio: crie uma cápsula e '
                           'faça ela pular!')
-    montar(p, 'mundo-3d.asp', [coruja(visivel=False)])
+    montar(p, 'mundo-3d.asp', [ator_jogo()])
 
 
 # ------------------------------------------------------------------ 4. Visualizador de modelos
@@ -525,7 +539,7 @@ def visualizador():
     p.var('número do modelo', 1)
     p.var('zoom', 5)
     p.var('girando', 1)
-    p.alvo('Palco')
+    p.alvo('Jogo')
 
     carregar = [
         k.d('apagar', NOME='modelo'),
@@ -577,7 +591,7 @@ def visualizador():
                            '"Importar modelo 3D…" da categoria 3D.\n2) Clique na bandeira.\n\n'
                            '← → giram a câmera   ↑ ↓ zoom\nESPAÇO para/continua a rotação\n'
                            'A = próxima animação   N = próximo modelo   T = mostra as texturas', 360, 260)
-    montar(p, 'visualizador-modelos.asp', [coruja(visivel=False)])
+    montar(p, 'visualizador-modelos.asp', [ator_jogo()])
 
 
 # ------------------------------------------------------------------ 5. Corrida 3D (plataforma)
@@ -596,7 +610,7 @@ def corrida_3d():
     p.var('animação correndo', 2)
     p.var('animação pulando', 3)
     p.var('velocidade', 9)
-    p.alvo('Palco')
+    p.alvo('Jogo')
 
     def caixa(nome, x, y, z, cor, tipo='solido'):
         return [k.d('criarForma', menus={'FORMA': ('formas', 'cubo')}, NOME=nome),
@@ -685,7 +699,7 @@ def corrida_3d():
              k.sempre(*pegar,
                       k.se(k.igual(k.v('anéis'), len(ANEIS)),
                            k.mude('mensagem', 'Você pegou todos os anéis! Parabéns!'))))
-    montar(p, 'corrida-3d.asp', [coruja(visivel=False)])
+    montar(p, 'corrida-3d.asp', [ator_jogo()])
 
 
 if __name__ == '__main__':
