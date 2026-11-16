@@ -700,7 +700,7 @@ class MenuBar extends React.Component {
                             className={
                                 classNames(styles.menuBarItem, styles.noOffset, styles.hoverable, 'tutorials-button')
                             }
-                            onClick={this.props.onOpenTipLibrary}
+                            onClick={() => window.open('tutoriais.html', '_blank', 'noopener')}
                         >
                             <img
                                 className={styles.helpIcon}

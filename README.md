@@ -72,6 +72,20 @@ A cena 3D é desenhada por cima do palco do Scratch. Com fundo transparente, os 
 dos objetos 3D. Modelos são ajustados automaticamente para caber em ~2 unidades e ficar com a base no chão.
 O Three.js é carregado só quando um bloco 3D é usado, então o editor não fica mais lento.
 
+## Tutoriais e exemplos
+
+- **`tutoriais.html`**: 9 lições interativas em português (primeiros passos, jogo 2D, Extras, mundo 3D, modelos e
+  texturas, jogo de plataforma 3D, detector de erros, salvar/entregar, conta e regras). Desenhos dos blocos em HTML/CSS,
+  progresso salvo no navegador, link direto para cada passo (`tutoriais.html#plataforma/3`). O botão "Tutoriais" do
+  editor abre esta página. O conteúdo fica em `src/playground/tutoriais.html` (cada `<section>` é uma lição e cada
+  `<article>` é um passo).
+- **`exemplos.html`**: 5 projetos prontos que abrem no editor com um clique (`editor.html?exemplo=nome`):
+  Coruja Coletora (2D), Calculadora da Coruja (Extras), Mundo 3D, Visualizador de Modelos e Corrida 3D (plataforma
+  com física, câmera em 3ª pessoa e animações por estado). A Corrida 3D e o Visualizador usam **o modelo que o
+  aluno importar**.
+- Os exemplos são gerados por `python scripts/exemplos/gerar_exemplos.py` (saem em `static/exemplos/*.asp`).
+  Para mudar um exemplo, edite a função dele no script e rode de novo.
+
 ## Detector de erros
 
 O editor analisa os blocos do ator em edição e marca os problemas: **vermelho** = erro, **laranja** = aviso,

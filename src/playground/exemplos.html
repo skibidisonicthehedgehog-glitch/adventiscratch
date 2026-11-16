@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Exemplos – Adventiscratch</title>
+  <meta name="description" content="Projetos de exemplo do Adventiscratch para abrir, jogar e modificar.">
+  <link rel="icon" href="static/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="static/adventiscratch/paginas.css">
+  <style>
+    .grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 22px; padding: 30px 0 60px; }
+    .cartao { background: #fff; border-radius: var(--raio); box-shadow: var(--sombra); overflow: hidden; display: flex; flex-direction: column; }
+    .capa { height: 150px; display: grid; place-items: center; font-size: 4rem; position: relative; }
+    .capa .selo { position: absolute; top: 12px; left: 12px; }
+    .corpo { padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+    .corpo h2 { color: var(--tinta); font-size: 1.25rem; font-weight: 900; line-height: 1.2; }
+    .corpo p { font-size: .96rem; }
+    .controles { font-size: .86rem; color: #6B6790; }
+    .aprende { display: flex; flex-wrap: wrap; gap: 6px; }
+    .aprende span { background: #F4F1FD; color: var(--roxo-escuro); border-radius: 999px; padding: 2px 10px; font-size: .78rem; font-weight: 700; }
+    .acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; padding-top: 6px; }
+    .destaque { background: #FFF7DB; border: 2px solid #FFE08A; border-radius: var(--raio); padding: 18px 22px; margin-top: 26px; }
+    .destaque h2 { color: var(--tinta); font-size: 1.15rem; font-weight: 900; margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+  <header class="topo">
+    <nav class="container" aria-label="Principal">
+      <a class="marca" href="index.html"><img src="static/adventiscratch/logo.svg" alt="Adventiscratch – início"></a>
+      <ul>
+        <li><a href="index.html">Início</a></li>
+        <li><a href="tutoriais.html">Tutoriais</a></li>
+        <li><a class="ativo" href="exemplos.html">Exemplos</a></li>
+        <li><a class="criar" href="editor.html">Criar</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <div class="cabecalho">
+    <div class="container">
+      <h1>Projetos de exemplo</h1>
+      <p>Abra, jogue, olhe os blocos e modifique. Cada exemplo tem comentários explicando o código e desafios para você tentar.</p>
+    </div>
+  </div>
+
+  <main class="container">
+    <div class="destaque">
+      <h2>🎮 Use o seu próprio personagem 3D</h2>
+      <p>A <b>Corrida 3D</b> e o <b>Visualizador de Modelos</b> usam o modelo que você importar (.glb, .fbx, .obj…).
+        Abra o exemplo, vá na categoria <b>3D</b>, clique em <b>Importar modelo 3D…</b> (selecione o modelo junto com as texturas)
+        e clique na bandeira. Seu personagem vira o herói do jogo, com câmera, física e animações.</p>
+    </div>
+
+    <div class="grade">
+      <article class="cartao">
+        <div class="capa" style="background:linear-gradient(135deg,#FFE9A8,#FFC94A)"><span class="selo iniciante">Iniciante</span>⭐🦉</div>
+        <div class="corpo">
+          <h2>Coruja Coletora</h2>
+          <p>Voe com a coruja e pegue o máximo de estrelas em 30 segundos.</p>
+          <p class="controles">🎮 Setas do teclado</p>
+          <div class="aprende"><span>variáveis</span><span>sensor de toque</span><span>mensagens</span><span>cronômetro</span></div>
+          <div class="acoes">
+            <a class="botao primario" href="editor.html?exemplo=coruja-coletora">▶ Abrir no editor</a>
+            <a class="botao leve" href="tutoriais.html#coletora/1">Tutorial</a>
+            <a class="botao leve" href="static/exemplos/coruja-coletora.asp" download>Baixar .asp</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="cartao">
+        <div class="capa" style="background:linear-gradient(135deg,#E3DAFF,#B9A6F5)"><span class="selo iniciante">Iniciante</span>🧮</div>
+        <div class="corpo">
+          <h2>Calculadora da Coruja</h2>
+          <p>A coruja pergunta dois números e mostra potência, raiz, comparação, maiúsculas e a data de hoje.</p>
+          <p class="controles">⌨️ Responda às perguntas no palco</p>
+          <div class="aprende"><span>Extras Adventiscratch</span><span>perguntar e responder</span><span>juntar textos</span></div>
+          <div class="acoes">
+            <a class="botao primario" href="editor.html?exemplo=calculadora-coruja">▶ Abrir no editor</a>
+            <a class="botao leve" href="tutoriais.html#extras/1">Tutorial</a>
+            <a class="botao leve" href="static/exemplos/calculadora-coruja.asp" download>Baixar .asp</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="cartao">
+        <div class="capa" style="background:linear-gradient(135deg,#BDEBFF,#7FD3C6)"><span class="selo intermediario">Intermediário</span>🧊🟠🍩</div>
+        <div class="corpo">
+          <h2>Mundo 3D</h2>
+          <p>Cubo, esfera, rosca e cone num mundo 3D com a câmera dando a volta. A bola flutua usando seno.</p>
+          <p class="controles">🎮 Espaço apaga o sol, L acende</p>
+          <div class="aprende"><span>formas 3D</span><span>câmera</span><span>luzes</span><span>seno e cosseno</span></div>
+          <div class="acoes">
+            <a class="botao primario" href="editor.html?exemplo=mundo-3d">▶ Abrir no editor</a>
+            <a class="botao leve" href="tutoriais.html#mundo-3d/1">Tutorial</a>
+            <a class="botao leve" href="static/exemplos/mundo-3d.asp" download>Baixar .asp</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="cartao">
+        <div class="capa" style="background:linear-gradient(135deg,#2B2752,#5B3FA8);color:#fff"><span class="selo intermediario">Intermediário</span>🔍🗿</div>
+        <div class="corpo">
+          <h2>Visualizador de Modelos</h2>
+          <p>Teste qualquer modelo 3D: gire, dê zoom, veja as animações uma por uma e confira as texturas.</p>
+          <p class="controles">🎮 ← → câmera · ↑ ↓ zoom · A animação · N modelo · T texturas · Espaço pausa</p>
+          <div class="aprende"><span>importar modelos</span><span>animações</span><span>texturas</span></div>
+          <div class="acoes">
+            <a class="botao primario" href="editor.html?exemplo=visualizador-modelos">▶ Abrir no editor</a>
+            <a class="botao leve" href="tutoriais.html#modelos/1">Tutorial</a>
+            <a class="botao leve" href="static/exemplos/visualizador-modelos.asp" download>Baixar .asp</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="cartao">
+        <div class="capa" style="background:linear-gradient(135deg,#8FD3FF,#4CAF50)"><span class="selo avancado">Avançado</span>🏃💍</div>
+        <div class="corpo">
+          <h2>Corrida 3D</h2>
+          <p>Jogo de plataforma em terceira pessoa: corra, pule nas plataformas, suba a rampa e pegue os 6 anéis. Use o seu personagem!</p>
+          <p class="controles">🎮 Setas/WASD andam · Espaço pula · X corre · Q E giram a câmera</p>
+          <div class="aprende"><span>física 3D</span><span>câmera em 3ª pessoa</span><span>animações por estado</span><span>colisão</span></div>
+          <div class="acoes">
+            <a class="botao primario" href="editor.html?exemplo=corrida-3d">▶ Abrir no editor</a>
+            <a class="botao leve" href="tutoriais.html#plataforma/1">Tutorial</a>
+            <a class="botao leve" href="static/exemplos/corrida-3d.asp" download>Baixar .asp</a>
+          </div>
+        </div>
+      </article>
+    </div>
+  </main>
+</body>
+</html>

@@ -7,6 +7,7 @@ import {Adventiscratch3D, attach3DToVm, resetForNewProject} from './three-extens
 import {patchVmForAsp} from './asp-format.js';
 import {iniciarContas} from './conta/conta.js';
 import {iniciarDetector} from './detector-erros.js';
+import {iniciarExemplos} from './exemplos.js';
 
 const EXTENSIONS = {
     adventiscratch: AdventiscratchExtras,
@@ -42,6 +43,7 @@ const setupAdventiscratch = vm => {
     attach3DToVm(vm);
     iniciarContas(vm);
     iniciarDetector(vm);
+    iniciarExemplos(vm);
 };
 
 export default setupAdventiscratch;

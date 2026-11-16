@@ -374,6 +374,13 @@ class Adventiscratch3D {
                     arguments: {MODELO: {type: A.STRING, menu: 'modelos'}}
                 },
                 {opcode: 'listaModelos', blockType: B.REPORTER, text: 'modelos importados'},
+                {opcode: 'quantidadeModelos', blockType: B.REPORTER, text: 'quantidade de modelos importados'},
+                {
+                    opcode: 'modeloNumero',
+                    blockType: B.REPORTER,
+                    text: 'modelo importado número [N]',
+                    arguments: {N: {type: A.NUMBER, defaultValue: 1}}
+                },
                 {
                     opcode: 'texturasModelo',
                     blockType: B.REPORTER,
@@ -688,6 +695,15 @@ class Adventiscratch3D {
     }
     listaModelos () {
         return getModelNames().join(', ');
+    }
+    quantidadeModelos () {
+        return getModelNames().length;
+    }
+    modeloNumero ({N}) {
+        const nomes = getModelNames();
+        if (!nomes.length) return '';
+        const i = Math.round(num(N)) - 1;
+        return nomes[((i % nomes.length) + nomes.length) % nomes.length];
     }
     texturasModelo ({INFO, MODELO}) {
         const model = getModel(MODELO);

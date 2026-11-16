@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tutoriais – Adventiscratch</title>
+  <meta name="description" content="Tutoriais em português do Adventiscratch: do primeiro bloco ao jogo de plataforma 3D.">
+  <link rel="icon" href="static/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="static/adventiscratch/paginas.css">
+  <style>
+    .layout { display: grid; grid-template-columns: 300px 1fr; gap: 26px; padding: 26px 0 60px; align-items: start; }
+    .menu-licoes { background: #fff; border-radius: var(--raio); box-shadow: var(--sombra); padding: 14px; position: sticky; top: 76px; }
+    .menu-licoes h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: #8A86A6; margin: 6px 8px 10px; }
+    .progresso-geral { margin: 0 8px 14px; }
+    .barra { height: 9px; background: #EEEAFB; border-radius: 999px; overflow: hidden; }
+    .barra span { display: block; height: 100%; background: linear-gradient(90deg, var(--roxo), var(--azul)); width: 0; transition: width .4s; }
+    .progresso-geral small { color: #8A86A6; font-weight: 700; }
+    .menu-licoes ol { list-style: none; counter-reset: l; }
+    .menu-licoes li button { width: 100%; text-align: left; border: 0; background: none; font: inherit; cursor: pointer; color: var(--tinta);
+      padding: 9px 10px; border-radius: 12px; display: flex; gap: 10px; align-items: center; }
+    .menu-licoes li button:hover { background: #F4F1FD; }
+    .menu-licoes li button.ativa { background: #EEEAFB; font-weight: 800; }
+    .menu-licoes .num { flex: 0 0 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: .8rem; font-weight: 900;
+      background: #EEEAFB; color: var(--roxo); }
+    .menu-licoes .feita .num { background: #16A34A; color: #fff; }
+    .menu-licoes .titulo-licao { line-height: 1.25; }
+    .menu-licoes .titulo-licao small { display: block; color: #8A86A6; font-weight: 600; font-size: .78rem; }
+
+    .licao { background: #fff; border-radius: var(--raio); box-shadow: var(--sombra); overflow: hidden; }
+    .licao-topo { padding: 22px 28px 16px; border-bottom: 1px solid var(--linha); }
+    .licao-topo h2 { color: var(--tinta); font-size: 1.6rem; font-weight: 900; line-height: 1.2; margin: 6px 0; }
+    .licao-topo .info { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .pontos { display: flex; gap: 6px; margin-top: 14px; }
+    .pontos button { flex: 1; height: 7px; border: 0; border-radius: 999px; background: #EEEAFB; cursor: pointer; padding: 0; }
+    .pontos button.visto { background: #C9BDF2; }
+    .pontos button.atual { background: var(--roxo); }
+    .passo { padding: 22px 28px; min-height: 340px; font-size: 1.04rem; }
+    .passo h3 { color: var(--tinta); font-size: 1.25rem; font-weight: 800; margin-bottom: 10px; }
+    .passo p { margin-bottom: 10px; }
+    .passo ul, .passo ol { margin: 6px 0 12px 22px; }
+    .passo li { margin-bottom: 4px; }
+    .licao-rodape { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 16px 28px 22px;
+      border-top: 1px solid var(--linha); flex-wrap: wrap; }
+    .licao-rodape .meio { color: #8A86A6; font-weight: 700; }
+    .parabens { text-align: center; padding: 12px 0; }
+    .parabens .grande { font-size: 3rem; }
+    [hidden] { display: none !important; }
+    @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .menu-licoes { position: static; } }
+  </style>
+</head>
+<body>
+  <header class="topo">
+    <nav class="container" aria-label="Principal">
+      <a class="marca" href="index.html"><img src="static/adventiscratch/logo.svg" alt="Adventiscratch – início"></a>
+      <ul>
+        <li><a href="index.html">Início</a></li>
+        <li><a class="ativo" href="tutoriais.html">Tutoriais</a></li>
+        <li><a href="exemplos.html">Exemplos</a></li>
+        <li><a class="criar" href="editor.html">Criar</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <div class="cabecalho">
+    <div class="container">
+      <h1>Tutoriais do Adventiscratch</h1>
+      <p>Aprenda passo a passo, do primeiro bloco até um jogo de plataforma 3D. Seu progresso fica salvo neste navegador.</p>
+    </div>
+  </div>
+
+  <div class="container layout">
+    <aside class="menu-licoes" aria-label="Lições">
+      <h2>Lições</h2>
+      <div class="progresso-geral">
+        <div class="barra"><span id="barra-geral"></span></div>
+        <small id="texto-progresso">0 de 9 concluídas</small>
+      </div>
+      <ol id="lista-licoes"></ol>
+    </aside>
+
+    <main class="licao" id="licao" aria-live="polite">
+      <div class="licao-topo">
+        <div class="info" id="licao-info"></div>
+        <h2 id="licao-titulo"></h2>
+        <div class="pontos" id="licao-pontos"></div>
+      </div>
+      <div class="passo" id="passo"></div>
+      <div class="licao-rodape">
+        <button class="botao leve" id="anterior">← Anterior</button>
+        <span class="meio" id="contador"></span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <a class="botao amarelo" id="abrir-exemplo" target="_blank" rel="noopener" hidden>▶ Abrir exemplo</a>
+          <button class="botao primario" id="proximo">Próximo →</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- =========================================================== CONTEÚDO DAS LIÇÕES
+       Cada <section> é uma lição; cada <article> é um passo. -->
+  <div id="conteudo" hidden>
+
+    <section data-id="primeiros-passos" data-titulo="Primeiros passos" data-nivel="iniciante" data-tempo="10 min">
+      <article>
+        <h3>Bem-vindo! 👋</h3>
+        <p>O Adventiscratch é um editor de <b>programação em blocos</b>. Em vez de digitar código, você encaixa blocos coloridos, como peças de LEGO, para dizer o que cada personagem (chamado de <b>ator</b>) deve fazer.</p>
+        <p>A tela tem três partes principais:</p>
+        <ul>
+          <li><b>Paleta de blocos</b> (à esquerda): as categorias Movimento, Aparência, Som, Eventos…</li>
+          <li><b>Área de código</b> (no meio): onde você arrasta e encaixa os blocos.</li>
+          <li><b>Palco</b> (à direita): onde o seu projeto aparece funcionando.</li>
+        </ul>
+        <div class="dica azul"><b>Dica</b>Abra o editor numa outra aba e vá fazendo junto com o tutorial.</div>
+      </article>
+      <article>
+        <h3>Seu primeiro script</h3>
+        <p>Um <b>script</b> é uma pilha de blocos. Ele quase sempre começa com um bloco de <b>Eventos</b> (amarelo), que diz <i>quando</i> o código roda.</p>
+        <p>Arraste estes blocos e encaixe um embaixo do outro:</p>
+        <div class="pilha">
+          <span class="bl eve chapeu">quando ⚑ for clicado</span>
+          <span class="bl apa">diga <span class="s">Olá, turma!</span> por <span class="s">2</span> segundos</span>
+          <span class="bl mov">mova <span class="s">50</span> passos</span>
+        </div>
+        <p>Agora clique na <b>bandeira verde</b> em cima do palco. A coruja fala e anda!</p>
+      </article>
+      <article>
+        <h3>Repetindo para sempre</h3>
+        <p>O bloco <b>sempre</b> (em Controle, laranja) repete o que estiver dentro dele sem parar. Assim dá para fazer animações:</p>
+        <div class="pilha">
+          <span class="bl eve chapeu">quando ⚑ for clicado</span>
+          <span class="bl ctl c">sempre
+            <span class="dentro">
+              <span class="bl mov">gire ↻ <span class="s">15</span> graus</span>
+              <span class="bl ctl">espere <span class="s">0.1</span> seg</span>
+            </span><span class="fim"></span></span>
+        </div>
+        <p>Para parar, clique no <b>octógono vermelho</b> ao lado da bandeira.</p>
+      </article>
+      <article>
+        <h3>Controlando com o teclado</h3>
+        <p>Use o bloco <b>se … então</b> com o sensor <b>tecla … pressionada?</b> (azul-claro) para mover a coruja com as setas:</p>
+        <div class="pilha">
+          <span class="bl eve chapeu">quando ⚑ for clicado</span>
+          <span class="bl ctl c">sempre
+            <span class="dentro">
+              <span class="bl ctl c">se <span class="h">tecla <span class="s">seta para direita</span> pressionada?</span> então
+                <span class="dentro"><span class="bl mov">adicione <span class="s">6</span> a x</span></span><span class="fim"></span></span>
+              <span class="bl ctl c">se <span class="h">tecla <span class="s">seta para esquerda</span> pressionada?</span> então
+                <span class="dentro"><span class="bl mov">adicione <span class="s">-6</span> a x</span></span><span class="fim"></span></span>
+            </span><span class="fim"></span></span>
+        </div>
+        <div class="dica"><b>Desafio</b>Faça também as setas para cima e para baixo usando <b>adicione … a y</b>.</div>
+      </article>
+      <article>
+        <h3>Salve o seu projeto</h3>
+        <p>Os projetos não ficam guardados no site. Para não perder o trabalho:</p>
+        <ol>
+          <li>Clique em <kbd>Arquivo</kbd> → <kbd>Baixar para o seu computador</kbd>.</li>
+          <li>O arquivo é salvo com a extensão <b>.asp</b> (AdventiScratch Project).</li>
+          <li>Para continuar depois, use <kbd>Arquivo</kbd> → <kbd>Carregar do seu computador</kbd>.</li>
+        </ol>
+        <div class="dica verde"><b>Pronto!</b>Você já sabe o básico. Na próxima lição vamos fazer um jogo de verdade.</div>
+      </article>
+    </section>
+
+    <section data-id="coletora" data-titulo="Jogo: Coruja Coletora" data-nivel="iniciante" data-tempo="20 min" data-exemplo="coruja-coletora">
+      <article>
+        <h3>O que vamos fazer</h3>
+        <p>Um jogo em que a coruja voa pelo palco pegando estrelas. Cada estrela vale 1 ponto e você tem <b>30 segundos</b>.</p>
+        <p>Você vai aprender: <b>variáveis</b> (para os pontos e o tempo), <b>sensor de toque</b> e <b>mensagens</b> entre atores.</p>
+        <div class="dica azul"><b>Exemplo pronto</b>Clique em <b>▶ Abrir exemplo</b> para ver o jogo funcionando. Depois tente refazer sozinho!</div>
+      </article>
+      <article>
+        <h3>1. Crie as variáveis</h3>
+        <p>Na categoria <b>Variáveis</b>, clique em <b>Criar uma Variável</b> e crie: <b>pontos</b>, <b>tempo</b> e <b>jogando</b>.</p>
+        <p>A variável <b>jogando</b> vale 1 enquanto o jogo está rodando e 0 quando acaba. Assim os atores sabem quando parar.</p>
+        <div class="pilha">
+          <span class="bl eve chapeu">quando ⚑ for clicado</span>
+          <span class="bl var">mude <span class="r">pontos</span> para <span class="s">0</span></span>
+          <span class="bl var">mude <span class="r">tempo</span> para <span class="s">30</span></span>
+          <span class="bl var">mude <span class="r">jogando</span> para <span class="s">1</span></span>
+        </div>
+      </article>
+      <article>
+        <h3>2. O cronômetro (no Palco)</h3>
+        <p>Clique no <b>Palco</b> (canto inferior direito) e monte:</p>
+        <div class="pilha">
+          <span class="bl ctl c">repita até que <span class="h"><span class="r">tempo</span> &lt; <span class="s">1</span></span>
+            <span class="dentro">
+              <span class="bl ctl">espere <span class="s">1</span> seg</span>
+              <span class="bl var">adicione <span class="s">-1</span> a <span class="r">tempo</span></span>
+            </span><span class="fim"></span></span>
+          <span class="bl var">mude <span class="r">jogando</span> para <span class="s">0</span></span>
+          <span class="bl eve">envie <span class="s">fim de jogo</span></span>
+        </div>
+        <p>O bloco <b>envie</b> manda uma <b>mensagem</b> para todos os atores. Quem tiver <b>quando eu receber</b> responde.</p>
+      </article>
+      <article>
+        <h3>3. A estrela</h3>
+        <p>Adicione um novo ator (a estrela) e programe:</p>
+        <div class="pilha">
+          <span class="bl eve chapeu">quando ⚑ for clicado</span>
+          <span class="bl mov">vá para <span class="s">posição aleatória</span></span>
+          <span class="bl ctl c">sempre
+            <span class="dentro">
+              <span class="bl mov">gire ↻ <span class="s">3</span> graus</span>
+              <span class="bl ctl c">se <span class="h">tocando em <span class="s">Coruja Sabida</span>?</span> então
+                <span class="dentro">
+                  <span class="bl var">adicione <span class="s">1</span> a <span class="r">pontos</span></span>
+                  <span class="bl som">toque o som <span class="s">Pio</span></span>
+                  <span class="bl mov">vá para <span class="s">posição aleatória</span></span>
+                </span><span class="fim"></span></span>
+            </span><span class="fim"></span></span>
+        </div>
+      </article>
+      <article>
+        <h3>4. Fim de jogo</h3>
+        <p>Na coruja, mostre a pontuação quando o tempo acabar. O bloco <b>junte</b> (verde) cola textos:</p>
+        <div class="pilha">
+          <span class="bl eve chapeu">quando eu receber <span class="s">fim de jogo</span></span>
+          <span class="bl apa">diga <span class="r">junte <span class="s">Você pegou </span> <span class="r">pontos</span></span></span>
+        </div>
+        <div class="dica"><b>Desafios</b>
+          • Faça uma segunda estrela que vale 3 pontos.<br>
+          • Deixe a coruja mais rápida a cada 5 pontos.<br>
+          • Adicione um inimigo que tira pontos!</div>
+      </article>
+    </section>
+
+    <section data-id="extras" data-titulo="Blocos Extras do Adventiscratch" data-nivel="iniciante" data-tempo="10 min" data-exemplo="calculadora-coruja">
+      <article>
+        <h3>Blocos que o Scratch não tem</h3>
+        <p>O Adventiscratch traz a extensão <b>Extras Adventiscratch</b>, com blocos roxos que facilitam contas e textos.</p>
+        <p>Para adicionar: clique no botão de <b>extensões</b> (canto inferior esquerdo do editor, ícone azul com +) e escolha <b>Extras Adventiscratch</b>.</p>
+      </article>
+      <article>
+        <h3>Matemática</h3>
+        <div class="pilha">
+          <span class="bl ext"><span class="s">2</span> elevado a <span class="s">10</span></span>
+          <span class="bl ext">raiz <span class="s">3</span> de <span class="s">27</span></span>
+        </div>
+        <p>O primeiro dá <b>1024</b> (2 × 2 × 2… dez vezes). O segundo dá <b>3</b> (raiz cúbica de 27). Para raiz quadrada, use <b>raiz 2 de …</b>.</p>
+        <p>Comparações novas: <span class="pilha" style="display:inline-flex;margin:0"><span class="bl ext"><span class="s">a</span> ≠ <span class="s">b</span></span></span>, ≥ e ≤.</p>
+      </article>
+      <article>
+        <h3>Decidir sem "se"</h3>
+        <p>O bloco <b>se … então … senão …</b> em formato de valor escolhe um entre dois resultados:</p>
+        <div class="pilha">
+          <span class="bl apa">diga <span class="r">se <span class="h"><span class="r">pontos</span> ≥ <span class="s">10</span></span> então <span class="s">Venceu!</span> senão <span class="s">Continue!</span></span></span>
+        </div>
+        <p>Ele é ótimo para escolher velocidade, cor ou mensagens numa linha só.</p>
+      </article>
+      <article>
+        <h3>Textos e datas</h3>
+        <div class="pilha">
+          <span class="bl ext"><span class="s">olá turma</span> em <span class="s">Primeira Letra Maiúscula ▾</span></span>
+          <span class="bl ext">substitua <span class="s">mundo</span> por <span class="s">turma</span> em <span class="s">olá, mundo!</span></span>
+          <span class="bl ext">data de hoje</span>
+        </div>
+        <div class="dica azul"><b>Experimente</b>Abra o exemplo <b>Calculadora da Coruja</b>: ela pergunta dois números e usa todos esses blocos.</div>
+      </article>
+    </section>
+
+    <section data-id="mundo-3d" data-titulo="Seu primeiro mundo 3D" data-nivel="intermediario" data-tempo="20 min" data-exemplo="mundo-3d">
+      <article>
+        <h3>Ligando o 3D</h3>
+        <p>Adicione a extensão <b>3D (Three.js)</b> pelo botão de extensões. Os blocos ficam na categoria <b>3D</b> (azul-petróleo).</p>
+        <div class="pilha">
+          <span class="bl eve chapeu">quando ⚑ for clicado</span>
+          <span class="bl d3">ligar o 3D</span>
+          <span class="bl d3">apagar todos os objetos 3D</span>
+          <span class="bl d3">mudar fundo do 3D para <span class="s">🟦</span></span>
+        </div>
+        <p>O mundo 3D aparece por cima do palco.</p>
+      </article>
+      <article>
+        <h3>Criando objetos</h3>
+        <p>Cada objeto 3D tem um <b>nome</b>. É pelo nome que você move, gira e pinta depois.</p>
+        <div class="pilha">
+          <span class="bl d3">criar <span class="s">plano (chão) ▾</span> chamado <span class="s">chao</span></span>
+          <span class="bl d3">mudar tamanho de <span class="s">chao</span> para <span class="s">300</span> %</span>
+          <span class="bl d3">criar <span class="s">cubo ▾</span> chamado <span class="s">cubo</span></span>
+          <span class="bl d3">mover <span class="s">cubo</span> para x: <span class="s">-4</span> y: <span class="s">1</span> z: <span class="s">0</span></span>
+          <span class="bl d3">mudar cor de <span class="s">cubo</span> para <span class="s">🟪</span></span>
+        </div>
+        <div class="dica"><b>Os três eixos</b><b>x</b> = esquerda/direita, <b>y</b> = para cima/para baixo, <b>z</b> = para frente/para trás.</div>
+      </article>
+      <article>
+        <h3>Animando</h3>
+        <div class="pilha">
+          <span class="bl ctl c">sempre
+            <span class="dentro">
+              <span class="bl d3">girar <span class="s">cubo</span> no eixo <span class="s">y ▾</span> por <span class="s">2</span> graus</span>
+            </span><span class="fim"></span></span>
+        </div>
+        <p>Para a câmera dar a volta, o exemplo usa <b>seno</b> e <b>cosseno</b> do cronômetro. É a matemática dos círculos!</p>
+        <div class="pilha">
+          <span class="bl d3">mover câmera para x: <span class="r">sen de <span class="r">cronômetro × 25</span> × 12</span> y: <span class="s">5</span> z: <span class="r">cos … × 12</span></span>
+          <span class="bl d3">apontar câmera para x: <span class="s">0</span> y: <span class="s">1</span> z: <span class="s">0</span></span>
+        </div>
+      </article>
+      <article>
+        <h3>Luzes</h3>
+        <p>Há duas luzes: o <b>sol</b> (que faz sombra de luz e brilho) e a luz <b>ambiente</b> (que clareia tudo por igual).</p>
+        <div class="pilha">
+          <span class="bl eve chapeu">quando a tecla <span class="s">espaço</span> for pressionada</span>
+          <span class="bl d3">intensidade da luz <span class="s">do sol ▾</span> para <span class="s">0.3</span></span>
+        </div>
+        <div class="dica"><b>Desafio</b>Crie uma cápsula e faça ela subir e descer como a bola do exemplo.</div>
+      </article>
+    </section>
+
+    <section data-id="modelos" data-titulo="Importar modelos e texturas" data-nivel="intermediario" data-tempo="15 min" data-exemplo="visualizador-modelos">
+      <article>
+        <h3>Modelos 3D de verdade</h3>
+        <p>Além das formas prontas, você pode usar modelos feitos em programas como Blender: <b>.glb, .gltf, .fbx, .obj, .stl, .dae e .ply</b>.</p>
+        <p>Na categoria 3D, no topo da paleta, há dois botões:</p>
+        <ul>
+          <li><b>Importar modelo 3D…</b>: escolha o modelo (e, segurando <kbd>Ctrl</kbd>, as imagens das texturas).</li>
+          <li><b>Importar pasta do modelo (com texturas)…</b>: escolha a pasta inteira.</li>
+        </ul>
+        <div class="dica azul"><b>Prefira .glb</b>O .glb guarda modelo e texturas num arquivo só, então é o formato que dá menos trabalho.</div>
+      </article>
+      <article>
+        <h3>Quando faltam texturas</h3>
+        <p>O editor lê o modelo e descobre quais imagens ele usa. Se faltar alguma, aparece a janela <b>Texturas do modelo</b> com a lista ✓ (encontrada) e ✗ (faltando). Clique em <b>Escolher arquivos…</b> ou <b>Escolher pasta…</b>.</p>
+        <p>Alguns modelos <b>.fbx</b> (principalmente de jogos) não dizem quais imagens usam. Aí aparece a janela <b>Texturas por material</b>: o editor sugere a imagem de cada parte do modelo pelo nome do arquivo, e você pode trocar.</p>
+        <div class="dica"><b>Exemplo</b>Material <b>personagem_corpo</b> → imagem <b>personagem_corpo_dif.png</b>. Imagens terminadas em <b>_nrm</b> ou <b>_normal</b> viram "relevo" (normal map).</div>
+      </article>
+      <article>
+        <h3>Usando o modelo</h3>
+        <div class="pilha">
+          <span class="bl d3">criar modelo <span class="s">meu_modelo ▾</span> chamado <span class="s">heroi</span></span>
+          <span class="bl d3">tocar animação <span class="s">1</span> de <span class="s">heroi</span></span>
+          <span class="bl d3"><span class="s">quantidade de animações ▾</span> de <span class="s">heroi</span></span>
+        </div>
+        <p>O modelo é ajustado automaticamente para ter cerca de 2 unidades de altura e ficar em pé no chão. Ele fica salvo dentro do seu arquivo <b>.asp</b>, junto com as texturas.</p>
+      </article>
+      <article>
+        <h3>Testando no Visualizador</h3>
+        <p>Abra o exemplo <b>Visualizador de Modelos</b>, importe o seu modelo e clique na bandeira:</p>
+        <ul>
+          <li><kbd>←</kbd> <kbd>→</kbd> giram a câmera, <kbd>↑</kbd> <kbd>↓</kbd> dão zoom</li>
+          <li><kbd>A</kbd> passa para a próxima animação: anote o número de cada uma!</li>
+          <li><kbd>N</kbd> troca de modelo, <kbd>T</kbd> mostra as texturas, <kbd>espaço</kbd> para a rotação</li>
+        </ul>
+        <div class="dica verde"><b>Use no seu jogo</b>Os números das animações que você anotar aqui vão ser usados na próxima lição.</div>
+      </article>
+    </section>
+
+    <section data-id="plataforma" data-titulo="Jogo de plataforma 3D" data-nivel="avancado" data-tempo="30 min" data-exemplo="corrida-3d">
+      <article>
+        <h3>Corrida 3D</h3>
+        <p>Vamos fazer um jogo de plataforma em terceira pessoa: o personagem corre, pula em plataformas, sobe rampas e pega anéis, com a câmera seguindo por trás.</p>
+        <p>O exemplo <b>Corrida 3D</b> usa o <b>primeiro modelo importado</b> como jogador. Importe o seu personagem e ele vira o herói do jogo! Sem modelo, o jogador é uma cápsula azul.</p>
+        <div class="dica azul"><b>Controles</b><kbd>Setas</kbd> ou <kbd>W A S D</kbd> andam, <kbd>espaço</kbd> pula, <kbd>X</kbd> corre, <kbd>Q</kbd> <kbd>E</kbd> giram a câmera.</div>
+      </article>
+      <article>
+        <h3>Física: corpo, sólido e terreno</h3>
+        <p>O bloco <b>física de … :</b> diz como cada objeto se comporta:</p>
+        <ul>
+          <li><b>corpo</b>: cai com a gravidade, colide e pode pular (o jogador).</li>
+          <li><b>sólido</b>: chão, paredes e plataformas (colisão em forma de caixa).</li>
+          <li><b>terreno</b>: chão com rampas; o jogador pisa na superfície de verdade.</li>
+        </ul>
+        <div class="pilha">
+          <span class="bl d3">física de <span class="s">chao</span>: <span class="s">sólido ▾</span></span>
+          <span class="bl d3">física de <span class="s">rampa</span>: <span class="s">terreno ▾</span></span>
+          <span class="bl d3">física de <span class="s">jogador</span>: <span class="s">corpo ▾</span></span>
+          <span class="bl d3">mudar gravidade para <span class="s">-30</span></span>
+        </div>
+        <p>A física só funciona enquanto o projeto está rodando (depois da bandeira).</p>
+      </article>
+      <article>
+        <h3>Câmera em terceira pessoa</h3>
+        <div class="pilha">
+          <span class="bl d3">câmera seguir <span class="s">jogador</span> distância <span class="s">9</span> altura <span class="s">4</span></span>
+          <span class="bl d3">girar câmera em volta do jogador por <span class="s">3</span> graus</span>
+        </div>
+        <p>O bloco <b>andar … pela câmera</b> faz "para frente" ser sempre para onde a câmera olha, como nos jogos de console. O personagem vira sozinho para a direção em que anda.</p>
+        <div class="pilha">
+          <span class="bl d3">andar <span class="s">jogador</span> pela câmera: lado <span class="r">direita − esquerda</span> frente <span class="r">cima − baixo</span> velocidade <span class="s">9</span></span>
+        </div>
+        <div class="dica"><b>Truque</b>Uma tecla "vale" 1 quando está apertada e 0 quando não está. Por isso <b>(seta direita) − (seta esquerda)</b> dá 1, -1 ou 0.</div>
+      </article>
+      <article>
+        <h3>Pulo e anéis</h3>
+        <div class="pilha">
+          <span class="bl ctl c">se <span class="h"><span class="h">tecla espaço pressionada?</span> e <span class="h">jogador está no chão?</span></span> então
+            <span class="dentro"><span class="bl d3">pular <span class="s">jogador</span> com força <span class="s">12</span></span></span><span class="fim"></span></span>
+          <span class="bl ctl c">se <span class="h">jogador tocando anel1?</span> então
+            <span class="dentro">
+              <span class="bl d3">apagar objeto <span class="s">anel1</span></span>
+              <span class="bl var">adicione <span class="s">1</span> a <span class="r">anéis</span></span>
+            </span><span class="fim"></span></span>
+        </div>
+        <p>Se o jogador cair do mundo (y menor que -10), o jogo o coloca de volta no começo.</p>
+      </article>
+      <article>
+        <h3>Animações do personagem</h3>
+        <p>O jogo descobre o <b>estado</b> do jogador (parado, correndo ou pulando) e só troca a animação quando o estado muda. Assim a animação não fica recomeçando.</p>
+        <p>Mude as variáveis <b>animação parado</b>, <b>animação correndo</b> e <b>animação pulando</b> para os números que você anotou no Visualizador.</p>
+        <div class="dica"><b>Personagem andando de costas?</b>Alguns modelos são exportados virados para trás. Mude o 0 do bloco <b>virar o modelo de jogador em 0 graus</b> para <b>180</b>.</div>
+        <div class="dica"><b>Desafios</b>• Faça um anel que dá velocidade extra.<br>• Crie uma plataforma que se move.<br>• Mostre "Você venceu!" e marque o tempo que levou.</div>
+      </article>
+    </section>
+
+    <section data-id="erros" data-titulo="Encontrando erros" data-nivel="iniciante" data-tempo="5 min">
+      <article>
+        <h3>O detector de erros</h3>
+        <p>O Adventiscratch olha seus blocos enquanto você programa. Quando encontra um problema, o bloco <b>brilha</b> e ganha um <b>!</b>:</p>
+        <div class="pilha">
+          <span class="bl ctl c erro">se <span class="h">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> então<span class="dentro"><span class="bl apa">diga <span class="s">Oi</span></span></span><span class="fim"></span></span>
+        </div>
+        <ul>
+          <li><b>Vermelho = erro</b>: o código vai dar problema com certeza (ex.: "se" sem condição, divisão por zero, fantasia que não existe).</li>
+          <li><b>Laranja = aviso</b>: talvez não seja o que você queria (ex.: script sem bloco de evento, mensagem que ninguém recebe).</li>
+        </ul>
+      </article>
+      <article>
+        <h3>Lendo e corrigindo</h3>
+        <p>Passe o mouse sobre o <b>!</b> para ler a explicação. No canto da área de código há um contador, como <b>⚠ 2 erros, 1 aviso</b>. Clique nele para ver a lista e clique num item para ir direto ao bloco.</p>
+        <p>Quando tudo estiver certo, o contador fica verde: <b>✓ Nenhum problema</b>.</p>
+        <div class="dica azul"><b>Erros comuns no 3D</b>Escrever o nome do objeto diferente em cada bloco (<b>jogador</b> × <b>jogadr</b>). O detector avisa quando um objeto é usado mas nunca é criado.</div>
+      </article>
+    </section>
+
+    <section data-id="salvar" data-titulo="Salvar, abrir e entregar" data-nivel="iniciante" data-tempo="5 min">
+      <article>
+        <h3>O arquivo .asp</h3>
+        <p>Os projetos do Adventiscratch são salvos como <b>.asp</b> (AdventiScratch Project). Ele guarda os blocos, os atores, os sons e também os <b>modelos 3D e texturas</b> que você importou.</p>
+        <ul>
+          <li><kbd>Arquivo</kbd> → <kbd>Baixar para o seu computador</kbd>: salva o .asp.</li>
+          <li><kbd>Arquivo</kbd> → <kbd>Carregar do seu computador</kbd>: abre um .asp (ou um .sb3 do Scratch).</li>
+        </ul>
+      </article>
+      <article>
+        <h3>Entregando um trabalho</h3>
+        <ol>
+          <li>Dê um nome ao projeto no campo ao lado do menu (ex.: <b>Jogo da Ana – 7B</b>).</li>
+          <li>Baixe o arquivo .asp.</li>
+          <li>Envie o arquivo ao professor do jeito que ele pedir (plataforma da escola, pendrive…).</li>
+        </ol>
+        <div class="dica"><b>Atenção</b>Fechar a aba sem baixar faz você perder o que não foi salvo.</div>
+      </article>
+    </section>
+
+    <section data-id="conta" data-titulo="Sua conta e as regras" data-nivel="iniciante" data-tempo="5 min">
+      <article>
+        <h3>Sua conta</h3>
+        <p>Você entra no Adventiscratch com a conta da sua turma. Para criar, use o <b>código da turma</b> que o professor passar.</p>
+        <ul>
+          <li>Use só o primeiro nome como nome de exibição.</li>
+          <li>Nunca compartilhe sua senha nem dados pessoais (endereço, telefone, escola) nos projetos.</li>
+        </ul>
+      </article>
+      <article>
+        <h3>Respeito e moderação</h3>
+        <p>O Adventiscratch é um lugar para aprender e criar juntos. Por isso existe a <b>moderação</b>:</p>
+        <ul>
+          <li><b>Advertência</b>: um aviso. A conta continua funcionando.</li>
+          <li><b>Suspensão temporária</b>: o editor fica bloqueado até uma data.</li>
+          <li><b>Suspensão indefinida</b>: até um moderador revisar o caso.</li>
+          <li><b>Suspensão permanente</b>: a conta é encerrada.</li>
+        </ul>
+        <p>Você sempre vê o motivo e, na maioria dos casos, pode <b>pedir revisão</b>. Mesmo suspenso, dá para baixar o seu projeto.</p>
+      </article>
+      <article>
+        <h3>Viu algo errado?</h3>
+        <p>Clique no seu nome (canto superior direito do editor) → <b>Denunciar um usuário…</b>. Um moderador vai analisar com cuidado.</p>
+        <div class="dica azul"><b>Importante</b>Se alguém estiver em perigo ou você se sentir ameaçado, avise também um professor ou um adulto de confiança.</div>
+      </article>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      var CHAVE = 'adventiscratch.tutoriais';
+      var NIVEIS = {iniciante: 'Iniciante', intermediario: 'Intermediário', avancado: 'Avançado'};
+      var salvo = {feitas: {}, vistos: {}};
+      try { salvo = JSON.parse(localStorage.getItem(CHAVE)) || salvo; } catch (e) {}
+      salvo.feitas = salvo.feitas || {};
+      salvo.vistos = salvo.vistos || {};
+      var guardar = function () { try { localStorage.setItem(CHAVE, JSON.stringify(salvo)); } catch (e) {} };
+
+      var licoes = Array.prototype.map.call(document.querySelectorAll('#conteudo > section'), function (s) {
+        return {
+          id: s.dataset.id, titulo: s.dataset.titulo, nivel: s.dataset.nivel, tempo: s.dataset.tempo,
+          exemplo: s.dataset.exemplo || '', passos: Array.prototype.map.call(s.querySelectorAll('article'), function (a) { return a.innerHTML; })
+        };
+      });
+      var atual = 0, passo = 0;
+      var el = function (id) { return document.getElementById(id); };
+
+      function lerHash () {
+        var partes = location.hash.replace('#', '').split('/');
+        var i = licoes.findIndex(function (l) { return l.id === partes[0]; });
+        if (i >= 0) {
+          atual = i;
+          passo = Math.max(0, Math.min(licoes[i].passos.length, (parseInt(partes[1], 10) || 1) - 1));
+        }
+      }
+
+      function desenharMenu () {
+        var lista = el('lista-licoes');
+        lista.innerHTML = '';
+        licoes.forEach(function (l, i) {
+          var li = document.createElement('li');
+          if (salvo.feitas[l.id]) li.className = 'feita';
+          var b = document.createElement('button');
+          if (i === atual) b.className = 'ativa';
+          b.innerHTML = '<span class="num">' + (salvo.feitas[l.id] ? '✓' : (i + 1)) + '</span><span class="titulo-licao">' +
+            l.titulo + '<small>' + NIVEIS[l.nivel] + ' · ' + l.tempo + '</small></span>';
+          b.onclick = function () { ir(i, 0); };
+          li.appendChild(b);
+          lista.appendChild(li);
+        });
+        var n = licoes.filter(function (l) { return salvo.feitas[l.id]; }).length;
+        el('barra-geral').style.width = (100 * n / licoes.length) + '%';
+        el('texto-progresso').textContent = n + ' de ' + licoes.length + ' concluídas';
+      }
+
+      function desenhar () {
+        var l = licoes[atual];
+        var total = l.passos.length;
+        var fim = passo >= total;
+        salvo.vistos[l.id] = Math.max(salvo.vistos[l.id] || 0, Math.min(passo + 1, total));
+        el('licao-titulo').textContent = l.titulo;
+        el('licao-info').innerHTML = '<span class="selo ' + l.nivel + '">' + NIVEIS[l.nivel] + '</span><span class="selo tempo">⏱ ' + l.tempo + '</span>';
+        var pontos = el('licao-pontos');
+        pontos.innerHTML = '';
+        for (var i = 0; i < total; i++) {
+          var p = document.createElement('button');
+          p.className = i === passo ? 'atual' : (i < salvo.vistos[l.id] ? 'visto' : '');
+          p.setAttribute('aria-label', 'Passo ' + (i + 1));
+          (function (k) { p.onclick = function () { ir(atual, k); }; })(i);
+          pontos.appendChild(p);
+        }
+        if (fim) {
+          salvo.feitas[l.id] = true;
+          var prox = licoes[atual + 1];
+          el('passo').innerHTML = '<div class="parabens"><div class="grande">🎉</div><h3>Lição concluída!</h3><p>Muito bem! ' +
+            (prox ? 'A próxima lição é <b>' + prox.titulo + '</b>.' : 'Você terminou todas as lições. Agora é criar!') + '</p></div>';
+          el('contador').textContent = 'Concluída';
+          el('proximo').textContent = prox ? 'Próxima lição →' : 'Abrir o editor →';
+        } else {
+          el('passo').innerHTML = l.passos[passo];
+          el('contador').textContent = 'Passo ' + (passo + 1) + ' de ' + total;
+          el('proximo').textContent = passo === total - 1 ? 'Concluir ✓' : 'Próximo →';
+        }
+        el('anterior').disabled = atual === 0 && passo === 0;
+        var ex = el('abrir-exemplo');
+        ex.hidden = !l.exemplo;
+        if (l.exemplo) ex.href = 'editor.html?exemplo=' + l.exemplo;
+        guardar();
+        desenharMenu();
+        history.replaceState(null, '', '#' + l.id + '/' + (passo + 1));
+      }
+
+      function ir (i, p) {
+        atual = i;
+        passo = p;
+        desenhar();
+        el('licao').scrollIntoView({behavior: 'smooth', block: 'start'});
+      }
+
+      el('proximo').onclick = function () {
+        var l = licoes[atual];
+        if (passo < l.passos.length) ir(atual, passo + 1);
+        else if (atual + 1 < licoes.length) ir(atual + 1, 0);
+        else location.href = 'editor.html';
+      };
+      el('anterior').onclick = function () {
+        if (passo > 0) ir(atual, passo - 1);
+        else if (atual > 0) ir(atual - 1, licoes[atual - 1].passos.length - 1);
+      };
+      document.addEventListener('keydown', function (e) {
+        if (e.target.closest && e.target.closest('input, textarea')) return;
+        if (e.key === 'ArrowRight') el('proximo').click();
+        if (e.key === 'ArrowLeft' && !el('anterior').disabled) el('anterior').click();
+      });
+
+      window.addEventListener('hashchange', function () { lerHash(); desenhar(); });
+      lerHash();
+      desenhar();
+    })();
+  </script>
+</body>
+</html>

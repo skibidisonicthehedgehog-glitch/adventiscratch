@@ -135,6 +135,18 @@ const buildConfig = baseConfig.clone()
         template: 'src/playground/home.html'
     }))
     .addPlugin(new HtmlWebpackPlugin({
+        chunks: [],
+        inject: false,
+        filename: 'tutoriais.html',
+        template: 'src/playground/tutoriais.html'
+    }))
+    .addPlugin(new HtmlWebpackPlugin({
+        chunks: [],
+        inject: false,
+        filename: 'exemplos.html',
+        template: 'src/playground/exemplos.html'
+    }))
+    .addPlugin(new HtmlWebpackPlugin({
         ...commonHtmlWebpackPluginOptions,
         chunks: ['blocksonly'],
         filename: 'blocks-only.html',
