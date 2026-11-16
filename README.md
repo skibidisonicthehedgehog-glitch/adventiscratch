@@ -253,6 +253,17 @@ O site pronto fica na pasta `build/`. É só subir essa pasta em qualquer hosped
 (GitHub Pages, Netlify, Vercel, servidor da escola…). Ela não funciona abrindo o arquivo direto
 com duplo clique: precisa ser servida por um servidor web (ex.: `npx serve build`).
 
+## Versão de teste no GitHub Pages
+
+O workflow `.github/workflows/pages.yml` gera o site (`BUILD_MODE=site`, só a pasta `build/`) e publica no GitHub
+Pages a cada push na `main`. Essa versão é **só para testes**: não tem servidor, então contas, nuvem, loja e
+moderação ficam desligadas (`config.js` com `api: 'desligado'`). O editor, a extensão 3D, a Plataforma 2D, os
+exemplos, os tutoriais e o fliperama funcionam normalmente. Para usar contas, publique com Docker ou Cloudflare.
+
+Para ligar: no repositório, **Settings → Pages → Source: GitHub Actions**. Em repositório privado, o GitHub Pages
+precisa de um plano pago (GitHub Pro); no plano grátis, o repositório tem que ser público. O site publicado é
+público mesmo com o repositório privado.
+
 ## Publicar no seu GitHub
 
 ```bash
