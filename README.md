@@ -47,6 +47,10 @@ Clique no botão de extensões (canto inferior esquerdo) e escolha **3D (Three.j
   (ex.: `C:\artista\texturas\pele.png` → procura `pele.png`). Se faltar algum, aparece uma janela listando o que
   falta, com botões para escolher os arquivos ou a pasta. O navegador não lê arquivos do computador sozinho,
   por isso o aluno precisa selecioná-los.
+- **Texturas por material:** muitos `.fbx` (principalmente de jogos) não dizem quais imagens usam. Nesse caso
+  aparece a janela "Texturas por material", que já sugere a imagem de cada material pelo nome do arquivo
+  (ex.: material `chr_sonic_body` → `chr_sonic_body_dif.png`, e `..._nrm.png` vira normal map). Dá para corrigir
+  à mão e adicionar mais imagens.
 - Reimportar o mesmo arquivo de modelo **substitui** o anterior (útil para adicionar texturas depois).
 - Modelo e texturas ficam salvos dentro do `.asp`.
 - Cena: ligar/desligar 3D, cor de fundo ou fundo transparente, apagar tudo.
@@ -55,6 +59,11 @@ Clique no botão de extensões (canto inferior esquerdo) e escolha **3D (Three.j
   "objeto 3D sob o mouse".
 - Animações de modelos `.glb`/`.fbx`: tocar animação (por número ou nome), parar, quantidade/nomes.
 - Bloco `[texturas / texturas faltando] do modelo [ ]` para conferir o que foi importado.
+- **Física para jogos de plataforma:** `física de [objeto]: corpo / sólido / terreno / sem física`, gravidade,
+  `andar [objeto] pela câmera: lado [] frente [] velocidade []` (o personagem vira para onde anda),
+  `pular [objeto] com força []`, `[objeto] está no chão?`, velocidade, e `câmera seguir [objeto] distância [] altura []`
+  (terceira pessoa) com `girar câmera em volta do jogador`. Sólidos usam caixa de colisão; "terreno" usa a superfície
+  real do modelo (rampas). A física roda enquanto o projeto está rodando (bandeira verde).
 - Câmera (posição, apontar, campo de visão) e luzes (sol e ambiente: intensidade, cor, posição).
 
 A cena 3D é desenhada por cima do palco do Scratch. Com fundo transparente, os atores 2D aparecem atrás

@@ -48,7 +48,8 @@ export const patchVmForAsp = (vm, onProjectChanged) => {
                 originalFile: m.originalFileName,
                 ext: m.ext,
                 resources: Object.values(m.resources).map(r => r.name),
-                missing: m.missing
+                missing: m.missing,
+                materialMaps: m.materialMaps
             }))
         }, null, 2));
         models.forEach(m => {
@@ -91,7 +92,8 @@ export const patchVmForAsp = (vm, onProjectChanged) => {
                             silent: true,
                             name: m.name,
                             resources,
-                            missing: m.missing || []
+                            missing: m.missing || [],
+                            materialMaps: m.materialMaps || null
                         });
                     }
                 }

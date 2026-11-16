@@ -8,7 +8,8 @@ export const MODEL_EXTENSIONS = ['glb', 'gltf', 'fbx', 'obj', 'stl', 'dae', 'ply
 /**
  * Cada modelo:
  * {name, fileName, originalFileName, ext, data: ArrayBuffer,
- *  resources: {nome-em-minúsculas: {name, data: ArrayBuffer}}, missing: string[]}
+ *  resources: {nome-em-minúsculas: {name, data: ArrayBuffer}}, missing: string[],
+ *  materialMaps: {material: {map, normalMap}} | null}
  */
 const models = new Map();
 const listeners = new Set();
@@ -38,6 +39,7 @@ export const extOf = fileName => {
  * @param {boolean} [options.silent] não avisa os ouvintes (usado ao abrir projeto)
  * @param {object} [options.resources] arquivos auxiliares: nome-em-minúsculas -> {name, data}
  * @param {string[]} [options.missing] arquivos auxiliares que o modelo pede e não foram encontrados
+ * @param {object} [options.materialMaps] texturas escolhidas por material (nome -> {map, normalMap})
  * @param {string} [options.name] nome fixo (usado ao abrir projeto)
  * @returns {{name: string, replaced: boolean}} nome final e se substituiu um existente
  */
@@ -69,7 +71,8 @@ export const addModel = (fileName, data, options = {}) => {
         ext,
         data,
         resources: options.resources || {},
-        missing: options.missing || []
+        missing: options.missing || [],
+        materialMaps: options.materialMaps || null
     });
     if (!options.silent) notify();
     return {name, replaced};

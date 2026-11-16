@@ -48,6 +48,9 @@ const injectStyle = () => {
   font-size:.88rem;background:#EEF2F7;color:#1E1B3A}
 .adv-modal button.primario{background:#0FA3B1;color:#fff}
 .adv-modal button:hover{filter:brightness(.95)}
+.adv-modal li.mat{display:grid;grid-template-columns:1fr 1.3fr;gap:10px}
+.adv-modal li.mat select{width:100%;padding:5px 6px;border:1px solid #CBD5E1;border-radius:8px;font-size:.85rem}
+.adv-modal .dica{color:#64748B;font-size:.8rem;grid-column:2}
 `;
     document.head.appendChild(style);
 };
@@ -60,7 +63,7 @@ const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({
  * Mostra uma janela com botões. Botões com `pick` abrem a seleção de arquivos
  * (dentro do clique, como o navegador exige).
  * @param {object} opts {title, html, buttons: [{label, value, primary, pick: {multiple, folder, accept}}]}
- * @returns {Promise<{value: string, files: File[]}>} botão clicado e arquivos escolhidos
+ * @returns {Promise<{value: string, files: File[], values: object}>} botão, arquivos e valores dos menus
  */
 const showDialog = ({title, html, buttons}) => new Promise(resolve => {
     injectStyle();
@@ -70,8 +73,12 @@ const showDialog = ({title, html, buttons}) => new Promise(resolve => {
         <header>${escapeHtml(title)}</header><div class="corpo">${html}</div><footer></footer></div>`;
     const footer = fundo.querySelector('footer');
     const close = result => {
+        const values = {};
+        fundo.querySelectorAll('select[data-mat]').forEach(sel => {
+            values[sel.dataset.mat] = sel.value;
+        });
         fundo.remove();
-        resolve(result);
+        resolve({...result, values});
     };
     buttons.forEach(b => {
         const btn = document.createElement('button');
@@ -123,6 +130,145 @@ const pick = (pool, names) => {
     return out;
 };
 
+// ---------------------------------------------------------------- texturas por material
+
+const IMAGE_FILE = /\.(png|jpe?g|gif|webp|bmp|tga)$/i;
+const SUFFIX = /[_\-. ]?(d|dif|diff|diffuse|alb|albedo|col|color|colour|base|basecolor|basecolour|tex|texture|n|nrm|nor|norm|normal|normals|nml|s|spec|specular|r|rough|roughness|m|metal|metallic|ao|occ|occlusion|e|em|emi|emission|emissive|mask|h|height|disp|bump|op|opacity|alpha)$/;
+const NORMAL_HINT = /[_\-. ](n|nrm|nor|norm|normal|normals|nml)$/;
+const OTHER_HINT = /[_\-. ](s|spec|specular|r|rough|roughness|m|metal|metallic|ao|occ|occlusion|e|em|emi|emission|emissive|mask|h|height|disp|bump|op|opacity|alpha)$/;
+const GENERIC = new Set(['chr', 'mat', 'material', 'tex', 'texture', 'mtl', 'obj', 'mesh', 'model', 'default']);
+
+const stemOf = file => file.replace(/\.[^.]+$/, '').toLowerCase();
+const normalizeMat = name => name.toLowerCase().replace(/material/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+const tokens = str => str.split(/[^a-z0-9]+/).filter(t => t.length > 1 && !GENERIC.has(t));
+
+/**
+ * Nota de 0 a 100 para "esta imagem parece ser deste material?".
+ * @param {string} material nome do material
+ * @param {string} file nome da imagem
+ * @returns {number} nota
+ */
+const matchScore = (material, file) => {
+    const mat = normalizeMat(material);
+    const stem = stemOf(file).replace(/[^a-z0-9]+/g, '_');
+    const core = stem.replace(SUFFIX, '');
+    if (!mat) return 0;
+    if (core === mat || stem === mat) return 100;
+    if (mat.length >= 3 && (core.includes(mat) || mat.includes(core))) return 70;
+    // palavras em comum, proporcional ao tamanho dos nomes:
+    // "chr_sonic_eye" x "chr_sonic_body_nrm" divide só "sonic" (1 de 2) e não passa do mínimo
+    const a = tokens(mat);
+    const b = new Set(tokens(core));
+    const shared = a.filter(t => b.has(t)).length;
+    if (!shared) return 0;
+    return Math.round(60 * shared / Math.max(a.length, b.size));
+};
+
+/**
+ * Sugere textura de cor e normal map para cada material, pelo nome dos arquivos.
+ * @param {string[]} materials nomes dos materiais
+ * @param {string[]} images nomes-em-minúsculas das imagens disponíveis
+ * @returns {object} material -> {map, normalMap}
+ */
+const autoMatch = (materials, images) => {
+    const colorImgs = images.filter(f => !NORMAL_HINT.test(stemOf(f)) && !OTHER_HINT.test(stemOf(f)));
+    const normalImgs = images.filter(f => NORMAL_HINT.test(stemOf(f)));
+    const best = (mat, list) => {
+        let top = null;
+        let topScore = 39;
+        list.forEach(f => {
+            const sc = matchScore(mat, f);
+            if (sc > topScore) {
+                top = f;
+                topScore = sc;
+            }
+        });
+        return top;
+    };
+    const out = {};
+    materials.forEach(mat => {
+        out[mat] = {map: best(mat, colorImgs), normalMap: best(mat, normalImgs)};
+    });
+    // um material só e uma imagem de cor só: com certeza é ela
+    if (materials.length === 1 && !out[materials[0]].map && colorImgs.length === 1) {
+        out[materials[0]].map = colorImgs[0];
+    }
+    return out;
+};
+
+/**
+ * Etapa "Texturas por material": para modelos que não dizem quais imagens usam
+ * (muito comum em .fbx exportados de jogos), o aluno escolhe a imagem de cada material.
+ * @param {string} fileName nome do modelo
+ * @param {Array<{name, hasMap}>} materials materiais do modelo
+ * @param {object} pool arquivos disponíveis
+ * @returns {Promise<object|null>} material -> {map, normalMap}, ou null se pulou
+ */
+const askMaterialTextures = async (fileName, materials, pool) => {
+    const semTextura = materials.filter(m => !m.hasMap).map(m => m.name);
+    let chosen = null; // escolhas do aluno (sobrevivem quando ele adiciona mais imagens)
+    for (;;) {
+        const images = Object.keys(pool).filter(k => IMAGE_FILE.test(k))
+            .sort();
+        const auto = autoMatch(semTextura, images);
+        const current = {};
+        semTextura.forEach(mat => {
+            current[mat] = chosen && chosen[mat] ? chosen[mat] : (auto[mat].map || '');
+        });
+        const options = sel => [
+            `<option value=""${sel ? '' : ' selected'}>(sem textura)</option>`,
+            ...images.map(k => `<option value="${escapeHtml(k)}"${k === sel ? ' selected' : ''}>${
+                escapeHtml(pool[k].name)}</option>`)
+        ].join('');
+        const rows = semTextura.map(mat => {
+            const normal = auto[mat].normalMap;
+            const dica = normal ? `<span class="dica">+ relevo (normal map): ${escapeHtml(pool[normal].name)}</span>` : '';
+            return `<li class="mat"><b>${escapeHtml(mat)}</b><select data-mat="${escapeHtml(mat)}">${
+                options(current[mat])}</select>${dica}</li>`;
+        }).join('');
+        const intro = images.length ?
+            'Este modelo não diz quais imagens usa. Escolha a textura de cada material ' +
+                '(já tentei adivinhar pelos nomes dos arquivos):' :
+            'Este modelo não diz quais imagens usa. Escolha as imagens das texturas (ou a pasta delas) ' +
+                'e depois indique qual vai em cada material:';
+        const answer = await showDialog({
+            title: 'Texturas por material',
+            html: `<p><b>${escapeHtml(fileName)}</b>: ${intro}</p><ul>${rows}</ul>`,
+            buttons: [
+                {label: 'Sem texturas', value: 'pular'},
+                {label: 'Escolher pasta…', value: 'arquivos', pick: {folder: true}},
+                {
+                    label: 'Escolher imagens…',
+                    value: 'arquivos',
+                    pick: {accept: '.png,.jpg,.jpeg,.gif,.webp,.bmp,.tga'}
+                },
+                ...(images.length ? [{label: 'Aplicar', value: 'aplicar', primary: true}] : [])
+            ]
+        });
+        if (answer.value === 'pular') return null;
+        if (answer.value === 'arquivos') {
+            // guarda só o que o aluno escolheu de fato; o resto volta a ser sugerido com as imagens novas
+            chosen = {};
+            Object.entries(answer.values).forEach(([mat, v]) => {
+                if (v) chosen[mat] = v;
+            });
+            await addToPool(answer.files, pool);
+            continue;
+        }
+        chosen = {...current, ...answer.values};
+        const result = {};
+        semTextura.forEach(mat => {
+            if (chosen[mat]) {
+                result[mat] = {map: chosen[mat]};
+                if (auto[mat].normalMap) result[mat].normalMap = auto[mat].normalMap;
+            }
+        });
+        return Object.keys(result).length ? result : null;
+    }
+};
+
 /**
  * Importa um modelo, perguntando pelas texturas que faltarem.
  * @param {File} file arquivo do modelo
@@ -162,9 +308,21 @@ const importOne = async (file, pool) => {
         await addToPool(answer.files, pool);
         if (Object.keys(pool).length === before) break; // nada novo: evita repetir a janela para sempre
     }
+    // materiais sem textura: o modelo não disse quais imagens usa (comum em .fbx de jogos)
+    let materialMaps = null;
+    const semTextura = probe.materials.filter(m => !m.hasMap);
+    const hasImages = Object.keys(pool).some(k => IMAGE_FILE.test(k) && !probe.used.includes(k));
+    const nenhumaTextura = probe.materials.length && probe.materials.every(m => !m.hasMap);
+    if (semTextura.length && (hasImages || (nenhumaTextura && ['fbx', 'obj', 'dae'].includes(ext)))) {
+        materialMaps = await askMaterialTextures(file.name, probe.materials, pool);
+        if (materialMaps) {
+            probe = await parseModel(data, ext, pool, materialMaps);
+        }
+    }
     const {name, replaced} = addModel(file.name, data, {
         resources: pick(pool, probe.used),
-        missing: probe.missing
+        missing: probe.missing,
+        materialMaps
     });
     return {name, replaced, used: probe.used, missing: probe.missing};
 };

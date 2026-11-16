@@ -90,26 +90,84 @@ const createResourceManager = resources => {
     });
     manager.addHandler(/\.tga$/i, new TGALoader(manager));
     // quando todas as texturas terminarem de carregar, libera as URLs temporárias
+    // (só as que já foram usadas; se algo pedir o arquivo de novo, uma URL nova é criada)
+    const revokeAll = () => {
+        const urls = Array.from(blobUrls.values());
+        blobUrls.clear();
+        setTimeout(() => urls.forEach(u => URL.revokeObjectURL(u)), 1000);
+    };
     let started = false;
     const done = new Promise(resolve => {
-        let settled = false;
-        const finish = () => {
-            if (settled) return;
-            settled = true;
-            setTimeout(() => blobUrls.forEach(u => URL.revokeObjectURL(u)), 1000);
-            resolve();
-        };
         manager.onStart = () => {
             started = true;
         };
-        manager.onLoad = finish;
+        manager.onLoad = () => {
+            revokeAll();
+            resolve();
+        };
         manager.onError = () => {}; // erro numa textura não impede o modelo de aparecer
         // se o modelo não pedir nenhum arquivo, onLoad nunca é chamado
         setTimeout(() => {
-            if (!started) finish();
+            if (!started) resolve();
         }, 0);
     });
     return {manager, used, missing, done};
+};
+
+const forEachMaterial = (object, fn) => {
+    object.traverse(child => {
+        if (!child.isMesh || !child.material) return;
+        (Array.isArray(child.material) ? child.material : [child.material]).forEach(m => m && fn(m, child));
+    });
+};
+
+/**
+ * Lista os materiais do modelo e se cada um já tem textura.
+ * @param {THREE.Object3D} object modelo
+ * @returns {Array<{name: string, hasMap: boolean}>} materiais (sem repetir nomes)
+ */
+const listMaterials = object => {
+    const byName = new Map();
+    forEachMaterial(object, m => {
+        const name = m.name || '(sem nome)';
+        const prev = byName.get(name);
+        byName.set(name, {name, hasMap: !!m.map || (prev ? prev.hasMap : false)});
+    });
+    return Array.from(byName.values());
+};
+
+/**
+ * Aplica texturas escolhidas por material (usado quando o arquivo do modelo não diz quais texturas usa,
+ * comum em modelos .fbx exportados de jogos).
+ * @param {THREE.Object3D} object modelo
+ * @param {object} materialMaps nome-do-material -> {map, normalMap} (nomes de arquivos)
+ * @param {THREE.LoadingManager} manager gerenciador que entrega os arquivos da memória
+ */
+const applyMaterialMaps = (object, materialMaps, manager) => {
+    if (!materialMaps) return;
+    const loader = new THREE.TextureLoader(manager);
+    const cache = new Map();
+    const getTexture = (file, srgb) => {
+        const key = `${file}|${srgb}`;
+        if (!cache.has(key)) {
+            const handler = manager.getHandler(file);
+            const tex = handler ? handler.load(file) : loader.load(file);
+            if (srgb) tex.colorSpace = THREE.SRGBColorSpace;
+            tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+            cache.set(key, tex);
+        }
+        return cache.get(key);
+    };
+    forEachMaterial(object, m => {
+        const choice = materialMaps[m.name || '(sem nome)'];
+        if (!choice) return;
+        if (choice.map) {
+            m.map = getTexture(choice.map, true);
+            if (m.color) m.color.set(0xffffff); // a cor do material multiplicaria a textura
+        }
+        if (choice.normalMap && 'normalMap' in m) m.normalMap = getTexture(choice.normalMap, false);
+        m.needsUpdate = true;
+    });
 };
 
 /**
@@ -117,9 +175,11 @@ const createResourceManager = resources => {
  * @param {ArrayBuffer} data conteúdo do arquivo
  * @param {string} ext extensão em minúsculas (glb, gltf, fbx, obj, stl, dae, ply)
  * @param {object} [resources] arquivos auxiliares: nome-em-minúsculas -> {name, data}
- * @returns {Promise<{object, animations, used: string[], missing: string[]}>} modelo
+ * @param {object} [materialMaps] texturas escolhidas por material:
+ *   nome-do-material -> {map: arquivo, normalMap: arquivo} (para modelos que não dizem quais texturas usam)
+ * @returns {Promise<{object, animations, used: string[], missing: string[], materials: Array}>} modelo
  */
-export const parseModel = async (data, ext, resources) => {
+export const parseModel = async (data, ext, resources, materialMaps) => {
     const {manager, used, missing, done} = createResourceManager(resources || {});
     const defaultMaterial = () => new THREE.MeshStandardMaterial({color: 0xcccccc, roughness: 0.6});
     let result;
@@ -190,9 +250,15 @@ export const parseModel = async (data, ext, resources) => {
     default:
         throw new Error(`Formato de modelo não suportado: .${ext}`);
     }
+    applyMaterialMaps(result.object, materialMaps, manager);
     // espera um pouco pelas texturas (o modelo já aparece mesmo se demorarem)
     await Promise.race([done, new Promise(r => setTimeout(r, 3000))]);
-    return {...result, used: Array.from(used), missing: Array.from(missing.values())};
+    return {
+        ...result,
+        used: Array.from(used),
+        missing: Array.from(missing.values()),
+        materials: listMaterials(result.object)
+    };
 };
 
 /**
@@ -242,6 +308,7 @@ class Engine {
         this.scene.add(this.ambient, this.sun, this.sun.target);
 
         this.raycaster = new THREE.Raycaster();
+        this._initPhysics();
         this._lastSize = '';
         this._loop = this._loop.bind(this);
         this.resetScene();
@@ -260,6 +327,11 @@ class Engine {
         this.ambient.intensity = 0.8;
         this.sun.intensity = 1.8;
         this.sun.position.set(5, 10, 7);
+        if (this.bodies) {
+            this.bodies.clear();
+            this.gravity = -25;
+            this.follow = null;
+        }
     }
 
     /** Apaga também o cache de modelos (ao abrir outro projeto ou remover um modelo). */
@@ -316,6 +388,7 @@ class Engine {
         for (const entry of this.objects.values()) {
             if (entry.mixer) entry.mixer.update(delta);
         }
+        this._updateFollowCamera(delta);
         if (this._attachToStage()) {
             this.renderer.render(this.scene, this.camera);
         }
@@ -369,7 +442,8 @@ class Engine {
      */
     async createModel (key, getFile, name) {
         if (!this.templates.has(key)) {
-            this.templates.set(key, getFile().then(({data, ext, resources}) => parseModel(data, ext, resources)));
+            this.templates.set(key, getFile().then(({data, ext, resources, materialMaps}) =>
+                parseModel(data, ext, resources, materialMaps)));
         }
         let template;
         try {
@@ -404,6 +478,8 @@ class Engine {
             }
         });
         this.objects.delete(String(name));
+        if (this.bodies) this.bodies.delete(String(name));
+        if (this.follow && this.follow.name === String(name)) this.follow = null;
     }
 
     setColor (name, hex) {
@@ -444,6 +520,244 @@ class Engine {
     animationNames (name) {
         const entry = this.objects.get(String(name));
         return entry ? entry.animations.map(c => c.name).join(', ') : '';
+    }
+
+    // ---------- física (para jogos de plataforma) ----------
+    //
+    // Modelo simples e previsível, pensado para alunos:
+    //  - "sólido": caixa que não se move sozinha (chão, paredes, plataformas). Colisão por caixa (AABB).
+    //  - "terreno": chão com rampas/relevo. O corpo "pisa" na superfície real do modelo (raio para baixo).
+    //  - "corpo": cai com a gravidade, colide com sólidos e terreno, pode pular. Usa uma caixa de colisão
+    //    do tamanho do modelo (sem girar), ideal para personagens.
+    // A física roda a cada quadro do Scratch, só enquanto o projeto está rodando (bandeira verde).
+
+    _initPhysics () {
+        this.bodies = new Map(); // nome -> {type, ...}
+        this.gravity = -25;
+        this.follow = null;
+        const runtime = this.runtime;
+        const originalStep = runtime._step.bind(runtime);
+        let last = performance.now();
+        runtime._step = () => {
+            const now = performance.now();
+            const dt = Math.min((now - last) / 1000, 1 / 15);
+            last = now;
+            if (this.enabled && this.bodies.size && runtime._nonMonitorThreadCount > 0) {
+                try {
+                    this.physicsStep(dt);
+                } catch (e) {
+                    console.warn('Adventiscratch 3D: erro na física', e); // eslint-disable-line no-console
+                }
+            }
+            originalStep();
+        };
+    }
+
+    setPhysicsType (name, type) {
+        const obj = this.get(name);
+        if (!obj) return;
+        name = String(name);
+        if (type === 'nenhum') {
+            this.bodies.delete(name);
+            return;
+        }
+        obj.updateMatrixWorld(true);
+        if (type === 'corpo') {
+            const box = new THREE.Box3().setFromObject(obj);
+            const size = box.getSize(new THREE.Vector3());
+            const center = box.getCenter(new THREE.Vector3());
+            const prev = this.bodies.get(name);
+            this.bodies.set(name, {
+                type,
+                half: size.multiplyScalar(0.5),
+                offset: center.sub(obj.position), // centro da caixa em relação à posição do objeto
+                vel: prev && prev.vel ? prev.vel : new THREE.Vector3(),
+                onGround: false,
+                driven: false
+            });
+        } else {
+            this.bodies.set(name, {type, box: new THREE.Box3(), matrix: null});
+        }
+    }
+
+    _solidBox (entry, obj) {
+        // recalcula a caixa só quando o objeto se mexeu (plataformas móveis funcionam)
+        obj.updateMatrixWorld(true);
+        const m = obj.matrixWorld.elements;
+        if (!entry.matrix || entry.matrix.some((v, i) => v !== m[i])) {
+            entry.box.setFromObject(obj);
+            entry.matrix = Array.from(m);
+        }
+        return entry.box;
+    }
+
+    physicsStep (dt) {
+        const solids = [];
+        const terrains = [];
+        for (const [name, b] of this.bodies) {
+            const obj = this.get(name);
+            if (!obj || !obj.visible) continue;
+            if (b.type === 'solido') solids.push({name, box: this._solidBox(b, obj)});
+            else if (b.type === 'terreno') terrains.push(obj);
+        }
+        const tmp = new THREE.Box3();
+        const eps = 0.001;
+        for (const [name, b] of this.bodies) {
+            if (b.type !== 'corpo') continue;
+            const obj = this.get(name);
+            if (!obj) continue;
+            const p = obj.position;
+            const v = b.vel;
+            const boxAt = (shrinkY = 0, shrinkXZ = 0) => {
+                const c = p.clone().add(b.offset);
+                tmp.min.set(c.x - b.half.x + shrinkXZ, c.y - b.half.y + shrinkY, c.z - b.half.z + shrinkXZ);
+                tmp.max.set(c.x + b.half.x - shrinkXZ, c.y + b.half.y - shrinkY, c.z + b.half.z - shrinkXZ);
+                return tmp;
+            };
+            // gravidade
+            v.y = Math.max(v.y + this.gravity * dt, -60);
+            // atrito quando ninguém está controlando o corpo neste quadro
+            if (!b.driven) {
+                const k = Math.pow(b.onGround ? 0.0005 : 0.3, dt);
+                v.x *= k;
+                v.z *= k;
+            }
+            b.driven = false;
+            const wasOnGround = b.onGround;
+            b.onGround = false;
+            // eixo X e Z: paredes (encolhe um pouco em Y para não "enganchar" no chão)
+            for (const axis of ['x', 'z']) {
+                p[axis] += v[axis] * dt;
+                for (const s of solids) {
+                    if (s.name === name) continue;
+                    const bb = boxAt(0.05, 0);
+                    if (!bb.intersectsBox(s.box)) continue;
+                    // degrau baixo: sobe automaticamente (até 0.3)
+                    const step = s.box.max.y - bb.min.y + 0.05;
+                    if (step > 0 && step < 0.35 && wasOnGround) {
+                        p.y += step;
+                        continue;
+                    }
+                    if (v[axis] > 0) p[axis] -= (bb.max[axis] - s.box.min[axis]) + eps;
+                    else if (v[axis] < 0) p[axis] += (s.box.max[axis] - bb.min[axis]) + eps;
+                    v[axis] = 0;
+                }
+            }
+            // eixo Y: chão e teto
+            p.y += v.y * dt;
+            for (const s of solids) {
+                if (s.name === name) continue;
+                const bb = boxAt(0, 0.02);
+                if (!bb.intersectsBox(s.box)) continue;
+                if (v.y <= 0) {
+                    p.y += (s.box.max.y - bb.min.y) + eps;
+                    b.onGround = true;
+                } else {
+                    p.y -= (bb.max.y - s.box.min.y) + eps;
+                }
+                v.y = 0;
+            }
+            // terreno: raio para baixo a partir do meio do corpo
+            if (terrains.length && v.y <= 0) {
+                const bb = boxAt();
+                const center = bb.getCenter(new THREE.Vector3());
+                const feet = bb.min.y;
+                const reach = b.half.y + 0.35 + (wasOnGround ? 0.4 : 0) + Math.max(0, -v.y * dt);
+                this.raycaster.set(new THREE.Vector3(center.x, center.y, center.z), new THREE.Vector3(0, -1, 0));
+                this.raycaster.far = reach;
+                const hit = this.raycaster.intersectObjects(terrains, true)[0];
+                this.raycaster.far = Infinity;
+                if (hit && hit.point.y >= feet - (wasOnGround ? 0.4 : 0.05) - Math.max(0, -v.y * dt)) {
+                    p.y += hit.point.y - feet;
+                    v.y = 0;
+                    b.onGround = true;
+                }
+            }
+        }
+    }
+
+    getBody (name) {
+        const b = this.bodies.get(String(name));
+        return b && b.type === 'corpo' ? b : null;
+    }
+
+    jump (name, force) {
+        const b = this.getBody(name);
+        if (b && b.onGround) {
+            b.vel.y = force;
+            b.onGround = false;
+        }
+    }
+
+    /**
+     * Movimento no chão a partir de um "joystick" (lado, frente), relativo à câmera ou ao próprio objeto.
+     * O personagem vira suavemente para a direção do movimento.
+     * @param {string} name objeto
+     * @param {number} side -1 (esquerda) a 1 (direita)
+     * @param {number} forward -1 (trás) a 1 (frente)
+     * @param {number} speed velocidade (unidades por segundo)
+     * @param {boolean} relativeToCamera usa a direção da câmera
+     */
+    walk (name, side, forward, speed, relativeToCamera) {
+        const obj = this.get(name);
+        const b = this.getBody(name);
+        if (!obj || !b) return;
+        let fwd;
+        if (relativeToCamera) {
+            fwd = new THREE.Vector3();
+            this.camera.getWorldDirection(fwd);
+        } else {
+            fwd = new THREE.Vector3(Math.sin(obj.rotation.y), 0, Math.cos(obj.rotation.y));
+        }
+        fwd.y = 0;
+        if (fwd.lengthSq() < 1e-6) fwd.set(0, 0, -1);
+        fwd.normalize();
+        const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
+        const dir = fwd.multiplyScalar(forward).add(right.multiplyScalar(side));
+        if (dir.lengthSq() > 1) dir.normalize();
+        b.vel.x = dir.x * speed;
+        b.vel.z = dir.z * speed;
+        b.driven = true;
+        if (relativeToCamera && dir.lengthSq() > 0.01) {
+            // vira para onde está andando (modelos olham para +Z)
+            const target = Math.atan2(dir.x, dir.z);
+            let diff = target - obj.rotation.y;
+            diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+            obj.rotation.y += diff * 0.35;
+        }
+    }
+
+    /**
+     * Gira só o "visual" do objeto, sem mudar a direção dele. Serve para modelos que foram
+     * exportados olhando para o lado errado (o personagem anda de costas ou de lado).
+     * @param {string} name objeto
+     * @param {number} degrees ângulo em graus
+     */
+    setFacingOffset (name, degrees) {
+        const obj = this.get(name);
+        if (obj && obj.children[0]) obj.children[0].rotation.y = degrees * DEG;
+    }
+
+    // ---------- câmera que segue (terceira pessoa) ----------
+
+    setFollow (name, distance, height) {
+        const prevYaw = this.follow ? this.follow.yaw : 0;
+        this.follow = {name: String(name), distance, height, yaw: prevYaw};
+    }
+
+    _updateFollowCamera (delta) {
+        if (!this.follow) return;
+        const target = this.get(this.follow.name);
+        if (!target) return;
+        const {distance, height, yaw} = this.follow;
+        const goal = new THREE.Vector3(
+            target.position.x + Math.sin(yaw) * distance,
+            target.position.y + height,
+            target.position.z + Math.cos(yaw) * distance
+        );
+        const k = 1 - Math.pow(0.0005, delta); // suaviza (independe do FPS)
+        this.camera.position.lerp(goal, k);
+        this.camera.lookAt(target.position.x, target.position.y + Math.min(height, 1.2), target.position.z);
     }
 
     // ---------- consultas ----------

@@ -225,6 +225,84 @@ class Adventiscratch3D {
                 },
                 '---',
                 {
+                    opcode: 'fisicaTipo',
+                    blockType: B.COMMAND,
+                    text: 'física de [NOME]: [TIPO]',
+                    arguments: {NOME: nome(), TIPO: {type: A.STRING, menu: 'tiposFisica', defaultValue: 'corpo'}}
+                },
+                {
+                    opcode: 'gravidade',
+                    blockType: B.COMMAND,
+                    text: 'mudar gravidade para [G]',
+                    arguments: {G: {type: A.NUMBER, defaultValue: -25}}
+                },
+                {
+                    opcode: 'andarCamera',
+                    blockType: B.COMMAND,
+                    text: 'andar [NOME] pela câmera: lado [X] frente [Z] velocidade [V]',
+                    arguments: {
+                        NOME: nome('jogador'),
+                        X: {type: A.NUMBER, defaultValue: 0},
+                        Z: {type: A.NUMBER, defaultValue: 1},
+                        V: {type: A.NUMBER, defaultValue: 8}
+                    }
+                },
+                {
+                    opcode: 'andarFrente',
+                    blockType: B.COMMAND,
+                    text: 'andar [NOME] para frente com velocidade [V]',
+                    arguments: {NOME: nome('jogador'), V: {type: A.NUMBER, defaultValue: 5}}
+                },
+                {
+                    opcode: 'pular',
+                    blockType: B.COMMAND,
+                    text: 'pular [NOME] com força [F]',
+                    arguments: {NOME: nome('jogador'), F: {type: A.NUMBER, defaultValue: 10}}
+                },
+                {
+                    opcode: 'noChao',
+                    blockType: B.BOOLEAN,
+                    text: '[NOME] está no chão?',
+                    arguments: {NOME: nome('jogador')}
+                },
+                {
+                    opcode: 'definirVelocidade',
+                    blockType: B.COMMAND,
+                    text: 'mudar velocidade de [NOME] para x: [X] y: [Y] z: [Z]',
+                    arguments: {NOME: nome('jogador'), ...xyz(0, 0, 0)}
+                },
+                {
+                    opcode: 'velocidade',
+                    blockType: B.REPORTER,
+                    text: 'velocidade [EIXO] de [NOME]',
+                    arguments: {EIXO: {type: A.STRING, menu: 'eixosVel', defaultValue: 'y'}, NOME: nome('jogador')}
+                },
+                {
+                    opcode: 'ajusteFrente',
+                    blockType: B.COMMAND,
+                    text: 'virar o modelo de [NOME] em [N] graus (ajuste de frente)',
+                    arguments: {NOME: nome('jogador'), N: {type: A.NUMBER, defaultValue: 180}}
+                },
+                '---',
+                {
+                    opcode: 'cameraSeguir',
+                    blockType: B.COMMAND,
+                    text: 'câmera seguir [NOME] distância [D] altura [H]',
+                    arguments: {
+                        NOME: nome('jogador'),
+                        D: {type: A.NUMBER, defaultValue: 7},
+                        H: {type: A.NUMBER, defaultValue: 3}
+                    }
+                },
+                {
+                    opcode: 'cameraGirarSeguindo',
+                    blockType: B.COMMAND,
+                    text: 'girar câmera em volta do jogador por [N] graus',
+                    arguments: {N: {type: A.NUMBER, defaultValue: 3}}
+                },
+                {opcode: 'cameraPararSeguir', blockType: B.COMMAND, text: 'parar de seguir com a câmera'},
+                '---',
+                {
                     opcode: 'cameraPara',
                     blockType: B.COMMAND,
                     text: 'mover câmera para x: [X] y: [Y] z: [Z]',
@@ -349,6 +427,24 @@ class Adventiscratch3D {
                     items: [
                         {text: 'texturas', value: 'texturas'},
                         {text: 'texturas faltando', value: 'faltando'}
+                    ]
+                },
+                tiposFisica: {
+                    acceptReporters: false,
+                    items: [
+                        {text: 'corpo (cai e pula)', value: 'corpo'},
+                        {text: 'sólido (chão, parede, plataforma)', value: 'solido'},
+                        {text: 'terreno (chão com rampas)', value: 'terreno'},
+                        {text: 'sem física', value: 'nenhum'}
+                    ]
+                },
+                eixosVel: {
+                    acceptReporters: false,
+                    items: [
+                        {text: 'x', value: 'x'},
+                        {text: 'y', value: 'y'},
+                        {text: 'z', value: 'z'},
+                        {text: 'horizontal (rapidez)', value: 'h'}
                     ]
                 },
                 luzes: {
@@ -494,6 +590,53 @@ class Adventiscratch3D {
     animacoes ({INFO, NOME}) {
         if (!engine) return INFO === 'nomes' ? '' : 0;
         return INFO === 'nomes' ? engine.animationNames(NOME) : engine.animationCount(NOME);
+    }
+
+    // ---------- física ----------
+    fisicaTipo ({NOME, TIPO}) {
+        if (engine) engine.setPhysicsType(NOME, String(TIPO));
+    }
+    gravidade ({G}) {
+        return withEngine(this.runtime, e => {
+            e.gravity = num(G);
+        });
+    }
+    andarCamera ({NOME, X, Z, V}) {
+        if (engine) engine.walk(NOME, num(X), num(Z), num(V), true);
+    }
+    andarFrente ({NOME, V}) {
+        if (engine) engine.walk(NOME, 0, 1, num(V), false);
+    }
+    pular ({NOME, F}) {
+        if (engine) engine.jump(NOME, num(F));
+    }
+    noChao ({NOME}) {
+        const b = engine && engine.getBody(NOME);
+        return !!(b && b.onGround);
+    }
+    definirVelocidade ({NOME, X, Y, Z}) {
+        const b = engine && engine.getBody(NOME);
+        if (!b) return;
+        b.vel.set(num(X), num(Y), num(Z));
+        b.driven = true;
+    }
+    velocidade ({EIXO, NOME}) {
+        const b = engine && engine.getBody(NOME);
+        if (!b) return 0;
+        if (EIXO === 'h') return round(Math.hypot(b.vel.x, b.vel.z));
+        return round(b.vel[EIXO] || 0);
+    }
+    ajusteFrente ({NOME, N}) {
+        if (engine) engine.setFacingOffset(NOME, num(N));
+    }
+    cameraSeguir ({NOME, D, H}) {
+        return withEngine(this.runtime, e => e.setFollow(NOME, num(D), num(H)));
+    }
+    cameraGirarSeguindo ({N}) {
+        if (engine && engine.follow) engine.follow.yaw += num(N) * Math.PI / 180;
+    }
+    cameraPararSeguir () {
+        if (engine) engine.follow = null;
     }
 
     // ---------- câmera ----------
