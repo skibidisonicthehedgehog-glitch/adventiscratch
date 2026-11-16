@@ -5,6 +5,8 @@
 import {AdventiscratchExtras} from './extras-extension.js';
 import {Adventiscratch3D, attach3DToVm, resetForNewProject} from './three-extension.js';
 import {patchVmForAsp} from './asp-format.js';
+import {iniciarContas} from './conta/conta.js';
+import {iniciarDetector} from './detector-erros.js';
 
 const EXTENSIONS = {
     adventiscratch: AdventiscratchExtras,
@@ -38,6 +40,8 @@ const setupAdventiscratch = vm => {
     // acesso pelo console do navegador (F12), útil para depurar
     window.adventiscratchVM = vm;
     attach3DToVm(vm);
+    iniciarContas(vm);
+    iniciarDetector(vm);
 };
 
 export default setupAdventiscratch;

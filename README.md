@@ -11,7 +11,9 @@ Fork do [scratch-gui oficial](https://github.com/scratchfoundation/scratch-gui) 
 | Página inicial em pt-BR (`index.html`) | `src/playground/home.html` |
 | Editor movido para `editor.html` | `webpack.config.js` |
 | Sempre abre em português (pt-BR) | `src/lib/detect-locale.js` |
-| Sem contas, "Meus projetos", mochila nem compartilhar | `src/playground/render-gui.jsx` |
+| Sem "Meus projetos", mochila nem compartilhar do Scratch | `src/playground/render-gui.jsx` |
+| Contas, moderação e telas de suspensão | `server/` (Django) e `src/lib/adventiscratch/conta/` |
+| Detector de erros nos blocos | `src/lib/adventiscratch/detector-erros.js` |
 | Logo do editor volta para a página inicial | `src/playground/render-gui.jsx` |
 | Extensão **Extras Adventiscratch** (14 blocos novos) | `src/lib/adventiscratch/extras-extension.js` |
 | Extensão **3D (Three.js)** com modelos 3D | `src/lib/adventiscratch/three-extension.js` e `three-engine.js` |
@@ -69,6 +71,88 @@ Clique no botão de extensões (canto inferior esquerdo) e escolha **3D (Three.j
 A cena 3D é desenhada por cima do palco do Scratch. Com fundo transparente, os atores 2D aparecem atrás
 dos objetos 3D. Modelos são ajustados automaticamente para caber em ~2 unidades e ficar com a base no chão.
 O Three.js é carregado só quando um bloco 3D é usado, então o editor não fica mais lento.
+
+## Detector de erros
+
+O editor analisa os blocos do ator em edição e marca os problemas: **vermelho** = erro, **laranja** = aviso,
+com um **⚠** no bloco (passe o mouse para ler). O contador no canto da área de código lista tudo; clique num
+item para ir até o bloco. Ele detecta: condição vazia em `se`/`até que`/`e`/`ou`, variável ou lista apagada,
+bloco personalizado sem definição, divisão por zero, fantasia/cenário/som que não existe, modelo 3D não importado,
+objeto 3D usado mas nunca criado, mensagem enviada que ninguém recebe (e vice-versa), script sem bloco de evento
+e `se`/`sempre`/`repita` vazios. Para criar uma regra nova, edite `analisar()` em `detector-erros.js`.
+
+## Contas e moderação
+
+O servidor fica na pasta `server/` (Django). Ele guarda as contas e cuida da moderação; o editor continua
+rodando no navegador e consulta a situação da conta a cada minuto.
+
+- **Contas de aluno:** criadas com o **código da turma** (o professor cria os códigos no painel). Guardamos só
+  usuário, nome de exibição e turma: sem e-mail e sem outros dados pessoais.
+- **Painel de moderação:** `/moderacao/` (admin do Django em português). Denúncias, sanções, pedidos de revisão,
+  códigos de turma e usuários.
+- **Sanções:**
+
+  | Tipo | O que o aluno vê |
+  |---|---|
+  | Advertência | Aviso azul "Li e entendi"; a conta continua funcionando |
+  | Suspensão temporária | Tela laranja com motivo, mensagem e contagem regressiva até a data de fim |
+  | Suspensão indefinida | Tela roxa: "até um moderador revisar o seu caso" |
+  | Suspensão permanente | Tela vermelha: conta encerrada (o moderador decide se aceita pedido de revisão) |
+
+  Quando há mais de uma, vale a mais grave. Ao aplicar uma suspensão, o aluno é desconectado na hora.
+  Em todas as telas o aluno pode **baixar o projeto** (para não perder o trabalho) e, se permitido,
+  **pedir revisão**. Denúncias são feitas pelo menu da conta (canto superior direito do editor).
+- **Fluxo do moderador:** Denúncias → abrir → "Aplicar sanção ao denunciado" (formulário já preenchido) →
+  escolher tipo, motivo e mensagem. Pedidos de revisão → aceitar (revoga) ou negar, com resposta ao aluno.
+
+### Rodar o servidor no computador (desenvolvimento)
+
+```bash
+cd server
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py criar_moderador professor --admin      # pede a senha
+python manage.py runserver                              # http://localhost:8000/moderacao/
+```
+
+Em outra janela, `npm start` (editor em http://localhost:8601). O editor encontra o servidor sozinho.
+No painel, crie um **código de turma** antes de criar contas de aluno. Testes: `python manage.py test contas`.
+
+A configuração do editor fica em `static/adventiscratch/config.js` (endereço da API e se o login é obrigatório).
+Para usar o editor sem contas, coloque `api: 'desligado'`.
+
+## Servidor com Docker Engine
+
+A imagem junta tudo: editor compilado + API + painel de moderação, num endereço só.
+
+```bash
+cp .env.example .env          # edite: DJANGO_SECRET_KEY, moderador inicial, domínio
+docker compose up -d --build  # http://SEU-SERVIDOR:8000
+docker compose logs -f        # ver o que está acontecendo
+```
+
+- Os dados (banco SQLite) ficam no volume `dados`. Backup: `docker compose cp adventiscratch:/dados ./backup`.
+- PostgreSQL (opcional): descomente as variáveis `POSTGRES_*` no `.env` e use `docker compose --profile postgres up -d`.
+- Atualizar depois de mudar o código: `docker compose up -d --build`.
+
+## Publicar na internet com Cloudflare Tunnel
+
+Não precisa abrir portas no roteador nem ter IP fixo.
+
+1. No painel da Cloudflare: **Zero Trust → Networks → Tunnels → Create a tunnel → Cloudflared**.
+2. Copie o **token** (o texto longo depois de `--token` no comando de instalação) para `CLOUDFLARE_TUNNEL_TOKEN` no `.env`.
+3. Em **Public Hostname**, adicione seu domínio (ex.: `adventiscratch.suaescola.com.br`) com **Service: HTTP** e
+   **URL: `adventiscratch:8000`**.
+4. No `.env`:
+   ```
+   DJANGO_ALLOWED_HOSTS=adventiscratch.suaescola.com.br
+   DJANGO_CSRF_TRUSTED_ORIGINS=https://adventiscratch.suaescola.com.br
+   ADVENTISCRATCH_ATRAS_DE_PROXY=1
+   ENDERECO=127.0.0.1
+   ```
+5. `docker compose --profile cloudflare up -d --build`
+
+O IP real do aluno (cabeçalho `CF-Connecting-IP`) é usado no limite de tentativas de login.
 
 ## Criar mais blocos
 

@@ -1,0 +1,48 @@
+# Adventiscratch com Docker Engine.
+#
+#   cp .env.example .env        (e edite o .env)
+#   docker compose up -d --build
+#
+# Opcional:
+#   docker compose --profile cloudflare up -d     -> publica na internet pelo Cloudflare Tunnel
+#   docker compose --profile postgres up -d       -> usa PostgreSQL em vez de SQLite
+services:
+  adventiscratch:
+    build: .
+    image: adventiscratch:latest
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      # Com Cloudflare Tunnel, use ENDERECO=127.0.0.1 no .env para não abrir a porta para a rede
+      - "${ENDERECO:-0.0.0.0}:${PORTA:-8000}:8000"
+    volumes:
+      - dados:/dados
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    profiles: ["cloudflare"]
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?Defina CLOUDFLARE_TUNNEL_TOKEN no .env}
+    depends_on:
+      - adventiscratch
+
+  db:
+    image: postgres:16-alpine
+    profiles: ["postgres"]
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-adventiscratch}
+      POSTGRES_USER: ${POSTGRES_USER:-adventiscratch}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no .env}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-adventiscratch}"]
+      interval: 10s
+      retries: 5
+
+volumes:
+  dados:
+  postgres:

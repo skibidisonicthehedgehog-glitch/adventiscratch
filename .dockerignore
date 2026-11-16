@@ -1,0 +1,11 @@
+node_modules
+build
+dist
+.git
+server/dados
+server/staticfiles
+**/__pycache__
+.env
+server/.env
+static/microbit
+src/generated

@@ -26,3 +26,8 @@ npm-*
 
 # for act
 .secrets
+
+# Adventiscratch
+.env
+server/dados/
+server/staticfiles/
