@@ -212,27 +212,4 @@ class AdventiscratchExtras {
     }
 }
 
-/**
- * Ensina a VM a carregar a extensão pelo ID "adventiscratch"
- * (tanto pela biblioteca de extensões quanto ao abrir um projeto .sb3 que a use).
- * @param {VirtualMachine} vm instância da VM do Scratch
- */
-const registerAdventiscratchExtras = vm => {
-    const manager = vm.extensionManager;
-    if (manager.__adventiscratchPatched) return;
-    manager.__adventiscratchPatched = true;
-    const originalLoad = manager.loadExtensionURL.bind(manager);
-    manager.loadExtensionURL = url => {
-        if (url === 'adventiscratch') {
-            if (!manager.isExtensionLoaded('adventiscratch')) {
-                const instance = new AdventiscratchExtras(vm.runtime);
-                const serviceName = manager._registerInternalExtension(instance);
-                manager._loadedExtensions.set('adventiscratch', serviceName);
-            }
-            return Promise.resolve();
-        }
-        return originalLoad(url);
-    };
-};
-
-export {AdventiscratchExtras, registerAdventiscratchExtras};
+export {AdventiscratchExtras};

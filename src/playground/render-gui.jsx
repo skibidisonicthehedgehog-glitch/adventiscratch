@@ -7,7 +7,7 @@ import GUI from '../containers/gui.jsx';
 import HashParserHOC from '../lib/hash-parser-hoc.jsx';
 import log from '../lib/log.js';
 
-import {registerAdventiscratchExtras} from '../lib/adventiscratch/extras-extension.js';
+import setupAdventiscratch from '../lib/adventiscratch/index.js';
 
 const onClickLogo = () => {
     window.location = 'index.html';
@@ -76,7 +76,7 @@ export default appTarget => {
                 canEditTitle
                 canSave={false}
                 onClickLogo={onClickLogo}
-                onVmInit={registerAdventiscratchExtras}
+                onVmInit={setupAdventiscratch}
             />,
         appTarget);
 };

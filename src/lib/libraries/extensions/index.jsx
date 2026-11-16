@@ -3,6 +3,8 @@ import {FormattedMessage} from 'react-intl';
 
 import adventiscratchIconURL from '../../adventiscratch/capa.png';
 import adventiscratchInsetIconURL from '../../adventiscratch/icone.svg';
+import adventiscratch3dIconURL from '../../adventiscratch/capa3d.png';
+import adventiscratch3dInsetIconURL from '../../adventiscratch/icone-3d.svg';
 import musicIconURL from './music/music.png';
 import musicInsetIconURL from './music/music-small.svg';
 
@@ -55,6 +57,14 @@ export default [
         iconURL: adventiscratchIconURL,
         insetIconURL: adventiscratchInsetIconURL,
         description: 'Potência, raiz, verdadeiro/falso, ≠ ≥ ≤, textos e datas.',
+        featured: true
+    },
+    {
+        name: '3D (Three.js)',
+        extensionId: 'adventiscratch3d',
+        iconURL: adventiscratch3dIconURL,
+        insetIconURL: adventiscratch3dInsetIconURL,
+        description: 'Cenas 3D com formas, câmera, luzes e modelos .glb, .fbx, .obj, .stl, .dae e .ply.',
         featured: true
     },
     {

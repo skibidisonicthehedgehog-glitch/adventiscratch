@@ -13,12 +13,47 @@ Fork do [scratch-gui oficial](https://github.com/scratchfoundation/scratch-gui) 
 | Sempre abre em português (pt-BR) | `src/lib/detect-locale.js` |
 | Sem contas, "Meus projetos", mochila nem compartilhar | `src/playground/render-gui.jsx` |
 | Logo do editor volta para a página inicial | `src/playground/render-gui.jsx` |
-| Extensão **Extras Adventiscratch** (17 blocos novos) | `src/lib/adventiscratch/extras-extension.js` e `src/lib/libraries/extensions/index.jsx` |
+| Extensão **Extras Adventiscratch** (14 blocos novos) | `src/lib/adventiscratch/extras-extension.js` |
+| Extensão **3D (Three.js)** com modelos 3D | `src/lib/adventiscratch/three-extension.js` e `three-engine.js` |
+| Formato de projeto **.asp** (AdventiScratch Project) | `src/lib/adventiscratch/asp-format.js`, `src/containers/sb3-downloader.jsx`, `src/lib/sb-file-uploader-hoc.jsx` |
+| Registro das extensões na VM | `src/lib/adventiscratch/index.js` e `src/lib/libraries/extensions/index.jsx` |
 
 ### Blocos da extensão Extras Adventiscratch
 `[A] elevado a [B]` · `raiz [N] de [X]` · `verdadeiro` · `falso` · `[A] ≠ [B]` · `[A] ≥ [B]` · `[A] ≤ [B]` ·
 `se <cond> então [A] senão [B]` · `[texto] em MAIÚSCULAS/minúsculas/Título` · `substitua [de] por [para] em [texto]` ·
 `repita [texto] [N] vezes` · `[texto] começa com [parte]?` · `milissegundos desde 1970` · `data de hoje`
+
+## Formato .asp
+
+Um `.asp` é um `.sb3` (zip com `project.json`, fantasias e sons) com uma pasta a mais:
+
+```
+adventiscratch/manifest.json      -> {"format": "asp", "version": 1, "models": [...]}
+adventiscratch/models/<arquivo>   -> modelos 3D importados no projeto
+```
+
+O editor salva sempre em `.asp` e abre `.asp`, `.sb3`, `.sb2` e `.sb`. Se um `.asp` for renomeado
+para `.sb3`, ele abre no Scratch comum (só os blocos do Adventiscratch não funcionam lá).
+
+## Extensão 3D (Three.js)
+
+Clique no botão de extensões (canto inferior esquerdo) e escolha **3D (Three.js)**.
+
+- **Importar modelo 3D…** (botão no topo da paleta): aceita `.glb`, `.gltf`, `.fbx`, `.obj`, `.stl`, `.dae` e `.ply`.
+  O modelo fica salvo dentro do `.asp`. Prefira `.glb`, porque `.gltf` e `.obj` costumam depender de arquivos
+  externos (texturas, `.bin`, `.mtl`), que não são importados.
+- Cena: ligar/desligar 3D, cor de fundo ou fundo transparente, apagar tudo.
+- Objetos: cubo, esfera, cilindro, cone, plano, rosca, cápsula ou um modelo importado (ou baixado de uma URL);
+  mover, girar, apontar, tamanho, cor, mostrar/esconder, consultar x/y/z/giro/tamanho, tocando, distância e
+  "objeto 3D sob o mouse".
+- Animações de modelos `.glb`/`.fbx`: tocar animação (por número ou nome), parar, quantidade/nomes.
+- Câmera (posição, apontar, campo de visão) e luzes (sol e ambiente: intensidade, cor, posição).
+
+A cena 3D é desenhada por cima do palco do Scratch. Com fundo transparente, os atores 2D aparecem atrás
+dos objetos 3D. Modelos são ajustados automaticamente para caber em ~2 unidades e ficar com a base no chão.
+O Three.js é carregado só quando um bloco 3D é usado, então o editor não fica mais lento.
+
+## Criar mais blocos
 
 Para criar mais blocos, adicione um item em `blocks` dentro de `getInfo()` e um método com o mesmo nome do `opcode`.
 

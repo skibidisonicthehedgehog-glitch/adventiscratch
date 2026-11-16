@@ -4,6 +4,7 @@ import defaultsDeep from 'lodash.defaultsdeep';
 import makeToolboxXML from '../lib/make-toolbox-xml';
 import PropTypes from 'prop-types';
 import React from 'react';
+import {IMPORT_MODEL_CALLBACK, importModelFromComputer} from '../lib/adventiscratch/three-extension.js';
 import VMScratchBlocks from '../lib/blocks';
 import VM from 'scratch-vm';
 
@@ -120,6 +121,8 @@ class Blocks extends React.Component {
         toolboxWorkspace.registerButtonCallback('MAKE_A_VARIABLE', varListButtonCallback(''));
         toolboxWorkspace.registerButtonCallback('MAKE_A_LIST', varListButtonCallback('list'));
         toolboxWorkspace.registerButtonCallback('MAKE_A_PROCEDURE', procButtonCallback);
+        // Adventiscratch: botão "Importar modelo 3D…" da extensão 3D
+        toolboxWorkspace.registerButtonCallback(IMPORT_MODEL_CALLBACK, importModelFromComputer);
 
         // Store the xml of the toolbox that is actually rendered.
         // This is used in componentDidUpdate instead of prevProps, because

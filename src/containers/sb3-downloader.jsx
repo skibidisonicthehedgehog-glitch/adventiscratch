@@ -49,7 +49,7 @@ const getProjectFilename = (curTitle, defaultTitle) => {
     if (!filenameTitle || filenameTitle.length === 0) {
         filenameTitle = defaultTitle;
     }
-    return `${filenameTitle.substring(0, 100)}.sb3`;
+    return `${filenameTitle.substring(0, 100)}.asp`; // Adventiscratch Project
 };
 
 SB3Downloader.propTypes = {
@@ -64,7 +64,7 @@ SB3Downloader.defaultProps = {
 };
 
 const mapStateToProps = state => ({
-    saveProjectSb3: state.scratchGui.vm.saveProjectSb3.bind(state.scratchGui.vm),
+    saveProjectSb3: () => state.scratchGui.vm.saveProjectSb3(),
     projectFilename: getProjectFilename(state.scratchGui.projectTitle, projectTitleInitialState)
 });
 
