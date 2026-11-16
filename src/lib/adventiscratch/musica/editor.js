@@ -1,6 +1,13 @@
 /**
  * Criador de Músicas: tela cheia com grade de piano (Melodia, Baixo, Acordes) e grade de bateria.
- * Clique para pôr ou tirar notas, arraste para deixar a nota mais longa.
+ *
+ * Ferramentas:
+ *  - ✏️ Desenhar (B): clique põe nota, clique numa nota tira, arraste a nota para mover, puxe a ponta para alongar.
+ *  - ⬚ Selecionar (V): arraste para fazer uma caixa de seleção; arraste notas selecionadas para mover.
+ *  - Shift+arrastar faz caixa em qualquer ferramenta; Ctrl+clique liga/desliga uma nota na seleção.
+ * Atalhos: Ctrl+C/X/V copiar/recortar/colar, Ctrl+D duplicar, Ctrl+A tudo, Delete apaga, Ctrl+Z/Ctrl+Y desfazer/
+ * refazer, setas movem (← → passo, Shift = batida; ↑ ↓ meio tom, Shift = oitava), Esc limpa a seleção.
+ * O "colar" põe as notas no marcador amarelo (clique na régua ou num lugar vazio da grade para mudar).
  */
 import {
     PASSOS_POR_BATIDA, PASSOS_POR_COMPASSO, LINHAS_BATERIA, NOMES_BATERIA,
@@ -18,6 +25,8 @@ const REGUA = 26;
 const CEL = 24; // largura de um passo
 const ALT = 16; // altura de uma linha do piano
 const ALT_BAT = 40;
+const PONTA = 7; // pixels na ponta direita da nota que servem para alongar
+const MAX_HISTORICO = 100;
 const PRETAS = new Set([1, 3, 6, 8, 10]);
 const CORES = {melodia: '#B48CFF', baixo: '#FF9F5A', acordes: '#5BD1C9', bateria: '#FFC928'};
 const DURACOES = [
@@ -34,6 +43,7 @@ const CSS = `
 .adv-mus button{font:inherit;font-weight:700;border:0;border-radius:9px;padding:7px 12px;cursor:pointer;
   background:rgba(255,255,255,.18);color:#fff}
 .adv-mus button:hover{background:rgba(255,255,255,.3)}
+.adv-mus button:disabled{opacity:.35;cursor:default;background:rgba(255,255,255,.12)}
 .adv-mus button.ativo{background:#FFC928;color:#1B1338}
 .adv-mus button.salvar{background:#5BBF4A}
 .adv-mus button.perigo{background:rgba(255,90,90,.35)}
@@ -42,16 +52,26 @@ const CSS = `
 .adv-mus-abas{display:flex;gap:4px;padding:8px 14px 0;background:#221A45}
 .adv-mus-abas button{border-radius:10px 10px 0 0;background:#2E2560;padding:9px 16px}
 .adv-mus-abas button.ativo{background:#3A2F78;color:#fff;box-shadow:inset 0 3px 0 var(--cor)}
+.adv-mus-ferramentas{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:7px 14px;background:#3A2F78;
+  border-bottom:1px solid rgba(255,255,255,.12)}
+.adv-mus-ferramentas button{padding:6px 10px;font-size:13px}
+.adv-mus-ferramentas .sep{width:1px;height:24px;background:rgba(255,255,255,.25);margin:0 4px}
+.adv-mus-ferramentas .info{font-size:13px;color:#E3DAFF;margin-left:4px}
 .adv-mus-faixa{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:8px 14px;background:#3A2F78}
 .adv-mus-grade{flex:1;overflow:auto;position:relative;background:#120D26}
 .adv-mus-grade .espaco{position:relative}
 .adv-mus-grade canvas{position:sticky;top:0;left:0;display:block;cursor:crosshair}
 .adv-mus-rodape{padding:6px 14px;font-size:12.5px;color:#CFC4F5;background:#221A45;display:flex;gap:16px;flex-wrap:wrap}
+.adv-mus-rodape kbd{background:#3A2F78;border-radius:4px;padding:0 5px;font-family:inherit}
 .adv-mus-aviso{position:absolute;left:50%;top:70px;transform:translateX(-50%);background:#1B1338;border:2px solid #FFC928;
   padding:8px 16px;border-radius:12px;z-index:5;pointer-events:none;transition:opacity .3s}
 `;
 
 let aberto = null;
+// área de transferência do Criador de Músicas (continua entre aberturas do editor e entre músicas)
+let areaTransferencia = null; // {tipo: 'notas', itens: [{p, n, d}], largura} | {tipo: 'bateria', itens: [{l, p}], largura}
+
+const dentro = (v, min, max) => Math.max(min, Math.min(max, v));
 
 /**
  * Abre o Criador de Músicas.
@@ -77,7 +97,12 @@ export const abrirCriadorDeMusicas = (vm, nomeInicial) => {
     let alterado = false;
     let aba = 'melodia';
     let duracao = 2;
+    let ferramenta = 'desenhar'; // desenhar | selecionar
     let arrastando = null;
+    let sel = new Set(); // melódico: objetos de nota; bateria: chaves "linha:passo"
+    let cursorPasso = 0; // onde o "colar" põe as notas
+    let historico = [];
+    let futuro = [];
 
     const raiz = document.createElement('div');
     raiz.className = 'adv-mus';
@@ -93,16 +118,37 @@ export const abrirCriadorDeMusicas = (vm, nomeInicial) => {
         <button class="repetir ativo" title="Repetir">🔁</button>
         <span class="esp"></span>
         <label>Começar de <select class="modelo" style="max-width:190px"></select></label>
-        <button class="perigo apagar">🗑 Apagar</button>
+        <button class="perigo apagar">🗑 Apagar música</button>
         <button class="salvar">✓ Salvar no projeto</button>
         <button class="fechar">✕ Fechar</button>
       </div>
       <div class="adv-mus-abas"></div>
+      <div class="adv-mus-ferramentas">
+        <button data-f="desenhar" title="Desenhar notas (B)">✏️ Desenhar</button>
+        <button data-f="selecionar" title="Selecionar com caixa (V) — ou segure Shift e arraste">⬚ Selecionar</button>
+        <span class="sep"></span>
+        <button data-a="desfazer" title="Desfazer (Ctrl+Z)">↶ Desfazer</button>
+        <button data-a="refazer" title="Refazer (Ctrl+Y)">↷ Refazer</button>
+        <span class="sep"></span>
+        <button data-a="copiar" title="Copiar (Ctrl+C)">⧉ Copiar</button>
+        <button data-a="recortar" title="Recortar (Ctrl+X)">✂ Recortar</button>
+        <button data-a="colar" title="Colar no marcador amarelo (Ctrl+V)">📋 Colar</button>
+        <button data-a="duplicar" title="Duplicar logo depois (Ctrl+D)">⎘ Duplicar</button>
+        <button data-a="apagar" title="Apagar seleção (Delete)">🗑 Apagar</button>
+        <span class="sep tons"></span>
+        <button class="tons" data-a="subir" title="Subir meio tom (↑)">♯ +1</button>
+        <button class="tons" data-a="descer" title="Descer meio tom (↓)">♭ −1</button>
+        <button class="tons" data-a="oitavaCima" title="Subir uma oitava (Shift+↑)">⇧ Oitava</button>
+        <button class="tons" data-a="oitavaBaixo" title="Descer uma oitava (Shift+↓)">⇩ Oitava</button>
+        <span class="info"></span>
+      </div>
       <div class="adv-mus-faixa"></div>
       <div class="adv-mus-grade"><div class="espaco"><canvas></canvas></div></div>
       <div class="adv-mus-rodape">
-        <span>🖱️ Clique para pôr uma nota · clique numa nota para tirar · arraste para deixar mais longa</span>
-        <span>Clique na régua para tocar dali · <b>Espaço</b> toca/pausa · teclado à esquerda toca a nota</span>
+        <span>✏️ clique põe/tira nota · arraste a nota para mover · puxe a ponta para alongar</span>
+        <span>⬚ ou <kbd>Shift</kbd>+arrastar: caixa de seleção · <kbd>Ctrl</kbd>+clique: soma à seleção</span>
+        <span><kbd>Ctrl+C</kbd> <kbd>Ctrl+X</kbd> <kbd>Ctrl+V</kbd> <kbd>Ctrl+D</kbd> <kbd>Ctrl+Z</kbd> · setas movem
+          (<kbd>Shift</kbd> = batida/oitava) · <kbd>Delete</kbd> apaga · <kbd>Espaço</kbd> toca/pausa</span>
       </div>
       <div class="adv-mus-aviso" style="opacity:0"></div>`;
     document.body.appendChild(raiz);
@@ -111,6 +157,12 @@ export const abrirCriadorDeMusicas = (vm, nomeInicial) => {
     const espaco = $('.espaco');
     const canvas = $('canvas');
     const g = canvas.getContext('2d');
+
+    // botões não ficam com o foco (senão o Espaço "clicaria" neles de novo)
+    raiz.addEventListener('click', e => {
+        const b = e.target.closest('button');
+        if (b) b.blur();
+    });
 
     const aviso = txt => {
         const a = $('.adv-mus-aviso');
@@ -127,17 +179,267 @@ export const abrirCriadorDeMusicas = (vm, nomeInicial) => {
         $('.salvar').textContent = '✓ Salvar no projeto *';
     };
 
+    const ehBateria = () => aba === 'bateria';
     const faixaAtual = () => m.faixas.find(f => f.id === aba);
+    const chaveBat = (l, p) => `${l}:${p}`;
+    const lerChave = k => {
+        const [l, p] = k.split(':').map(Number);
+        return {l, p};
+    };
+    const temBatida = (l, p) => m.bateria.linhas[LINHAS_BATERIA[l]].includes(p);
+
+    // ---------- desfazer / refazer ----------
+    const registrar = () => {
+        historico.push(JSON.stringify(m));
+        if (historico.length > MAX_HISTORICO) historico.shift();
+        futuro = [];
+        marcarAlterado();
+        atualizarFerramentas();
+    };
+    const restaurar = json => {
+        const nome = m.nome;
+        m = JSON.parse(json);
+        m.nome = nome; // o nome digitado não volta atrás
+        tocador.trocarMusica(m);
+        sel = new Set();
+        arrastando = null;
+        preencherCampos();
+        ajustarTamanho();
+        marcarAlterado();
+    };
+    const desfazer = () => {
+        if (!historico.length) {
+            aviso('Nada para desfazer');
+            return;
+        }
+        futuro.push(JSON.stringify(m));
+        restaurar(historico.pop());
+    };
+    const refazer = () => {
+        if (!futuro.length) {
+            aviso('Nada para refazer');
+            return;
+        }
+        historico.push(JSON.stringify(m));
+        restaurar(futuro.pop());
+    };
+
+    // ---------- seleção ----------
+    const limparSelecao = () => {
+        sel = new Set();
+        atualizarFerramentas();
+    };
+    const selecionados = () => {
+        if (ehBateria()) return Array.from(sel).map(lerChave).filter(({l, p}) => temBatida(l, p));
+        const f = faixaAtual();
+        return f.notas.filter(n => sel.has(n));
+    };
+    const selecionarTudo = () => {
+        if (ehBateria()) {
+            sel = new Set();
+            LINHAS_BATERIA.forEach((l, i) => m.bateria.linhas[l].forEach(p => sel.add(chaveBat(i, p))));
+        } else {
+            sel = new Set(faixaAtual().notas);
+        }
+        atualizarFerramentas();
+    };
+
+    const apagarSelecao = () => {
+        const itens = selecionados();
+        if (!itens.length) return;
+        registrar();
+        if (ehBateria()) {
+            itens.forEach(({l, p}) => {
+                const lista = m.bateria.linhas[LINHAS_BATERIA[l]];
+                lista.splice(lista.indexOf(p), 1);
+            });
+        } else {
+            const f = faixaAtual();
+            f.notas = f.notas.filter(n => !sel.has(n));
+        }
+        limparSelecao();
+    };
+
+    const copiar = () => {
+        const itens = selecionados();
+        if (!itens.length) {
+            aviso('Selecione notas para copiar');
+            return false;
+        }
+        const ini = Math.min(...itens.map(i => i.p));
+        if (ehBateria()) {
+            areaTransferencia = {tipo: 'bateria', itens: itens.map(({l, p}) => ({l, p: p - ini})),
+                largura: Math.max(...itens.map(i => i.p)) - ini + 1};
+        } else {
+            areaTransferencia = {tipo: 'notas', itens: itens.map(n => ({p: n.p - ini, n: n.n, d: n.d})),
+                largura: Math.max(...itens.map(n => n.p + n.d)) - ini};
+        }
+        atualizarFerramentas();
+        aviso(`${itens.length} ${itens.length === 1 ? 'nota copiada' : 'notas copiadas'}`);
+        return true;
+    };
+
+    const recortar = () => {
+        if (copiar()) apagarSelecao();
+    };
+
+    const colarEm = inicio => {
+        const at = areaTransferencia;
+        if (!at) {
+            aviso('Copie algumas notas primeiro');
+            return;
+        }
+        if ((at.tipo === 'bateria') !== ehBateria()) {
+            aviso(at.tipo === 'bateria' ? 'Isso foi copiado da bateria: cole na aba Bateria' :
+                'Notas de piano não podem ser coladas na bateria');
+            return;
+        }
+        const total = totalPassos(m);
+        registrar();
+        const novos = new Set();
+        if (at.tipo === 'bateria') {
+            for (const it of at.itens) {
+                const p = inicio + it.p;
+                if (p >= total) continue;
+                const lista = m.bateria.linhas[LINHAS_BATERIA[it.l]];
+                if (!lista.includes(p)) lista.push(p);
+                novos.add(chaveBat(it.l, p));
+            }
+        } else {
+            const f = faixaAtual();
+            for (const it of at.itens) {
+                const p = inicio + it.p;
+                if (p >= total) continue;
+                let nota = f.notas.find(x => x.p === p && x.n === it.n);
+                if (nota) {
+                    nota.d = Math.max(nota.d, Math.min(it.d, total - p));
+                } else {
+                    nota = {p, n: it.n, d: Math.min(it.d, total - p)};
+                    f.notas.push(nota);
+                }
+                novos.add(nota);
+            }
+        }
+        sel = novos;
+        cursorPasso = Math.min(total - 1, inicio + at.largura);
+        atualizarFerramentas();
+        if (!novos.size) aviso('Não coube nada: o marcador está no fim da música');
+    };
+    const colar = () => colarEm(cursorPasso);
+
+    const duplicar = () => {
+        const itens = selecionados();
+        if (!itens.length) {
+            aviso('Selecione notas para duplicar');
+            return;
+        }
+        const guardada = areaTransferencia;
+        copiar();
+        const ini = Math.min(...itens.map(i => i.p));
+        colarEm(ini + areaTransferencia.largura);
+        areaTransferencia = guardada || areaTransferencia;
+        atualizarFerramentas();
+    };
+
+    /** Move a seleção: dp passos para a direita; dv meio-tons para cima (ou linhas da bateria para baixo). */
+    const moverSelecao = (dp, dv) => {
+        const itens = selecionados();
+        if (!itens.length) return;
+        const total = totalPassos(m);
+        registrar();
+        if (ehBateria()) {
+            const minP = Math.min(...itens.map(i => i.p));
+            const maxP = Math.max(...itens.map(i => i.p));
+            const minL = Math.min(...itens.map(i => i.l));
+            const maxL = Math.max(...itens.map(i => i.l));
+            const ddp = dentro(dp, -minP, total - 1 - maxP);
+            const ddl = dentro(dv, -minL, LINHAS_BATERIA.length - 1 - maxL);
+            itens.forEach(({l, p}) => {
+                const lista = m.bateria.linhas[LINHAS_BATERIA[l]];
+                lista.splice(lista.indexOf(p), 1);
+            });
+            sel = new Set();
+            itens.forEach(({l, p}) => {
+                const lista = m.bateria.linhas[LINHAS_BATERIA[l + ddl]];
+                if (!lista.includes(p + ddp)) lista.push(p + ddp);
+                sel.add(chaveBat(l + ddl, p + ddp));
+            });
+        } else {
+            const minP = Math.min(...itens.map(n => n.p));
+            const maxFim = Math.max(...itens.map(n => n.p + n.d));
+            const minN = Math.min(...itens.map(n => n.n));
+            const maxN = Math.max(...itens.map(n => n.n));
+            const ddp = dentro(dp, -minP, total - maxFim);
+            const ddn = dentro(dv, NOTA_MIN - minN, NOTA_MAX - maxN);
+            itens.forEach(n => {
+                n.p += ddp;
+                n.n += ddn;
+            });
+            if (ddn && itens.length <= 6) {
+                const f = faixaAtual();
+                itens.forEach(n => tocarNota(ctx(), saida(), f.instrumento, n.n, ctx().currentTime + 0.01, 0.25, f.volume));
+            }
+        }
+        atualizarFerramentas();
+    };
+
+    const ACOES = {
+        desfazer, refazer, copiar, recortar, colar, duplicar,
+        apagar: apagarSelecao,
+        subir: () => moverSelecao(0, 1),
+        descer: () => moverSelecao(0, -1),
+        oitavaCima: () => moverSelecao(0, 12),
+        oitavaBaixo: () => moverSelecao(0, -12)
+    };
+
+    const escolherFerramenta = f => {
+        ferramenta = f;
+        atualizarFerramentas();
+    };
+
+    function atualizarFerramentas () {
+        if (!m) return;
+        raiz.querySelectorAll('[data-f]').forEach(b => b.classList.toggle('ativo', b.dataset.f === ferramenta));
+        const qtd = selecionados().length;
+        const at = areaTransferencia;
+        const podeColar = Boolean(at) && ((at.tipo === 'bateria') === ehBateria());
+        const estado = {
+            desfazer: historico.length > 0,
+            refazer: futuro.length > 0,
+            copiar: qtd > 0,
+            recortar: qtd > 0,
+            colar: podeColar,
+            duplicar: qtd > 0,
+            apagar: qtd > 0,
+            subir: qtd > 0,
+            descer: qtd > 0,
+            oitavaCima: qtd > 0,
+            oitavaBaixo: qtd > 0
+        };
+        raiz.querySelectorAll('[data-a]').forEach(b => {
+            b.disabled = !estado[b.dataset.a];
+        });
+        raiz.querySelectorAll('.tons').forEach(b => {
+            b.style.display = ehBateria() ? 'none' : '';
+        });
+        let info = qtd ? `${qtd} ${ehBateria() ? (qtd === 1 ? 'batida selecionada' : 'batidas selecionadas') :
+            (qtd === 1 ? 'nota selecionada' : 'notas selecionadas')}` : '';
+        if (at) info += `${info ? ' · ' : ''}📋 ${at.itens.length} na área de transferência`;
+        $('.adv-mus-ferramentas .info').textContent = info;
+    }
+
+    raiz.querySelectorAll('[data-f]').forEach(b => b.addEventListener('click', () => escolherFerramenta(b.dataset.f)));
+    raiz.querySelectorAll('[data-a]').forEach(b => b.addEventListener('click', () => ACOES[b.dataset.a]()));
 
     // ---------- interface ----------
     const preencherLista = () => {
-        const sel = $('.lista');
+        const s = $('.lista');
         const nomes = nomesMusicas();
-        sel.innerHTML = '';
-        if (!nomeOriginal) sel.add(new Option(`${m.nome} (nova)`, ''));
-        nomes.forEach(n => sel.add(new Option(`🎵 ${n}`, n)));
-        sel.add(new Option('＋ Nova música', '__nova__'));
-        sel.value = nomeOriginal || '';
+        s.innerHTML = '';
+        if (!nomeOriginal) s.add(new Option(`${m.nome} (nova)`, ''));
+        nomes.forEach(n => s.add(new Option(`🎵 ${n}`, n)));
+        s.add(new Option('＋ Nova música', '__nova__'));
+        s.value = nomeOriginal || '';
     };
 
     const instrumentosOpcoes = atual => {
@@ -163,10 +465,13 @@ export const abrirCriadorDeMusicas = (vm, nomeInicial) => {
                 b.style.setProperty('--cor', CORES[id]);
                 if (id === aba) b.classList.add('ativo');
                 b.addEventListener('click', () => {
+                    if (aba === id) return;
                     aba = id;
+                    sel = new Set();
                     montarAbas();
                     montarFaixa();
                     ajustarTamanho(true);
+                    atualizarFerramentas();
                 });
                 abas.appendChild(b);
             });
@@ -174,19 +479,20 @@ export const abrirCriadorDeMusicas = (vm, nomeInicial) => {
 
     const montarFaixa = () => {
         const div = $('.adv-mus-faixa');
-        if (aba === 'bateria') {
+        if (ehBateria()) {
             div.innerHTML = `<label>Volume da bateria <input class="vol" type="range" min="0" max="1" step="0.05"
                 value="${m.bateria.volume}"></label><button class="limpar">Limpar bateria</button>
                 <span style="opacity:.8">Clique nos quadradinhos para ligar e desligar cada som.</span>`;
+            div.querySelector('.vol').addEventListener('change', () => marcarAlterado());
             div.querySelector('.vol').addEventListener('input', e => {
                 m.bateria.volume = Number(e.target.value);
-                marcarAlterado();
             });
             div.querySelector('.limpar').addEventListener('click', () => {
+                registrar();
                 LINHAS_BATERIA.forEach(l => {
                     m.bateria.linhas[l] = [];
                 });
-                marcarAlterado();
+                limparSelecao();
             });
             return;
         }
@@ -202,27 +508,28 @@ export const abrirCriadorDeMusicas = (vm, nomeInicial) => {
                 e.target.value = f.instrumento;
                 const evento = v === '__importar__' ? 'adventiscratch-importar-sf2' : 'adventiscratch-loja-instrumentos';
                 window.dispatchEvent(new CustomEvent(evento, {detail: {aoEscolher: id => {
+                    registrar();
                     f.instrumento = id;
-                    marcarAlterado();
                     montarFaixa();
                 }}}));
                 return;
             }
+            registrar();
             f.instrumento = v;
-            marcarAlterado();
             tocarNota(ctx(), saida(), f.instrumento, aba === 'baixo' ? 43 : 67, ctx().currentTime + 0.01, 0.4, f.volume);
         });
+        div.querySelector('.vol').addEventListener('change', () => marcarAlterado());
         div.querySelector('.vol').addEventListener('input', e => {
             f.volume = Number(e.target.value);
-            marcarAlterado();
         });
         div.querySelectorAll('.dur').forEach(b => b.addEventListener('click', () => {
             duracao = Number(b.dataset.d);
             montarFaixa();
         }));
         div.querySelector('.limpar').addEventListener('click', () => {
+            registrar();
             f.notas = [];
-            marcarAlterado();
+            limparSelecao();
         });
     };
 
@@ -238,11 +545,12 @@ export const abrirCriadorDeMusicas = (vm, nomeInicial) => {
         preencherLista();
         montarAbas();
         montarFaixa();
+        atualizarFerramentas();
     };
 
     // ---------- tamanho e rolagem ----------
     const larguraMundo = () => TECLADO + (totalPassos(m) * CEL);
-    const alturaMundo = () => REGUA + (aba === 'bateria' ? LINHAS_BATERIA.length * ALT_BAT : LINHAS * ALT);
+    const alturaMundo = () => REGUA + (ehBateria() ? LINHAS_BATERIA.length * ALT_BAT : LINHAS * ALT);
 
     const ajustarTamanho = rolarParaNotas => {
         espaco.style.width = `${larguraMundo()}px`;
@@ -252,7 +560,7 @@ export const abrirCriadorDeMusicas = (vm, nomeInicial) => {
         canvas.style.width = `${canvas.width}px`;
         canvas.style.height = `${canvas.height}px`;
         canvas.style.marginBottom = `-${canvas.height}px`;
-        if (rolarParaNotas && aba !== 'bateria') {
+        if (rolarParaNotas && !ehBateria()) {
             const f = faixaAtual();
             const media = f.notas.length ? f.notas.reduce((s, n) => s + n.n, 0) / f.notas.length :
                 (aba === 'baixo' ? 43 : 67);
@@ -260,91 +568,270 @@ export const abrirCriadorDeMusicas = (vm, nomeInicial) => {
         }
     };
 
-    // ---------- coordenadas ----------
-    const paraPasso = x => Math.floor((x + grade.scrollLeft - TECLADO) / CEL);
-    const paraNota = y => NOTA_MAX - Math.floor((y + grade.scrollTop - REGUA) / ALT);
-    const paraLinhaBat = y => Math.floor((y + grade.scrollTop - REGUA) / ALT_BAT);
-
-    const notaEm = (f, p, n) => f.notas.find(x => x.n === n && p >= x.p && p < x.p + x.d);
-
+    // ---------- coordenadas (mundo = posição dentro da grade inteira, sem a rolagem) ----------
     const posMouse = ev => {
         const r = canvas.getBoundingClientRect();
         return {x: ev.clientX - r.left, y: ev.clientY - r.top};
     };
+    const paraMundo = ({x, y}) => ({x: x + grade.scrollLeft, y: y + grade.scrollTop});
+    const passoDoMundo = wx => Math.floor((wx - TECLADO) / CEL);
+    const notaDoMundo = wy => NOTA_MAX - Math.floor((wy - REGUA) / ALT);
+    const linhaDoMundo = wy => Math.floor((wy - REGUA) / ALT_BAT);
 
+    const notaNoPonto = (f, wx, wy) => {
+        const p = passoDoMundo(wx);
+        const n = notaDoMundo(wy);
+        // a nota desenhada por último fica por cima: procura de trás para frente
+        for (let i = f.notas.length - 1; i >= 0; i--) {
+            const x = f.notas[i];
+            if (x.n === n && p >= x.p && p < x.p + x.d) return x;
+        }
+        return null;
+    };
+    const naPonta = (nota, wx) => wx >= TECLADO + ((nota.p + nota.d) * CEL) - PONTA;
+
+    const retanguloDaNota = n => ({x: TECLADO + (n.p * CEL), y: REGUA + ((NOTA_MAX - n.n) * ALT), w: n.d * CEL, h: ALT});
+    const retanguloDaBatida = (l, p) => ({x: TECLADO + (p * CEL), y: REGUA + (l * ALT_BAT), w: CEL, h: ALT_BAT});
+    const cruza = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+
+    // ---------- mouse ----------
     canvas.addEventListener('mousedown', ev => {
-        const {x, y} = posMouse(ev);
-        if (y < REGUA && x >= TECLADO) {
-            const p = Math.max(0, paraPasso(x));
+        if (ev.button !== 0) return;
+        const tela = posMouse(ev);
+        const w = paraMundo(tela);
+        const total = totalPassos(m);
+        const p = passoDoMundo(w.x);
+        const somar = ev.ctrlKey || ev.metaKey;
+        const caixa = ferramenta === 'selecionar' || ev.shiftKey;
+
+        // régua: toca dali e põe o marcador de colar
+        if (tela.y < REGUA) {
+            if (tela.x < TECLADO) return;
+            const pp = dentro(p, 0, total - 1);
+            cursorPasso = pp;
             if (tocador.estado === 'parada') {
-                tocador.tocar(m, p);
+                tocador.tocar(m, pp);
                 atualizarBotaoTocar();
             } else {
-                tocador.irPara(p);
+                tocador.irPara(pp);
             }
             return;
         }
-        if (y < REGUA) return;
-        if (aba === 'bateria') {
-            if (x < TECLADO) {
-                const l = LINHAS_BATERIA[paraLinhaBat(y)];
-                if (l) tocarBateria(ctx(), saida(), l, ctx().currentTime + 0.01, m.bateria.volume);
+
+        if (ehBateria()) {
+            const l = linhaDoMundo(w.y);
+            const linha = LINHAS_BATERIA[l];
+            if (!linha) return;
+            if (tela.x < TECLADO) {
+                tocarBateria(ctx(), saida(), linha, ctx().currentTime + 0.01, m.bateria.volume);
                 return;
             }
-            const l = LINHAS_BATERIA[paraLinhaBat(y)];
-            const p = paraPasso(x);
-            if (!l || p < 0 || p >= totalPassos(m)) return;
-            const lista = m.bateria.linhas[l];
-            const i = lista.indexOf(p);
-            if (i >= 0) {
-                lista.splice(i, 1);
-            } else {
-                lista.push(p);
-                tocarBateria(ctx(), saida(), l, ctx().currentTime + 0.01, m.bateria.volume);
+            if (p < 0 || p >= total) return;
+            const k = chaveBat(l, p);
+            const tem = temBatida(l, p);
+            if (tem && somar) {
+                if (sel.has(k)) sel.delete(k);
+                else sel.add(k);
+                atualizarFerramentas();
+                return;
             }
-            arrastando = {bateria: true, linha: l, ligar: i < 0};
-            marcarAlterado();
+            if (tem) {
+                const estavaSelecionada = sel.has(k) && sel.size > 1;
+                if (!sel.has(k)) sel = new Set([k]);
+                arrastando = {tipo: 'moverBat', inicio: {l, p}, clicado: k, estavaSelecionada, d: {p: 0, l: 0}, moveu: false,
+                    flutuantes: null};
+                atualizarFerramentas();
+                return;
+            }
+            cursorPasso = p;
+            if (caixa || somar) {
+                arrastando = {tipo: 'caixa', a: w, b: w, base: (ev.shiftKey || somar) ? new Set(sel) : new Set()};
+                if (!ev.shiftKey && !somar) limparSelecao();
+                return;
+            }
+            // desenhar: liga o quadradinho e continua ligando enquanto arrasta
+            registrar();
+            limparSelecao();
+            m.bateria.linhas[linha].push(p);
+            tocarBateria(ctx(), saida(), linha, ctx().currentTime + 0.01, m.bateria.volume);
+            arrastando = {tipo: 'pintarBat', l};
             return;
         }
-        const n = paraNota(y);
-        if (n < NOTA_MIN || n > NOTA_MAX) return;
+
         const f = faixaAtual();
-        if (x < TECLADO) {
+        const n = notaDoMundo(w.y);
+        if (n < NOTA_MIN || n > NOTA_MAX) return;
+        if (tela.x < TECLADO) {
             tocarNota(ctx(), saida(), f.instrumento, n, ctx().currentTime + 0.01, 0.5, f.volume);
             return;
         }
-        const p = paraPasso(x);
-        if (p < 0 || p >= totalPassos(m)) return;
-        const existente = notaEm(f, p, n);
-        if (existente) {
-            f.notas.splice(f.notas.indexOf(existente), 1);
-            marcarAlterado();
+        if (p < 0 || p >= total) return;
+        const nota = notaNoPonto(f, w.x, w.y);
+        if (nota && somar) {
+            if (sel.has(nota)) sel.delete(nota);
+            else sel.add(nota);
+            atualizarFerramentas();
             return;
         }
-        const nova = {p, n, d: Math.min(duracao, totalPassos(m) - p)};
+        if (nota) {
+            const estavaSelecionada = sel.has(nota) && sel.size > 1;
+            if (!sel.has(nota)) sel = new Set([nota]);
+            const grupo = f.notas.filter(x => sel.has(x));
+            arrastando = {
+                tipo: naPonta(nota, w.x) ? 'alongar' : 'mover',
+                inicio: {p, n},
+                clicada: nota,
+                estavaSelecionada,
+                originais: new Map(grupo.map(x => [x, {p: x.p, n: x.n, d: x.d}])),
+                moveu: false,
+                ultimoTom: nota.n
+            };
+            atualizarFerramentas();
+            return;
+        }
+        cursorPasso = p;
+        if (caixa || somar) {
+            arrastando = {tipo: 'caixa', a: w, b: w, base: (ev.shiftKey || somar) ? new Set(sel) : new Set()};
+            if (!ev.shiftKey && !somar) limparSelecao();
+            return;
+        }
+        // desenhar: nova nota (arrastar deixa mais longa)
+        registrar();
+        const nova = {p, n, d: Math.min(duracao, total - p)};
         f.notas.push(nova);
+        sel = new Set();
         tocarNota(ctx(), saida(), f.instrumento, n, ctx().currentTime + 0.01, Math.min(0.6, nova.d * 0.12), f.volume);
-        arrastando = {nota: nova};
-        marcarAlterado();
+        arrastando = {tipo: 'nova', nota: nova};
+        atualizarFerramentas();
     });
+
+    const cursorDoMouse = w => {
+        if (w.y - grade.scrollTop < REGUA) return 'pointer';
+        if (ehBateria()) {
+            const l = linhaDoMundo(w.y);
+            const p = passoDoMundo(w.x);
+            if (l >= 0 && l < LINHAS_BATERIA.length && temBatida(l, p)) return 'move';
+            return ferramenta === 'selecionar' ? 'default' : 'crosshair';
+        }
+        const nota = notaNoPonto(faixaAtual(), w.x, w.y);
+        if (nota) return naPonta(nota, w.x) ? 'ew-resize' : 'move';
+        return ferramenta === 'selecionar' ? 'default' : 'crosshair';
+    };
+
     const aoMover = ev => {
-        if (!arrastando) return;
-        const {x, y} = posMouse(ev);
-        const p = Math.max(0, Math.min(totalPassos(m) - 1, paraPasso(x)));
-        if (arrastando.nota) {
-            arrastando.nota.d = Math.max(1, p - arrastando.nota.p + 1);
-        } else if (arrastando.bateria) {
-            // arrastar na bateria liga (ou desliga) vários quadradinhos seguidos
-            const l = LINHAS_BATERIA[paraLinhaBat(y)];
-            if (l !== arrastando.linha) return;
-            const lista = m.bateria.linhas[l];
-            const i = lista.indexOf(p);
-            if (arrastando.ligar && i < 0) lista.push(p);
-            if (!arrastando.ligar && i >= 0) lista.splice(i, 1);
+        const tela = posMouse(ev);
+        const w = paraMundo(tela);
+        if (!arrastando) {
+            if (ev.target === canvas) canvas.style.cursor = cursorDoMouse(w);
+            return;
+        }
+        const total = totalPassos(m);
+        const p = dentro(passoDoMundo(w.x), 0, total - 1);
+        const a = arrastando;
+        if (a.tipo === 'nova') {
+            a.nota.d = Math.max(1, p - a.nota.p + 1);
+        } else if (a.tipo === 'pintarBat') {
+            const lista = m.bateria.linhas[LINHAS_BATERIA[a.l]];
+            if (linhaDoMundo(w.y) === a.l && !lista.includes(p)) lista.push(p);
+        } else if (a.tipo === 'caixa') {
+            a.b = w;
+            const r = {x: Math.min(a.a.x, a.b.x), y: Math.min(a.a.y, a.b.y), w: Math.abs(a.b.x - a.a.x),
+                h: Math.abs(a.b.y - a.a.y)};
+            const novo = new Set(a.base);
+            if (ehBateria()) {
+                LINHAS_BATERIA.forEach((l, i) => m.bateria.linhas[l].forEach(pp => {
+                    if (cruza(r, retanguloDaBatida(i, pp))) novo.add(chaveBat(i, pp));
+                }));
+            } else {
+                faixaAtual().notas.forEach(x => {
+                    if (cruza(r, retanguloDaNota(x))) novo.add(x);
+                });
+            }
+            sel = novo;
+            atualizarFerramentas();
+        } else if (a.tipo === 'mover' || a.tipo === 'alongar') {
+            const dp = passoDoMundo(w.x) - a.inicio.p;
+            const dn = notaDoMundo(w.y) - a.inicio.n;
+            if (!a.moveu && (dp || (a.tipo === 'mover' && dn))) {
+                registrar();
+                a.moveu = true;
+            }
+            if (!a.moveu) return;
+            const orig = Array.from(a.originais.values());
+            if (a.tipo === 'mover') {
+                const ddp = dentro(dp, -Math.min(...orig.map(o => o.p)), total - Math.max(...orig.map(o => o.p + o.d)));
+                const ddn = dentro(dn, NOTA_MIN - Math.min(...orig.map(o => o.n)), NOTA_MAX - Math.max(...orig.map(o => o.n)));
+                a.originais.forEach((o, x) => {
+                    x.p = o.p + ddp;
+                    x.n = o.n + ddn;
+                });
+                if (a.clicada.n !== a.ultimoTom) {
+                    a.ultimoTom = a.clicada.n;
+                    const f = faixaAtual();
+                    tocarNota(ctx(), saida(), f.instrumento, a.clicada.n, ctx().currentTime + 0.01, 0.2, f.volume);
+                }
+            } else {
+                a.originais.forEach((o, x) => {
+                    x.d = dentro(o.d + dp, 1, total - x.p);
+                });
+            }
+        } else if (a.tipo === 'moverBat') {
+            const dp = passoDoMundo(w.x) - a.inicio.p;
+            const dl = linhaDoMundo(w.y) - a.inicio.l;
+            if (!a.moveu && (dp || dl)) {
+                registrar();
+                a.moveu = true;
+                // tira as batidas selecionadas da grade: elas "flutuam" até soltar o mouse
+                a.flutuantes = selecionados();
+                a.flutuantes.forEach(({l, p: pp}) => {
+                    const lista = m.bateria.linhas[LINHAS_BATERIA[l]];
+                    lista.splice(lista.indexOf(pp), 1);
+                });
+            }
+            if (!a.moveu) return;
+            const fl = a.flutuantes;
+            a.d = {
+                p: dentro(dp, -Math.min(...fl.map(i => i.p)), total - 1 - Math.max(...fl.map(i => i.p))),
+                l: dentro(dl, -Math.min(...fl.map(i => i.l)), LINHAS_BATERIA.length - 1 - Math.max(...fl.map(i => i.l)))
+            };
         }
     };
+
     const aoSoltar = () => {
+        const a = arrastando;
         arrastando = null;
+        if (!a) return;
+        if ((a.tipo === 'mover' || a.tipo === 'alongar') && !a.moveu) {
+            if (ferramenta === 'desenhar' && !a.estavaSelecionada) {
+                // clique simples numa nota com o lápis: tira a nota
+                registrar();
+                const f = faixaAtual();
+                f.notas.splice(f.notas.indexOf(a.clicada), 1);
+                sel = new Set();
+            } else {
+                sel = new Set([a.clicada]);
+            }
+        } else if (a.tipo === 'moverBat') {
+            if (!a.moveu) {
+                if (ferramenta === 'desenhar' && !a.estavaSelecionada) {
+                    registrar();
+                    const {l, p} = lerChave(a.clicado);
+                    const lista = m.bateria.linhas[LINHAS_BATERIA[l]];
+                    lista.splice(lista.indexOf(p), 1);
+                    sel = new Set();
+                } else {
+                    sel = new Set([a.clicado]);
+                }
+            } else {
+                sel = new Set();
+                a.flutuantes.forEach(({l, p}) => {
+                    const lista = m.bateria.linhas[LINHAS_BATERIA[l + a.d.l]];
+                    if (!lista.includes(p + a.d.p)) lista.push(p + a.d.p);
+                    sel.add(chaveBat(l + a.d.l, p + a.d.p));
+                });
+            }
+        }
+        atualizarFerramentas();
     };
     window.addEventListener('mousemove', aoMover);
     window.addEventListener('mouseup', aoSoltar);
@@ -362,7 +849,7 @@ export const abrirCriadorDeMusicas = (vm, nomeInicial) => {
         const passoIni = Math.max(0, Math.floor(sx / CEL));
         const passoFim = Math.min(total, Math.ceil((sx + W) / CEL) + 1);
 
-        if (aba === 'bateria') {
+        if (ehBateria()) {
             LINHAS_BATERIA.forEach((l, i) => {
                 const y = REGUA + (i * ALT_BAT) - sy;
                 g.fillStyle = i % 2 ? '#1A1436' : '#1E1840';
@@ -392,28 +879,39 @@ export const abrirCriadorDeMusicas = (vm, nomeInicial) => {
         g.beginPath();
         g.rect(TECLADO, REGUA, W, H);
         g.clip();
-        if (aba === 'bateria') {
-            LINHAS_BATERIA.forEach((l, i) => {
+        if (ehBateria()) {
+            const quadradinho = (i, p, selecionada, alfa = 1) => {
+                const x = x0 + (p * CEL);
                 const y = REGUA + (i * ALT_BAT) - sy;
-                for (const p of m.bateria.linhas[l]) {
-                    const x = x0 + (p * CEL);
-                    if (x < TECLADO - CEL || x > W) continue;
-                    g.fillStyle = CORES.bateria;
-                    g.beginPath();
-                    g.roundRect(x + 3, y + 6, CEL - 6, ALT_BAT - 12, 5);
-                    g.fill();
+                if (x < TECLADO - CEL || x > W) return;
+                g.globalAlpha = alfa;
+                g.fillStyle = CORES.bateria;
+                g.beginPath();
+                g.roundRect(x + 3, y + 6, CEL - 6, ALT_BAT - 12, 5);
+                g.fill();
+                if (selecionada) {
+                    g.lineWidth = 2.5;
+                    g.strokeStyle = '#fff';
+                    g.stroke();
                 }
+                g.globalAlpha = 1;
+            };
+            LINHAS_BATERIA.forEach((l, i) => {
+                for (const p of m.bateria.linhas[l]) quadradinho(i, p, sel.has(chaveBat(i, p)));
             });
+            const a = arrastando;
+            if (a && a.tipo === 'moverBat' && a.moveu) {
+                a.flutuantes.forEach(({l, p}) => quadradinho(l + a.d.l, p + a.d.p, true, 0.85));
+            }
         } else {
             // notas das outras faixas, bem clarinhas
+            g.fillStyle = 'rgba(255,255,255,.12)';
             for (const f of m.faixas) {
-                const atual = f.id === aba;
-                g.fillStyle = atual ? CORES[f.id] : 'rgba(255,255,255,.12)';
+                if (f.id === aba) continue;
                 for (const n of f.notas) {
                     const x = x0 + (n.p * CEL);
                     const y = REGUA + ((NOTA_MAX - n.n) * ALT) - sy;
                     if (x > W || x + (n.d * CEL) < TECLADO || y > H || y + ALT < REGUA) continue;
-                    if (atual) continue;
                     g.fillRect(x + 1, y + 2, (n.d * CEL) - 2, ALT - 4);
                 }
             }
@@ -422,13 +920,32 @@ export const abrirCriadorDeMusicas = (vm, nomeInicial) => {
                 const x = x0 + (n.p * CEL);
                 const y = REGUA + ((NOTA_MAX - n.n) * ALT) - sy;
                 if (x > W || x + (n.d * CEL) < TECLADO || y > H || y + ALT < REGUA) continue;
+                const selecionada = sel.has(n);
                 g.fillStyle = CORES[f.id];
                 g.beginPath();
                 g.roundRect(x + 1, y + 1, (n.d * CEL) - 2, ALT - 2, 4);
                 g.fill();
-                g.fillStyle = 'rgba(0,0,0,.25)';
+                if (selecionada) {
+                    g.lineWidth = 2.5;
+                    g.strokeStyle = '#fff';
+                    g.stroke();
+                }
+                g.fillStyle = selecionada ? '#fff' : 'rgba(0,0,0,.25)';
                 g.fillRect(x + (n.d * CEL) - 5, y + 3, 2, ALT - 6);
             }
+        }
+        // caixa de seleção
+        if (arrastando && arrastando.tipo === 'caixa') {
+            const {a, b} = arrastando;
+            const rx = Math.min(a.x, b.x) - sx;
+            const ry = Math.min(a.y, b.y) - sy;
+            g.fillStyle = 'rgba(255,201,40,.12)';
+            g.fillRect(rx, ry, Math.abs(b.x - a.x), Math.abs(b.y - a.y));
+            g.setLineDash([6, 4]);
+            g.lineWidth = 1.5;
+            g.strokeStyle = '#FFC928';
+            g.strokeRect(rx + 0.5, ry + 0.5, Math.abs(b.x - a.x), Math.abs(b.y - a.y));
+            g.setLineDash([]);
         }
         g.restore();
 
@@ -437,7 +954,7 @@ export const abrirCriadorDeMusicas = (vm, nomeInicial) => {
         g.fillRect(0, REGUA, TECLADO, H);
         g.font = 'bold 11px Helvetica, Arial, sans-serif';
         g.textBaseline = 'middle';
-        if (aba === 'bateria') {
+        if (ehBateria()) {
             LINHAS_BATERIA.forEach((l, i) => {
                 const y = REGUA + (i * ALT_BAT) - sy;
                 g.fillStyle = '#2E2560';
@@ -451,7 +968,7 @@ export const abrirCriadorDeMusicas = (vm, nomeInicial) => {
                 if (y > H || y + ALT < REGUA) continue;
                 const preta = PRETAS.has(n % 12);
                 g.fillStyle = preta ? '#222' : '#F4F1FF';
-                g.fillRect(preta ? 0 : 0, y, preta ? TECLADO * 0.62 : TECLADO - 1, ALT - 1);
+                g.fillRect(0, y, preta ? TECLADO * 0.62 : TECLADO - 1, ALT - 1);
                 if (n % 12 === 0) {
                     g.fillStyle = '#6D4FC2';
                     g.fillText(nomeNota(n), TECLADO - 34, y + (ALT / 2));
@@ -469,6 +986,18 @@ export const abrirCriadorDeMusicas = (vm, nomeInicial) => {
             const compasso = p % PASSOS_POR_COMPASSO === 0;
             g.fillStyle = compasso ? '#FFC928' : 'rgba(255,255,255,.6)';
             g.fillText(compasso ? `${(p / PASSOS_POR_COMPASSO) + 1}` : `·${batida}`, x + 4, REGUA / 2);
+        }
+        // marcador de colar (amarelo)
+        const xc = x0 + (cursorPasso * CEL);
+        if (xc >= TECLADO && xc <= W) {
+            g.fillStyle = 'rgba(255,201,40,.35)';
+            g.fillRect(xc, REGUA, 1, H);
+            g.fillStyle = '#FFC928';
+            g.beginPath();
+            g.moveTo(xc - 6, REGUA - 9);
+            g.lineTo(xc + 6, REGUA - 9);
+            g.lineTo(xc, REGUA);
+            g.fill();
         }
         g.fillStyle = '#1B1338';
         g.fillRect(0, 0, TECLADO, REGUA);
@@ -521,12 +1050,13 @@ export const abrirCriadorDeMusicas = (vm, nomeInicial) => {
         marcarAlterado();
     });
     $('.bpm').addEventListener('change', e => {
-        m.bpm = Math.max(40, Math.min(240, Math.round(Number(e.target.value) || 110)));
+        registrar();
+        m.bpm = dentro(Math.round(Number(e.target.value) || 110), 40, 240);
         e.target.value = m.bpm;
         tocador.trocarMusica(m);
-        marcarAlterado();
     });
     $('.compassos').addEventListener('change', e => {
+        registrar();
         m.compassos = Number(e.target.value);
         const total = totalPassos(m);
         m.faixas.forEach(f => {
@@ -538,23 +1068,26 @@ export const abrirCriadorDeMusicas = (vm, nomeInicial) => {
         LINHAS_BATERIA.forEach(l => {
             m.bateria.linhas[l] = m.bateria.linhas[l].filter(p => p < total);
         });
+        cursorPasso = Math.min(cursorPasso, total - 1);
+        sel = new Set();
         ajustarTamanho();
-        marcarAlterado();
+        atualizarFerramentas();
     });
     $('.modelo').addEventListener('change', e => {
         const mod = MODELOS.find(x => x.id === e.target.value);
         e.target.value = '';
         if (!mod) return;
         if (alterado && !window.confirm('Trocar as notas desta música pelo modelo escolhido?')) return; // eslint-disable-line no-alert
+        registrar();
         const nome = m.nome;
         m = mod.criar();
         m.nome = nome;
+        sel = new Set();
         tocador.trocarMusica(m);
         if (tocador.estado !== 'parada') tocador.tocar(m, 0);
         preencherCampos();
         ajustarTamanho(true);
-        marcarAlterado();
-        aviso(`Modelo "${mod.nome}" carregado. Mude o que quiser!`);
+        aviso(`Modelo "${mod.nome}" carregado. Mude o que quiser! (Ctrl+Z desfaz)`);
     });
 
     const carregar = nome => {
@@ -569,6 +1102,10 @@ export const abrirCriadorDeMusicas = (vm, nomeInicial) => {
             nomeOriginal = null;
         }
         alterado = false;
+        historico = [];
+        futuro = [];
+        sel = new Set();
+        cursorPasso = 0;
         $('.salvar').textContent = '✓ Salvar no projeto';
         preencherCampos();
         ajustarTamanho(true);
@@ -611,17 +1148,58 @@ export const abrirCriadorDeMusicas = (vm, nomeInicial) => {
         carregar(resto[0] || null);
     });
 
+    // ---------- teclado ----------
     const aoTeclar = ev => {
         // teclas digitadas em outra janela aberta por cima (loja, escolher instrumento) ficam com ela
         const alvo = ev.target;
         if (alvo && alvo !== document.body && alvo !== document.documentElement && !raiz.contains(alvo)) return;
-        const campo = alvo && /INPUT|SELECT|TEXTAREA/.test(alvo.tagName);
-        if (ev.key === ' ' && !campo) {
-            tocarPausar();
-            ev.preventDefault();
-        }
-        if (ev.key === 'Escape') fechar();
         ev.stopPropagation(); // o palco do Scratch não recebe as teclas enquanto o editor está aberto
+        const campo = alvo && /INPUT|SELECT|TEXTAREA/.test(alvo.tagName);
+        if (ev.key === 'Escape') {
+            limparSelecao(); // (para fechar o editor, use o botão ✕ Fechar)
+            return;
+        }
+        if (campo) return;
+        const ctrl = ev.ctrlKey || ev.metaKey;
+        const k = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key;
+        let feito = true;
+        if (ctrl && k === 'z') {
+            if (ev.shiftKey) refazer();
+            else desfazer();
+        } else if (ctrl && k === 'y') {
+            refazer();
+        } else if (ctrl && k === 'c') {
+            copiar();
+        } else if (ctrl && k === 'x') {
+            recortar();
+        } else if (ctrl && k === 'v') {
+            colar();
+        } else if (ctrl && k === 'd') {
+            duplicar();
+        } else if (ctrl && k === 'a') {
+            selecionarTudo();
+        } else if (ctrl) {
+            feito = false;
+        } else if (k === ' ') {
+            tocarPausar();
+        } else if (k === 'Delete' || k === 'Backspace') {
+            apagarSelecao();
+        } else if (k === 'b') {
+            escolherFerramenta('desenhar');
+        } else if (k === 'v') {
+            escolherFerramenta('selecionar');
+        } else if (k.startsWith('Arrow') && sel.size) {
+            const passo = ev.shiftKey ? PASSOS_POR_BATIDA : 1;
+            const tom = ev.shiftKey ? 12 : 1;
+            if (k === 'ArrowLeft') moverSelecao(-passo, 0);
+            if (k === 'ArrowRight') moverSelecao(passo, 0);
+            // na bateria, ↑ ↓ trocam de linha (para cima = linha de cima)
+            if (k === 'ArrowUp') moverSelecao(0, ehBateria() ? -1 : tom);
+            if (k === 'ArrowDown') moverSelecao(0, ehBateria() ? 1 : -tom);
+        } else {
+            feito = false;
+        }
+        if (feito) ev.preventDefault();
     };
     window.addEventListener('keydown', aoTeclar, true);
     const aoRedimensionar = () => ajustarTamanho();
@@ -642,10 +1220,13 @@ export const abrirCriadorDeMusicas = (vm, nomeInicial) => {
         pararInstrumentos();
         raiz.remove();
         aberto = null;
+        delete window.adventiscratchCriador;
     };
     $('.fechar').addEventListener('click', fechar);
 
     aberto = {fechar};
+    // para depurar pelo console (F12)
+    window.adventiscratchCriador = {musica: () => m, selecao: () => sel.size, area: () => areaTransferencia};
     carregar(nomeInicial && obterMusica(nomeInicial) ? nomeInicial : (nomesMusicas()[0] || null));
     laco();
 };

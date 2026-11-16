@@ -122,6 +122,11 @@ prato). BPM, 1 a 32 compassos (4/4, passos de semicolcheia), tocar/pausar/parar/
 Calma, Chefe, Fase 8-bit) e 8 instrumentos sintetizados com Web Audio (piano, órgão, baixo, cordas, flauta, sinos,
 sintetizador, 8-bit). As músicas ficam no `.asp` em `adventiscratch/musicas/<n>.json`.
 
+Edição: ferramentas **✏️ Desenhar** (B) e **⬚ Selecionar** (V); caixa de seleção (ou Shift+arrastar), Ctrl+clique
+soma à seleção; arrastar move (notas e batidas da bateria), puxar a ponta alonga; Ctrl+C/X/V (cola no marcador
+amarelo), Ctrl+D duplica, Ctrl+A seleciona tudo, Delete apaga, setas movem (Shift = batida/oitava), botões de
+transpor, e **desfazer/refazer** (Ctrl+Z / Ctrl+Y, até 100 passos).
+
 Blocos: tocar música, tocar até o fim, pausar, continuar, parar, repetir sim/não, volume, velocidade, pular para a
 batida, "música está tocando/pausada/parada?", batida da música, nome da música, **quando a música chegar na
 batida N**, **a cada batida da música**, **quando a música terminar** e "tocar nota N com instrumento por B batidas".
