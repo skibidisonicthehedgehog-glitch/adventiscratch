@@ -11,6 +11,8 @@ import adventiscratchMusicaIconURL from '../../adventiscratch/musica/capa-musica
 import adventiscratchMusicaInsetIconURL from '../../adventiscratch/musica/icone-musica.svg';
 import adventiscratchAnimIconURL from '../../adventiscratch/spritesheet/capa-animacoes.png';
 import adventiscratchRitmoIconURL from '../../adventiscratch/ritmo/capa-ritmo.png';
+import adventiscratchCameraIconURL from '../../adventiscratch/capa-camera.png';
+import adventiscratchMultiIconURL from '../../adventiscratch/capa-multiplayer.png';
 import musicIconURL from './music/music.png';
 import musicInsetIconURL from './music/music-small.svg';
 
@@ -101,6 +103,20 @@ export default [
         extensionId: 'adventiscratchritmo',
         iconURL: adventiscratchRitmoIconURL,
         description: 'Crie jogos de ritmo com setas (estilo FNF) ou círculos (estilo osu!): editor de mapas, pontos e combos.',
+        featured: true
+    },
+    {
+        name: 'Câmera',
+        extensionId: 'adventiscratchcamera',
+        iconURL: adventiscratchCameraIconURL,
+        description: 'Mova, aproxime e gire a visão do palco, siga um ator e trema a tela. Mundos maiores que o palco!',
+        featured: true
+    },
+    {
+        name: 'Multiplayer (só para membros)',
+        extensionId: 'adventiscratchmulti',
+        iconURL: adventiscratchMultiIconURL,
+        description: 'Jogos online com os colegas: salas, mensagens, variáveis da sala e posição dos jogadores. Precisa de conta.',
         featured: true
     },
     {

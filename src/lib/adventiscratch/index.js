@@ -10,6 +10,8 @@ import {iniciarInstrumentos} from './musica/soundfont-store.js';
 import {AdventiscratchAnimacoes, ID_ANIM} from './spritesheet/animacoes-extension.js';
 import {aoMudarControladores, renomearControlador} from './spritesheet/controladores.js';
 import {AdventiscratchRitmo, ligarRitmoNaVm} from './ritmo/ritmo-extension.js';
+import {AdventiscratchCamera} from './camera-extension.js';
+import {AdventiscratchMultiplayer} from './multiplayer-extension.js';
 import {patchVmForAsp} from './asp-format.js';
 import {iniciarContas} from './conta/conta.js';
 import {aoCarregarProjeto, iniciarNuvem} from './conta/nuvem.js';
@@ -24,7 +26,9 @@ const EXTENSIONS = {
     adventiscratch2d: AdventiscratchPlataforma2D,
     adventiscratchmusica: AdventiscratchMusicas,
     adventiscratchanim: AdventiscratchAnimacoes,
-    adventiscratchritmo: AdventiscratchRitmo
+    adventiscratchritmo: AdventiscratchRitmo,
+    adventiscratchcamera: AdventiscratchCamera,
+    adventiscratchmulti: AdventiscratchMultiplayer
 };
 
 /**

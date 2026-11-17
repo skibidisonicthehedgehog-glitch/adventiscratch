@@ -16,8 +16,6 @@ if [ -n "$ADVENTISCRATCH_MODERADOR" ] && [ -n "$ADVENTISCRATCH_MODERADOR_SENHA" 
         || echo "Aviso: não foi possível criar o moderador inicial."
 fi
 
-exec gunicorn adventiscratch_server.wsgi:application \
-    --bind 0.0.0.0:8000 \
-    --workers "${GUNICORN_WORKERS:-3}" \
-    --access-logfile - \
-    --forwarded-allow-ips="*"
+# Daphne (ASGI): serve a API, o editor e o Servidor Multiplayer (WebSocket).
+# Um processo só, porque as salas do multiplayer ficam na memória.
+exec daphne -b 0.0.0.0 -p 8000 --proxy-headers adventiscratch_server.asgi:application

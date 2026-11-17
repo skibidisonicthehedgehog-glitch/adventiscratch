@@ -33,6 +33,8 @@ ADVENTISCRATCH_ORIGENS = env_list('ADVENTISCRATCH_ORIGENS', 'http://localhost:86
 CSRF_TRUSTED_ORIGINS = env_list('DJANGO_CSRF_TRUSTED_ORIGINS', '')
 
 INSTALLED_APPS = [
+    # Daphne primeiro: o "runserver" passa a ser ASGI e aceita WebSocket (Servidor Multiplayer)
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -41,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'contas',
     'conteudo',
+    'multiplayer',
 ]
 
 MIDDLEWARE = [
@@ -157,6 +160,16 @@ ADVENTISCRATCH_LOGIN_TENTATIVAS = int(os.environ.get('ADVENTISCRATCH_LOGIN_TENTA
 ADVENTISCRATCH_LOGIN_BLOQUEIO_SEGUNDOS = int(os.environ.get('ADVENTISCRATCH_LOGIN_BLOQUEIO_SEGUNDOS', '300'))
 # Validade do login no editor (dias)
 ADVENTISCRATCH_TOKEN_DIAS = int(os.environ.get('ADVENTISCRATCH_TOKEN_DIAS', '30'))
+
+# Servidor Multiplayer (WebSocket em /api/multiplayer, só para quem tem conta)
+ASGI_APPLICATION = 'adventiscratch_server.asgi.application'
+ADVENTISCRATCH_MULTIPLAYER = env_bool('ADVENTISCRATCH_MULTIPLAYER', True)
+ADVENTISCRATCH_MULTI_MAX_JOGADORES = int(os.environ.get('ADVENTISCRATCH_MULTI_MAX_JOGADORES', '20'))
+ADVENTISCRATCH_MULTI_MAX_SALAS = int(os.environ.get('ADVENTISCRATCH_MULTI_MAX_SALAS', '200'))
+ADVENTISCRATCH_MULTI_MSG_SEG = int(os.environ.get('ADVENTISCRATCH_MULTI_MSG_SEG', '60'))
+ADVENTISCRATCH_MULTI_MAX_TEXTO = 2000
+ADVENTISCRATCH_MULTI_MAX_MENSAGEM = 20000
+ADVENTISCRATCH_MULTI_MAX_VARIAVEIS = 200
 
 LOGGING = {
     'version': 1,

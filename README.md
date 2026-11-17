@@ -240,6 +240,39 @@ de vida (e "ganhando" acima de 80%), e o do jogador fica espelhado, como no FNF.
 **Contagem regressiva**: `contagem regressiva (3, 2, 1, vai!) antes do mapa: sim` espera 4 batidas antes do
 áudio (o tempo do mapa começa negativo) e dispara `quando a contagem mostrar [3/2/1/vai!]` (para tocar os sons).
 
+## Extensão Câmera
+
+Mova, aproxime (zoom) e gire a visão do palco, siga um ator e treme a tela (`src/lib/adventiscratch/camera-extension.js`).
+As posições dos atores continuam sendo as do "mundo": só o desenho muda. Quando a câmera está em uso:
+
+- os atores podem sair da área do palco (o mundo pode ser maior que o palco);
+- "tocando em ator/cor" funciona em qualquer lugar do mundo;
+- cliques e "tocando no ponteiro do mouse" levam a câmera em conta (`x do mouse no mundo`, `y do mouse no mundo`);
+- `câmera seguir [ator] com suavidade [80] %`, `olhar à frente do ator seguido`, `limitar a câmera entre x… y…`;
+- `fixar este ator na tela: sim` deixa placar, vidas e botões parados na tela; `cenário anda com a câmera: não`
+  (padrão) deixa o cenário parado como um céu.
+
+A bandeira verde volta a câmera ao normal. Arrastar atores com o mouse com a câmera girada ou com zoom pode
+ficar estranho.
+
+## Servidor Multiplayer (só para membros)
+
+Jogos online com os colegas, em salas (`src/lib/adventiscratch/multiplayer-extension.js` e `server/multiplayer/`).
+Só funciona com conta (o aluno precisa ter entrado no editor) e não deixa entrar contas suspensas.
+
+- `entrar na sala [nome] (até [8] jogadores)`, `sair da sala`, `quando um jogador entrar/sair`, `sou o anfitrião?`;
+- `enviar mensagem [pulo] com [dado] para todos` (ou para um jogador) e `quando receber mensagem [pulo]`;
+- `mudar variável da sala [placar] para [10]` (todos veem o mesmo valor) e `quando a variável da sala mudar`;
+- `mudar meu [vida] para [3]` e `[vida] do jogador [id]`;
+- `compartilhar a posição deste ator: sim` envia x, y, direção, fantasia, tamanho e visibilidade (até 20 vezes
+  por segundo) e `ficar igual ao ator do jogador [id]` copia tudo isso para um clone.
+
+O servidor é um WebSocket em `/api/multiplayer`, servido pelo **Daphne** (o `runserver` já usa ele, e o Docker e o
+`publicar-na-internet.bat` também). As salas ficam na memória, por isso o servidor roda num processo só. Limites
+no `.env`: `ADVENTISCRATCH_MULTI_MAX_JOGADORES`, `ADVENTISCRATCH_MULTI_MAX_SALAS`, `ADVENTISCRATCH_MULTI_MSG_SEG`
+(mensagens por segundo de cada jogador); `ADVENTISCRATCH_MULTIPLAYER=0` desliga. Moderadores veem as salas abertas
+em `GET /api/multiplayer/salas`. No GitHub Pages (sem servidor) o multiplayer não funciona.
+
 ## Tutoriais e exemplos
 
 - **`tutoriais.html`**: 14 lições interativas em português (primeiros passos, jogo 2D, Extras, mundo 3D, modelos e

@@ -26,7 +26,7 @@ if not exist src\generated\microbit-hex-url.cjs (
     call node scripts\prepublish.mjs || goto erro
 )
 
-python -c "import django" 2>nul || (
+python -c "import django, daphne" 2>nul || (
     echo Instalando as dependencias do servidor...
     python -m pip install -r server\requirements.txt || goto erro
 )

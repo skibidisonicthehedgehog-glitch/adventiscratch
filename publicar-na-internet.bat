@@ -28,7 +28,7 @@ where cloudflared >nul 2>nul || (
 )
 
 echo [1/4] Instalando dependencias...
-python -m pip install -q -r server\requirements.txt waitress || goto erro
+python -m pip install -q -r server\requirements.txt || goto erro
 if not exist node_modules (call npm install || goto erro)
 if not exist src\generated\microbit-hex-url.cjs (call node scripts\prepublish.mjs || goto erro)
 
@@ -48,7 +48,7 @@ set DJANGO_CSRF_TRUSTED_ORIGINS=https://*.trycloudflare.com
 set ADVENTISCRATCH_ATRAS_DE_PROXY=1
 python manage.py migrate --noinput || (popd & goto erro)
 python manage.py collectstatic --noinput -v 0 || (popd & goto erro)
-start "Adventiscratch - servidor publico" /min cmd /k python -m waitress --listen=127.0.0.1:8000 --trusted-proxy=127.0.0.1 "--trusted-proxy-headers=x-forwarded-for x-forwarded-proto" adventiscratch_server.wsgi:application
+start "Adventiscratch - servidor publico" /min cmd /k python -m daphne -b 127.0.0.1 -p 8000 --proxy-headers adventiscratch_server.asgi:application
 popd
 timeout /t 4 /nobreak >nul
 

@@ -12,4 +12,5 @@ urlpatterns = [
     path('moderacao/', admin.site.urls),
     path('api/', include('contas.urls')),
     path('api/', include('conteudo.urls')),
+    path('api/', include('multiplayer.urls')),
 ]
