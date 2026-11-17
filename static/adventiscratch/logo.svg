@@ -12,5 +12,5 @@
     <path d="M100 14 L170 38 L100 62 L30 38 Z" fill="#1E1B3A"/>
     <path d="M100 38 L152 46 L152 80" stroke="#FACC15" stroke-width="6" fill="none"/>
   </g>
-  <text x="50" y="30.5" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-weight="700" font-size="23" fill="#fff" letter-spacing="-0.3">Adventi<tspan fill="#FFE27A">scratch</tspan></text>
+  <text x="50" y="30.5" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-weight="700" font-size="23" fill="#fff" letter-spacing="-0.3">Adventi<tspan fill="#FFE27A">blocks</tspan></text>
 </svg>

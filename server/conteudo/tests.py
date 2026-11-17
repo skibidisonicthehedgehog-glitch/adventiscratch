@@ -7,9 +7,10 @@ import zipfile
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.management import call_command
 from django.test import TestCase, override_settings
 
-from contas.models import CodigoTurma, Denuncia, Sancao, TipoSancao
+from contas.models import CodigoTurma, Denuncia, Sancao, TipoSancao, TokenAcesso
 
 from .models import Modelo3D, Projeto, Situacao
 
@@ -87,6 +88,21 @@ class ProjetosTests(Base):
         pid = self.novo_projeto(self.ana)
         self.assertEqual(self.client.get(f'/api/projetos/{pid}/arquivo', **self.h(self.caio)).status_code, 404)
         self.assertEqual(self.client.get('/api/explorar', **self.h(self.caio)).json()['projetos'], [])
+
+    def test_download_privado_exige_permissao_de_moderacao(self):
+        pid = self.novo_projeto(self.ana)
+        equipe = User.objects.create_user('equipe', is_staff=True)
+        token = TokenAcesso.criar(equipe)
+        api = f'/api/projetos/{pid}/arquivo'
+        painel = f'/moderacao/arquivo/projeto/{pid}/'
+        self.client.force_login(equipe)
+        self.assertEqual(self.client.get(api, **self.h(token)).status_code, 404)
+        self.assertEqual(self.client.get(painel).status_code, 403)
+
+        call_command('criar_moderador', equipe.username, stdout=io.StringIO())
+        for resposta in (self.client.get(api, **self.h(token)), self.client.get(painel)):
+            resposta.close()
+            self.assertEqual(resposta.status_code, 200)
 
     def test_compartilhado_e_global(self):
         pid = self.novo_projeto(self.ana, compartilhar=True)

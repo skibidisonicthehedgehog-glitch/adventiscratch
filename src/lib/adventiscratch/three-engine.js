@@ -1,5 +1,5 @@
 /**
- * Motor 3D do Adventiscratch (Three.js).
+ * Motor 3D do Adventiblocks (Three.js).
  * Este arquivo é carregado sob demanda (chunk separado) na primeira vez que um bloco 3D roda,
  * para não deixar o editor mais lento para quem não usa 3D.
  */
@@ -581,7 +581,7 @@ class Engine {
                 try {
                     this.physicsStep(dt);
                 } catch (e) {
-                    console.warn('Adventiscratch 3D: erro na física', e); // eslint-disable-line no-console
+                    console.warn('Adventiblocks 3D: erro na física', e); // eslint-disable-line no-console
                 }
             }
             originalStep();

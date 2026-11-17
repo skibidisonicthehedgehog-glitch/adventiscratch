@@ -68,7 +68,7 @@ class AdventiscratchAnimacoes {
             try {
                 this.passo();
             } catch (e) {
-                console.warn('Adventiscratch: erro nas animações', e); // eslint-disable-line no-console
+                console.warn('Adventiblocks: erro nas animações', e); // eslint-disable-line no-console
             }
             passoOriginal();
         };

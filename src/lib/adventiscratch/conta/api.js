@@ -1,5 +1,5 @@
 /**
- * Cliente da API do servidor do Adventiscratch (contas e moderação).
+ * Cliente da API do servidor do Adventiblocks (contas e moderação).
  */
 const CHAVE_TOKEN = 'adventiscratch.token';
 
@@ -65,7 +65,7 @@ export const chamar = async (caminho, opcoes = {}) => {
             body: opcoes.body ? JSON.stringify(opcoes.body) : undefined
         });
     } catch (e) {
-        throw new ErroApi('Não foi possível conectar ao servidor do Adventiscratch.', 0);
+        throw new ErroApi('Não foi possível conectar ao servidor do Adventiblocks.', 0);
     }
     let dados = {};
     try {
@@ -111,7 +111,7 @@ export const enviarArquivos = async (caminho, campos) => {
     try {
         resposta = await fetch(base + caminho, {method: 'POST', headers: cabecalhoAuth(), body: form});
     } catch (e) {
-        throw new ErroApi('Não foi possível conectar ao servidor do Adventiscratch.', 0);
+        throw new ErroApi('Não foi possível conectar ao servidor do Adventiblocks.', 0);
     }
     await tratarResposta(resposta);
     return resposta.json();
@@ -125,7 +125,7 @@ export const baixarBinario = async caminho => {
     try {
         resposta = await fetch(base + caminho, {headers: cabecalhoAuth()});
     } catch (e) {
-        throw new ErroApi('Não foi possível conectar ao servidor do Adventiscratch.', 0);
+        throw new ErroApi('Não foi possível conectar ao servidor do Adventiblocks.', 0);
     }
     await tratarResposta(resposta);
     return resposta.arrayBuffer();

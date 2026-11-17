@@ -1,5 +1,5 @@
 /**
- * Ponto de entrada das personalizações do Adventiscratch na VM.
+ * Ponto de entrada das personalizações do Adventiblocks na VM.
  * Chamado uma vez pelo GUI (onVmInit).
  */
 import {AdventiscratchExtras} from './extras-extension.js';

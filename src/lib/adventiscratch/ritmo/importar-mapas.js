@@ -86,7 +86,7 @@ export const lerOsu = (texto, nomeArquivo) => {
  * @param {string} nomeArquivo nome do arquivo
  * @returns {object} mapa
  */
-/** Tipo de nota do FNF (Psych "Hurt Note", V-Slice "hurt"/"mine"…) → item do Adventiscratch. */
+/** Tipo de nota do FNF (Psych "Hurt Note", V-Slice "hurt"/"mine"…) → item do Adventiblocks. */
 const itemDoTipoFnf = tipo => {
     const t = typeof tipo === 'string' ? tipo.trim() : '';
     if (!t) return '';

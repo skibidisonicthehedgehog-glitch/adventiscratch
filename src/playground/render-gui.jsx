@@ -75,6 +75,10 @@ export default appTarget => {
             <WrappedGui
                 canEditTitle
                 canSave={false}
+                onClickAbout={[{
+                    title: 'Sobre o Adventiblocks e código-fonte',
+                    onClick: () => window.open('index.html#licenca', '_blank', 'noopener,noreferrer')
+                }]}
                 onClickLogo={onClickLogo}
                 onVmInit={setupAdventiscratch}
             />,

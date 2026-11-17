@@ -1,6 +1,7 @@
 """CORS simples para a API: o editor (outra origem, ex. localhost:8601) pode chamar /api/."""
 from django.conf import settings
 from django.http import HttpResponse
+from django.utils.cache import add_never_cache_headers, patch_vary_headers
 
 
 class CorsApiMiddleware:
@@ -14,10 +15,11 @@ class CorsApiMiddleware:
             response = HttpResponse(status=204)
         else:
             response = self.get_response(request)
+        add_never_cache_headers(response)
         origem = request.headers.get('Origin')
         if origem and origem in settings.ADVENTISCRATCH_ORIGENS:
             response['Access-Control-Allow-Origin'] = origem
-            response['Vary'] = 'Origin'
+            patch_vary_headers(response, ('Origin',))
             response['Access-Control-Allow-Headers'] = 'Authorization, Content-Type'
             response['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
             response['Access-Control-Max-Age'] = '600'

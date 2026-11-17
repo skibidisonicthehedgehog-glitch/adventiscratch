@@ -29,5 +29,8 @@ npm-*
 
 # Adventiscratch
 .env
+.env.*
+!.env.example
+!.env.*.example
 server/dados/
 server/staticfiles/

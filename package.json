@@ -1,13 +1,13 @@
 {
-  "name": "scratch-gui",
+  "name": "adventiblocks",
   "version": "5.3.0",
-  "description": "Adventiscratch – editor de programação em blocos para estudantes Adventistas, baseado no Scratch 3.0",
+  "description": "Adventiblocks – editor de programação em blocos para estudantes Adventistas, baseado no Scratch 3.0",
   "author": "Massachusetts Institute of Technology",
   "license": "AGPL-3.0-only",
-  "homepage": "https://github.com/scratchfoundation/scratch-gui#readme",
+  "homepage": "https://github.com/skibidisonicthehedgehog-glitch/adventiscratch#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/scratchfoundation/scratch-gui.git"
+    "url": "https://github.com/skibidisonicthehedgehog-glitch/adventiscratch.git"
   },
   "main": "./dist/scratch-gui.js",
   "scripts": {

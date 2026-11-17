@@ -49,7 +49,7 @@ const getProjectFilename = (curTitle, defaultTitle) => {
     if (!filenameTitle || filenameTitle.length === 0) {
         filenameTitle = defaultTitle;
     }
-    return `${filenameTitle.substring(0, 100)}.asp`; // Adventiscratch Project
+    return `${filenameTitle.substring(0, 100)}.asp`; // Adventiblocks Project
 };
 
 SB3Downloader.propTypes = {

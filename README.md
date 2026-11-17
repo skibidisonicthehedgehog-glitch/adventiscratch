@@ -1,7 +1,7 @@
-# 🦉 Adventiscratch
+# 🦉 Adventiblocks
 
-Uma versão mais avançada do Scratch 3.0, toda em português, feita para estudantes Adventistas.
-Fork do [scratch-gui oficial](https://github.com/scratchfoundation/scratch-gui) da Scratch Foundation.
+Editor de programação em blocos em português para aprender a criar jogos em sala de aula.
+Projeto independente baseado no [editor Scratch de código aberto](https://github.com/scratchfoundation/scratch-gui).
 
 ## O que mudou em relação ao Scratch
 
@@ -15,7 +15,7 @@ Fork do [scratch-gui oficial](https://github.com/scratchfoundation/scratch-gui) 
 | Contas, moderação e telas de suspensão | `server/` (Django) e `src/lib/adventiscratch/conta/` |
 | Detector de erros nos blocos | `src/lib/adventiscratch/detector-erros.js` |
 | Logo do editor volta para a página inicial | `src/playground/render-gui.jsx` |
-| Extensão **Extras Adventiscratch** (14 blocos novos) | `src/lib/adventiscratch/extras-extension.js` |
+| Extensão **Extras Adventiblocks** (14 blocos novos) | `src/lib/adventiscratch/extras-extension.js` |
 | Extensão **3D (Three.js)** com modelos 3D | `src/lib/adventiscratch/three-extension.js` e `three-engine.js` |
 | Extensão **Plataforma 2D** (gravidade, pulo, chão, paredes) | `src/lib/adventiscratch/plataforma2d-extension.js` |
 | **Criador de Músicas**, extensão **Músicas** e instrumentos **.sf2** | `src/lib/adventiscratch/musica/` |
@@ -23,10 +23,10 @@ Fork do [scratch-gui oficial](https://github.com/scratchfoundation/scratch-gui) 
 | Extensão **Jogo de Ritmo** (setas estilo FNF, círculos estilo osu!) e editor de mapas | `src/lib/adventiscratch/ritmo/` |
 | **Loja de Instrumentos Virtuais** (.sf2) | `server/conteudo/` (`InstrumentoSF2`) e `src/lib/adventiscratch/conta/telas-nuvem.js` |
 | Sons **.ogg** (Ogg Vorbis/Opus), convertidos em WAV ao enviar | `src/lib/adventiscratch/audio-ogg.js` e `src/lib/file-uploader.js` |
-| Formato de projeto **.asp** (AdventiScratch Project) | `src/lib/adventiscratch/asp-format.js`, `src/containers/sb3-downloader.jsx`, `src/lib/sb-file-uploader-hoc.jsx` |
+| Formato de projeto **.asp** (projeto Adventiblocks) | `src/lib/adventiscratch/asp-format.js`, `src/containers/sb3-downloader.jsx`, `src/lib/sb-file-uploader-hoc.jsx` |
 | Registro das extensões na VM | `src/lib/adventiscratch/index.js` e `src/lib/libraries/extensions/index.jsx` |
 
-### Blocos da extensão Extras Adventiscratch
+### Blocos da extensão Extras Adventiblocks
 `[A] elevado a [B]` · `raiz [N] de [X]` · `verdadeiro` · `falso` · `[A] ≠ [B]` · `[A] ≥ [B]` · `[A] ≤ [B]` ·
 `se <cond> então [A] senão [B]` · `[texto] em MAIÚSCULAS/minúsculas/Título` · `substitua [de] por [para] em [texto]` ·
 `repita [texto] [N] vezes` · `[texto] começa com [parte]?` · `milissegundos desde 1970` · `data de hoje`
@@ -41,7 +41,7 @@ adventiscratch/models/<arquivo>   -> modelos 3D importados no projeto
 ```
 
 O editor salva sempre em `.asp` e abre `.asp`, `.sb3`, `.sb2` e `.sb`. Se um `.asp` for renomeado
-para `.sb3`, ele abre no Scratch comum (só os blocos do Adventiscratch não funcionam lá).
+para `.sb3`, ele abre no Scratch comum (só os blocos do Adventiblocks não funcionam lá).
 
 ## Extensão 3D (Three.js)
 
@@ -392,6 +392,35 @@ Para criar mais blocos, adicione um item em `blocks` dentro de `getInfo()` e um 
   use Docker + Cloudflare Tunnel com domínio próprio (seção abaixo). Nesse modo, entre no painel de moderação
   pelo endereço público (https), não pelo localhost.
 
+## Implantação institucional em Docker
+
+O Compose institucional executa o editor e a API Django com Daphne, PostgreSQL, Redis e Cloudflare Tunnel.
+PostgreSQL e Redis ficam em uma rede interna. O acesso externo passa pelo túnel, sem portas
+publicadas no host. O Redis mantém o cache e a contagem de tentativas de login entre processos.
+As salas multiplayer ficam na memória do Daphne. Mantenha uma réplica da aplicação enquanto
+essa implementação estiver ativa.
+
+1. Copie `.env.institucional.example` para `.env.institucional`. Gere valores aleatórios distintos
+   para a chave Django e as senhas do PostgreSQL e do Redis. Restrinja o acesso ao arquivo ao
+   operador da implantação (`chmod 600 .env.institucional` em um host Linux).
+2. No Cloudflare, crie um túnel gerenciado e uma rota para o domínio institucional com destino
+   `http://adventiscratch:8000`. Preencha `ADVENTISCRATCH_DOMINIO` com o hostname e
+   `CLOUDFLARE_TUNNEL_TOKEN` com o token do túnel.
+3. Valide a configuração e suba a instância:
+
+   ```sh
+   docker compose --env-file .env.institucional -f compose.institucional.yml -p adventiscratch-institucional config --quiet
+   docker compose --env-file .env.institucional -f compose.institucional.yml -p adventiscratch-institucional up -d --build
+   docker compose --env-file .env.institucional -f compose.institucional.yml -p adventiscratch-institucional exec adventiscratch python manage.py createsuperuser
+   ```
+
+4. Verifique `https://<domínio>/api/saude` e o login no painel antes de cadastrar turmas.
+
+O nome de projeto `adventiscratch-institucional` cria volumes próprios. Para migrar uma
+instalação existente, faça backup do banco e dos arquivos enviados, migre os dados para o
+PostgreSQL e restaure os arquivos no novo volume antes de direcionar os usuários ao novo ambiente.
+Valide a abertura de projetos e a recuperação de contas na instância de destino.
+
 ## Como rodar
 
 Pré-requisitos: **Node.js 20** (veja `.nvmrc`) e Git.
@@ -435,11 +464,18 @@ git push -u origin adventiscratch
 
 ## Licença e marcas
 
-O código é baseado no scratch-gui, distribuído sob **AGPL-3.0** (veja `LICENSE`). Se você publicar o
-Adventiscratch na internet, a AGPL exige que o código-fonte, com as suas alterações, fique disponível
-para quem usa (um repositório público no GitHub resolve).
+O Adventiblocks é um projeto independente baseado no editor de código aberto Scratch. Não tem afiliação
+nem endosso da Scratch Foundation. O Scratch é desenvolvido pela Scratch Foundation e seus parceiros e afiliados.
 
-"Scratch", o logo e o Gato do Scratch são marcas do MIT (veja `TRADEMARK`). Eles não podem ser usados
-para promover projetos derivados. Por isso, o Adventiscratch usa mascote e logo próprios. O ator padrão
-de um projeto novo ainda é o gato, que vem da biblioteca do Scratch. Se quiser trocar, edite o projeto
-padrão em `src/lib/default-project/`.
+O [código desta base](LICENSE) está sob **AGPL-3.0-only**. A licença permite cobrar pelo serviço. Ao oferecer
+uma versão modificada pela rede, ofereça aos usuários acesso ao **código-fonte correspondente da versão
+implantada**, incluindo as alterações e os scripts necessários para gerar e instalar a versão. Preserve os
+avisos de direitos autorais e licença e indique as alterações. Ao distribuir a imagem Docker ou outro
+artefato, observe também as condições de distribuição da AGPL. O link no rodapé deve apontar para o fonte
+efetivamente publicado.
+
+As [diretrizes de marca](https://mitscratch.freshdesk.com/en/support/solutions/articles/4000232107-scratch-trademark-guidelines)
+tratam separadamente o nome, os logos e os personagens protegidos. A Coruja Sabida é o ator padrão, e o
+catálogo inclui a coruja, a estrela e o controle de jogo do próprio projeto. Projetos importados conservam
+seus recursos. Antes de uma distribuição comercial, revise também as licenças dos demais recursos de
+terceiros, inclusive sons, imagens, tutoriais, fontes e arquivos de exemplo.

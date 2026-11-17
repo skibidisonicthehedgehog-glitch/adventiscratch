@@ -1,4 +1,4 @@
-# Publica o Adventiscratch no GitHub Pages (versão de TESTE, sem contas nem servidor).
+# Publica o Adventiblocks no GitHub Pages (versão de TESTE, sem contas nem servidor).
 # Roda a cada push na branch main, ou pelo botão "Run workflow" na aba Actions.
 name: Publicar no GitHub Pages (teste)
 

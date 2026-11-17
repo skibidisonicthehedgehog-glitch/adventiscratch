@@ -1,5 +1,5 @@
 /**
- * Extensão "Plataforma 2D" do Adventiscratch.
+ * Extensão "Plataforma 2D" do Adventiblocks.
  *
  * Física simples e previsível para jogos de plataforma com atores comuns:
  *  - "personagem": cai com a gravidade, anda, pula (com pulo duplo opcional) e colide.
@@ -98,7 +98,7 @@ class AdventiscratchPlataforma2D {
                 try {
                     this.passo();
                 } catch (err) {
-                    console.warn('Adventiscratch 2D: erro na física', err); // eslint-disable-line no-console
+                    console.warn('Adventiblocks 2D: erro na física', err); // eslint-disable-line no-console
                 }
             }
             passoOriginal();

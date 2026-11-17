@@ -1,11 +1,12 @@
 """
-Configurações do servidor do Adventiscratch.
+Configurações do servidor do Adventiblocks.
 
 Tudo que muda entre o computador de desenvolvimento e o servidor de verdade vem de variáveis de ambiente
 (veja server/.env.example). Sem nenhuma variável, roda em modo de desenvolvimento com SQLite.
 """
 import os
 from pathlib import Path
+from urllib.parse import quote
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -107,7 +108,10 @@ else:
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', 'OPTIONS': {'min_length': 6}},
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {'min_length': int(os.environ.get('ADVENTISCRATCH_SENHA_MINIMA', '6'))},
+    },
     {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
@@ -144,16 +148,28 @@ ADVENTISCRATCH_APROVAR_MODELOS = env_bool('ADVENTISCRATCH_APROVAR_MODELOS', Fals
 DATA_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
 
 # Atrás do Cloudflare Tunnel / proxy: confiar no cabeçalho de HTTPS
-if env_bool('ADVENTISCRATCH_ATRAS_DE_PROXY', False):
+ADVENTISCRATCH_ATRAS_DE_PROXY = env_bool('ADVENTISCRATCH_ATRAS_DE_PROXY', False)
+if ADVENTISCRATCH_ATRAS_DE_PROXY:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = int(os.environ.get('DJANGO_HSTS_SECONDS', '0'))
+    SECURE_SSL_REDIRECT = env_bool('DJANGO_SSL_REDIRECT', False)
+    SECURE_REDIRECT_EXEMPT = [r'^api/saude$']
 
 # cache em arquivo: o limite de tentativas de login vale para todos os processos do gunicorn
 CACHES = {'default': {
     'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
     'LOCATION': DATA_DIR / 'cache',
 }}
+if os.environ.get('ADVENTISCRATCH_REDIS_HOST'):
+    redis_password = quote(os.environ['ADVENTISCRATCH_REDIS_PASSWORD'], safe='')
+    redis_host = os.environ['ADVENTISCRATCH_REDIS_HOST']
+    CACHES['default'] = {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': f'redis://:{redis_password}@{redis_host}:6379/0',
+        'KEY_PREFIX': 'adventiscratch',
+    }
 
 # Proteção contra adivinhar senha: bloqueia por alguns minutos após várias tentativas erradas
 ADVENTISCRATCH_LOGIN_TENTATIVAS = int(os.environ.get('ADVENTISCRATCH_LOGIN_TENTATIVAS', '8'))

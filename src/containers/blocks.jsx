@@ -128,16 +128,16 @@ class Blocks extends React.Component {
         toolboxWorkspace.registerButtonCallback('MAKE_A_VARIABLE', varListButtonCallback(''));
         toolboxWorkspace.registerButtonCallback('MAKE_A_LIST', varListButtonCallback('list'));
         toolboxWorkspace.registerButtonCallback('MAKE_A_PROCEDURE', procButtonCallback);
-        // Adventiscratch: botão "Importar modelo 3D…" da extensão 3D
+        // Adventiblocks: botão "Importar modelo 3D…" da extensão 3D
         toolboxWorkspace.registerButtonCallback(IMPORT_MODEL_CALLBACK, importModelFromComputer);
         toolboxWorkspace.registerButtonCallback(IMPORT_FOLDER_CALLBACK, importModelFromFolder);
         toolboxWorkspace.registerButtonCallback(STORE_CALLBACK, () => abrirCentral('loja'));
-        // Adventiscratch: botão "Criador de Músicas…" da extensão Músicas
+        // Adventiblocks: botão "Criador de Músicas…" da extensão Músicas
         toolboxWorkspace.registerButtonCallback(CRIADOR_CALLBACK, () => {
             import(/* webpackChunkName: "adventiscratch-musica" */ '../lib/adventiscratch/musica/editor.js')
                 .then(m => m.abrirCriadorDeMusicas(this.props.vm));
         });
-        // Adventiscratch: botão "Importar spritesheet…" da extensão Animações
+        // Adventiblocks: botão "Importar spritesheet…" da extensão Animações
         toolboxWorkspace.registerButtonCallback(SPRITESHEET_CALLBACK, () => {
             import(/* webpackChunkName: "adventiscratch-spritesheet" */ '../lib/adventiscratch/spritesheet/importar.js')
                 .then(m => m.abrirImportadorSpritesheet(this.props.vm));
@@ -150,7 +150,7 @@ class Blocks extends React.Component {
             import(/* webpackChunkName: "adventiscratch-ritmo" */ '../lib/adventiscratch/ritmo/editor-mapas.js')
                 .then(m => m.abrirEditorMapas(this.props.vm));
         });
-        // Adventiscratch: detector de erros (brilho vermelho + ⚠ nos blocos com problema)
+        // Adventiblocks: detector de erros (brilho vermelho + ⚠ nos blocos com problema)
         definirWorkspaceDetector(this.workspace);
 
         // Store the xml of the toolbox that is actually rendered.

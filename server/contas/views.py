@@ -46,9 +46,11 @@ def ler_json(request):
 
 
 def ip_de(request):
-    return (request.headers.get('CF-Connecting-IP')
-            or request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip()
-            or request.META.get('REMOTE_ADDR', ''))
+    if settings.ADVENTISCRATCH_ATRAS_DE_PROXY:
+        ip = request.headers.get('CF-Connecting-IP')
+        if ip:
+            return ip
+    return request.META.get('REMOTE_ADDR', '')
 
 
 def usuario_do_token(request):

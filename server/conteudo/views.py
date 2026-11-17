@@ -33,6 +33,7 @@ from datetime import timedelta
 from django.conf import settings
 from django.db.models import F
 from django.http import FileResponse, JsonResponse
+from django.views.decorators.cache import never_cache
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -121,10 +122,15 @@ def instrumento_api(i, usuario):
     }
 
 
+def pode_moderar_conteudo(usuario, modelo):
+    opts = modelo._meta
+    return usuario.is_staff and usuario.has_perm(f'{opts.app_label}.view_{opts.model_name}')
+
+
 def pode_ver_projeto(p, usuario):
     if p.apagado_em:
         return False
-    if p.dono_id == usuario.id or usuario.is_staff:
+    if p.dono_id == usuario.id or pode_moderar_conteudo(usuario, Projeto):
         return True
     return p.compartilhado and Projeto.objects.visiveis().filter(id=p.id).exists()
 
@@ -132,7 +138,7 @@ def pode_ver_projeto(p, usuario):
 def pode_ver_modelo(m, usuario):
     if m.apagado_em:
         return False
-    if m.dono_id == usuario.id or usuario.is_staff:
+    if m.dono_id == usuario.id or pode_moderar_conteudo(usuario, Modelo3D):
         return True
     return Modelo3D.objects.visiveis().filter(id=m.id).exists()
 
@@ -405,7 +411,7 @@ def apagar_modelo(request, mid):
 def pode_ver_instrumento(i, usuario):
     if i.apagado_em:
         return False
-    if i.dono_id == usuario.id or usuario.is_staff:
+    if i.dono_id == usuario.id or pode_moderar_conteudo(usuario, InstrumentoSF2):
         return True
     return InstrumentoSF2.objects.visiveis().filter(id=i.id).exists()
 
@@ -490,9 +496,14 @@ def apagar_instrumento(request, iid):
 
 # ------------------------------------------------------------------ download para moderadores (painel)
 
+@never_cache
 def arquivo_moderacao(request, tipo, oid):
     """Moderadores logados no painel baixam o arquivo original para conferir."""
-    if not request.user.is_authenticated or not request.user.is_staff:
+    modelos = {'projeto': Projeto, 'instrumento': InstrumentoSF2, 'modelo': Modelo3D}
+    modelo = modelos.get(tipo)
+    if modelo is None:
+        return erro('Arquivo não encontrado.', status=404)
+    if not request.user.is_authenticated or not pode_moderar_conteudo(request.user, modelo):
         return erro('Somente moderadores.', status=403)
     if tipo == 'projeto':
         p = Projeto.objects.filter(id=oid).first()

@@ -37,7 +37,7 @@ def _onda(forma, taxa=22050, freq=261.63, ciclos=40):
     return pcm
 
 
-def gerar_sf2(nome='Teste Adventiscratch', instrumentos=(('Seno', 'seno'), ('Quadrada', 'quadrada'), ('Serra', 'serra'))):
+def gerar_sf2(nome='Teste Adventiblocks', instrumentos=(('Seno', 'seno'), ('Quadrada', 'quadrada'), ('Serra', 'serra'))):
     taxa = 22050
     smpl = b''
     shdr = b''

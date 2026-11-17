@@ -18,6 +18,9 @@ PERMISSOES = [
     ('contas', 'view_recurso'), ('contas', 'change_recurso'),
     ('contas', 'view_codigoturma'), ('contas', 'add_codigoturma'), ('contas', 'change_codigoturma'),
     ('contas', 'view_perfil'), ('auth', 'view_user'),
+    ('conteudo', 'view_projeto'), ('conteudo', 'change_projeto'),
+    ('conteudo', 'view_modelo3d'), ('conteudo', 'change_modelo3d'),
+    ('conteudo', 'view_instrumentosf2'), ('conteudo', 'change_instrumentosf2'),
 ]
 
 
@@ -29,7 +32,7 @@ def grupo_moderadores():
 
 
 class Command(BaseCommand):
-    help = 'Cria ou atualiza um moderador do Adventiscratch.'
+    help = 'Cria ou atualiza um moderador do Adventiblocks.'
 
     def add_arguments(self, parser):
         parser.add_argument('usuario')

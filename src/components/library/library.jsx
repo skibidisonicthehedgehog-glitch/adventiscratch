@@ -137,7 +137,7 @@ class LibraryComponent extends React.Component {
         }
     }
     handleFilterChange (event) {
-        // Adventiscratch: segredo na busca de cenários
+        // Adventiblocks: segredo na busca de cenários
         if (this.props.id === 'backdropLibrary' &&
             event.target.value.trim().toUpperCase() === 'EASTEREGGSEARCHING') {
             this.setState({filterQuery: ''});

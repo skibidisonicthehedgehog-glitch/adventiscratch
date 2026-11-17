@@ -377,7 +377,7 @@ export class MotorRitmo {
     _ignorar (ev) {
         const t = ev.target;
         if (t && /INPUT|TEXTAREA|SELECT/.test(t.tagName)) return true;
-        // editores do Adventiscratch abertos por cima não jogam
+        // editores do Adventiblocks abertos por cima não jogam
         return Boolean(document.querySelector('.adv-mus, .adv-mapa, .adv-ctl, .adv-fli'));
     }
 

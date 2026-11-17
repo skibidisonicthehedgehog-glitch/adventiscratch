@@ -36,7 +36,7 @@ def _abrir_zip(arquivo, limite_mb, rotulo):
 def validar_projeto(arquivo):
     z = _abrir_zip(arquivo, settings.ADVENTISCRATCH_MAX_PROJETO_MB, 'Projeto')
     if 'project.json' not in z.namelist():
-        raise ArquivoInvalido('Isso não parece um projeto do Adventiscratch (.asp ou .sb3).')
+        raise ArquivoInvalido('Isso não parece um projeto do Adventiblocks (.asp ou .sb3).')
     try:
         json.loads(z.read('project.json'))
     except (ValueError, UnicodeDecodeError):

@@ -1,0 +1,78 @@
+services:
+  adventiscratch:
+    build: .
+    restart: unless-stopped
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Defina DJANGO_SECRET_KEY}
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,${ADVENTISCRATCH_DOMINIO:?Defina ADVENTISCRATCH_DOMINIO}
+      DJANGO_CSRF_TRUSTED_ORIGINS: https://${ADVENTISCRATCH_DOMINIO}
+      ADVENTISCRATCH_ORIGENS: ""
+      ADVENTISCRATCH_ATRAS_DE_PROXY: "1"
+      DJANGO_HSTS_SECONDS: "31536000"
+      DJANGO_SSL_REDIRECT: "1"
+      POSTGRES_DB: ${POSTGRES_DB:-adventiscratch}
+      POSTGRES_USER: ${POSTGRES_USER:-adventiscratch}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD}
+      POSTGRES_HOST: db
+      ADVENTISCRATCH_REDIS_HOST: redis
+      ADVENTISCRATCH_REDIS_PASSWORD: ${ADVENTISCRATCH_REDIS_PASSWORD:?Defina ADVENTISCRATCH_REDIS_PASSWORD}
+      ADVENTISCRATCH_APROVAR_MODELOS: "true"
+      ADVENTISCRATCH_SENHA_MINIMA: "12"
+      ADVENTISCRATCH_MULTIPLAYER: ${ADVENTISCRATCH_MULTIPLAYER:-1}
+    volumes:
+      - dados:/dados
+    networks: [entrada, dados]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-adventiscratch}
+      POSTGRES_USER: ${POSTGRES_USER:-adventiscratch}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    networks: [dados]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    environment:
+      REDISCLI_AUTH: ${ADVENTISCRATCH_REDIS_PASSWORD:?Defina ADVENTISCRATCH_REDIS_PASSWORD}
+    command: ["sh", "-c", "exec docker-entrypoint.sh redis-server --save '' --appendonly no --requirepass \"$$REDISCLI_AUTH\""]
+    networks: [dados]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -qx PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?Defina CLOUDFLARE_TUNNEL_TOKEN}
+    networks: [entrada]
+    depends_on:
+      adventiscratch:
+        condition: service_healthy
+
+volumes:
+  dados:
+  postgres:
+
+networks:
+  entrada:
+  dados:
+    internal: true

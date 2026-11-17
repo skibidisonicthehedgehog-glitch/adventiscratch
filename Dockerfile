@@ -1,4 +1,4 @@
-# Adventiscratch: editor + servidor de contas/moderação numa imagem só.
+# Adventiblocks: editor + servidor de contas/moderação numa imagem só.
 #
 #   docker compose up -d --build
 #

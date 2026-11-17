@@ -32,7 +32,7 @@ const retRedondo = (ctx, x, y, l, a, r) => {
 };
 
 /**
- * Coruja (mascote do Adventiscratch). (x, y) = pés. pose: 'normal' | 'esquerda' | 'baixo' | 'cima' | 'direita'
+ * Coruja (mascote do Adventiblocks). (x, y) = pés. pose: 'normal' | 'esquerda' | 'baixo' | 'cima' | 'direita'
  * | 'errou' | 'pulo'. piscar: 0..1
  */
 const coruja = (ctx, x, y, escala = 1, {pose = 'normal', cor = '#7A4FC8', barriga = '#C9B6F0', virada = 1,

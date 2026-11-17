@@ -1,7 +1,7 @@
 /**
  * Leitor de SoundFont 2 (.sf2) e tocador dos instrumentos extraídos.
  *
- * Um .sf2 tem várias "presets" (instrumentos). Ao importar, o aluno escolhe uma e o Adventiscratch
+ * Um .sf2 tem várias "presets" (instrumentos). Ao importar, o aluno escolhe uma e o Adventiblocks
  * extrai só as amostras usadas por ela (um "instrumento extraído"), que vai dentro do .asp:
  *   {nome, origem, regioes: [{amostra, keyLo, keyHi, velLo, velHi, raiz, ajuste (cents), loop, loopIni, loopFim,
  *     ataque, segura, decai, sustenta, solta (segundos / nível), volume, pan}],

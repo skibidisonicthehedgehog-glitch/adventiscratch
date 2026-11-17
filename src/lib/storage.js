@@ -1,6 +1,7 @@
 import {ScratchStorage} from 'scratch-storage';
 
 import defaultProject from './default-project';
+import {adventiblocksAssetUrl} from './libraries/adventiblocks-assets';
 
 /**
  * Wrapper for ScratchStorage which adds default web sources.
@@ -10,7 +11,7 @@ class Storage extends ScratchStorage {
     constructor () {
         super();
         this.cacheDefaultProject();
-        // Adventiscratch: o scratch-storage baixa os recursos num Web Worker carregado de "/chunks/...".
+        // Adventiblocks: o scratch-storage baixa os recursos num Web Worker carregado de "/chunks/...".
         // Se esse arquivo não for encontrado (site numa subpasta, como o GitHub Pages, ou build sem a cópia),
         // o worker falha em silêncio e os downloads ficam parados para sempre: nenhum ator, cenário ou som
         // da biblioteca entra no projeto. Baixar direto pela página (fetch) funciona em qualquer lugar.
@@ -66,6 +67,8 @@ class Storage extends ScratchStorage {
         this.assetHost = assetHost;
     }
     getAssetGetConfig (asset) {
+        const local = adventiblocksAssetUrl(`${asset.assetId}.${asset.dataFormat}`);
+        if (local) return local;
         return `${this.assetHost}/internalapi/asset/${asset.assetId}.${asset.dataFormat}/get/`;
     }
     getAssetCreateConfig (asset) {

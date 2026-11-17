@@ -4,12 +4,12 @@ import sharedMessages from '../shared-messages';
 let messages = defineMessages({
     hoot: {
         defaultMessage: 'Pio',
-        description: 'Name for the owl hoot sound (Adventiscratch)',
+        description: 'Name for the owl hoot sound (Adventiblocks)',
         id: 'adventiscratch.defaultProject.hoot'
     },
     owl: {
         defaultMessage: 'Coruja Sabida',
-        description: 'Name for the default sprite (Adventiscratch)',
+        description: 'Name for the default sprite (Adventiblocks)',
         id: 'adventiscratch.defaultProject.owl'
     },
     variable: {

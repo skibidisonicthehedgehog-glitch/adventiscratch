@@ -1,5 +1,5 @@
 /*
- * Configuração do Adventiscratch (pode ser editada sem recompilar o editor).
+ * Configuração do Adventiblocks (pode ser editada sem recompilar o editor).
  *
  * api:
  *   - '' (vazio)  -> descobre sozinho: '/api' quando o editor é servido pelo servidor (Docker/Cloudflare),

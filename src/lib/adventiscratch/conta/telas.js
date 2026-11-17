@@ -137,7 +137,7 @@ export const ocupado = async (botao, fn) => {
 export const telaLogin = acoes => {
     const tela = abrirTela(`
 <div class="adv-cartao">
-  <div class="adv-topo"><img src="${MASCOTE}" alt=""><h1>Bem-vindo ao Adventiscratch</h1>
+  <div class="adv-topo"><img src="${MASCOTE}" alt=""><h1>Bem-vindo ao Adventiblocks</h1>
     <p>Entre na sua conta para começar a criar.</p></div>
   <div class="adv-corpo">
     <div class="adv-abas" role="tablist">
@@ -279,7 +279,7 @@ export const telaSuspensao = (situacao, acoes) => {
   <div class="adv-corpo">
     <p style="margin:0 0 4px">Olá, <b>${esc(situacao.conta.nome)}</b>.
       ${s.tipo === 'permanente' ?
-        'Um moderador encerrou esta conta e ela não poderá mais ser usada no Adventiscratch.' :
+        'Um moderador encerrou esta conta e ela não poderá mais ser usada no Adventiblocks.' :
         'Um moderador suspendeu esta conta. Enquanto isso, o editor fica bloqueado.'}</p>
     <div class="adv-caixa"><b>Motivo</b>${esc(s.categoria_nome)}</div>
     <div class="adv-caixa"><b>Mensagem do moderador</b>${esc(s.mensagem).replace(/\n/g, '<br>')}</div>
@@ -413,7 +413,7 @@ export const telaDenuncia = (categorias, enviar) => {
             await ocupado(form.querySelector('[type="submit"]'), () => enviar(d));
             form.hidden = true;
             const ok = tela.querySelector('.adv-msg-ok');
-            ok.textContent = 'Denúncia enviada. Obrigado por ajudar a manter o Adventiscratch seguro!';
+            ok.textContent = 'Denúncia enviada. Obrigado por ajudar a manter o Adventiblocks seguro!';
             ok.hidden = false;
             setTimeout(fecharTela, 2500);
         } catch (err) {

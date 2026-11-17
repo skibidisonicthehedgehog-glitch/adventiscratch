@@ -3,8 +3,8 @@ from django.urls import include, path
 
 from conteudo.views import arquivo_moderacao
 
-admin.site.site_header = 'Adventiscratch – Moderação'
-admin.site.site_title = 'Moderação Adventiscratch'
+admin.site.site_header = 'Adventiblocks – Moderação'
+admin.site.site_title = 'Moderação Adventiblocks'
 admin.site.index_title = 'Painel de moderação'
 
 urlpatterns = [

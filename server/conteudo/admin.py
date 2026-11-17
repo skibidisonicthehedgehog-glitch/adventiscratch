@@ -57,13 +57,13 @@ class ConteudoAdmin(admin.ModelAdmin):
     def acoes_dono(self, obj):
         return format_html('<a class="button" href="{}">Aplicar sanção ao dono</a>', link_sancionar(obj.dono_id))
 
-    @admin.action(description='Ocultar (sai da galeria/loja; o dono vê a nota da moderação)')
+    @admin.action(permissions=['change'], description='Ocultar (sai da galeria/loja; o dono vê a nota da moderação)')
     def ocultar(self, request, queryset):
         n = queryset.update(situacao=Situacao.OCULTO)
         self.message_user(request, f'{n} item(ns) ocultado(s). Escreva o motivo em "nota da moderação".',
                           messages.WARNING)
 
-    @admin.action(description='Publicar / aprovar')
+    @admin.action(permissions=['change'], description='Publicar / aprovar')
     def publicar(self, request, queryset):
         n = queryset.update(situacao=Situacao.PUBLICADO)
         self.message_user(request, f'{n} item(ns) publicado(s).', messages.SUCCESS)

@@ -43,7 +43,7 @@ class AdventiscratchMusicas {
             try {
                 this.conferirEventos();
             } catch (e) {
-                console.warn('Adventiscratch: erro na música', e); // eslint-disable-line no-console
+                console.warn('Adventiblocks: erro na música', e); // eslint-disable-line no-console
             }
             passoOriginal();
         };

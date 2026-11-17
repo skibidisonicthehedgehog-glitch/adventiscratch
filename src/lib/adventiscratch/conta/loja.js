@@ -30,7 +30,7 @@ export const publicarModelo = async dados => {
         modelo: modelo.fileName,
         recursos: recursos.map(r => r.name),
         materialMaps: modelo.materialMaps || null,
-        editor: 'Adventiscratch'
+        editor: 'Adventiblocks'
     }, null, 2));
     zip.file(modelo.fileName, modelo.data);
     recursos.forEach(r => zip.file(r.name, r.data));
@@ -44,7 +44,7 @@ export const publicarModelo = async dados => {
         miniatura = r.png;
         animacoes = r.animacoes;
     } catch (e) {
-        console.warn('Adventiscratch: não foi possível desenhar a miniatura do modelo', e); // eslint-disable-line no-console
+        console.warn('Adventiblocks: não foi possível desenhar a miniatura do modelo', e); // eslint-disable-line no-console
     }
     const resposta = await enviarArquivos('/modelos', {
         pacote: {blob: pacote, nome: 'modelo.zip'},

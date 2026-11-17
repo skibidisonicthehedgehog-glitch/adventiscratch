@@ -60,7 +60,7 @@ import gdxforConnectionSmallIconURL from './gdxfor/gdxfor-small.svg';
 
 export default [
     {
-        name: 'Extras Adventiscratch',
+        name: 'Extras Adventiblocks',
         extensionId: 'adventiscratch',
         iconURL: adventiscratchIconURL,
         insetIconURL: adventiscratchInsetIconURL,

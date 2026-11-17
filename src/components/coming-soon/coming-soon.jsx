@@ -7,8 +7,7 @@ import ReactTooltip from 'react-tooltip';
 
 import styles from './coming-soon.css';
 
-import awwCatIcon from './aww-cat.png';
-import coolCatIcon from './cool-cat.png';
+import mascotIcon from '../../lib/adventiscratch/icone.svg';
 
 const messages = defineMessages({
     message1: {
@@ -49,9 +48,7 @@ class ComingSoonContent extends React.Component {
     }
     getRandomMessage () {
         // randomly chooses a messages from `messages` to display in the tooltip.
-        const images = [awwCatIcon, coolCatIcon];
         const messageNumber = Math.floor(Math.random() * Object.keys(messages).length) + 1;
-        const imageNumber = Math.floor(Math.random() * Object.keys(images).length);
         return (
             <FormattedMessage
                 {...messages[`message${messageNumber}`]}
@@ -59,7 +56,8 @@ class ComingSoonContent extends React.Component {
                     emoji: (
                         <img
                             className={styles.comingSoonImage}
-                            src={images[imageNumber]}
+                            alt=""
+                            src={mascotIcon}
                         />
                     )
                 }}

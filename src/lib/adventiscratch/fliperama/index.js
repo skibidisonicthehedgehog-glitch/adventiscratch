@@ -1,5 +1,5 @@
 /**
- * Fliperama secreto do Adventiscratch.
+ * Fliperama secreto do Adventiblocks.
  * Abre quando alguém digita EASTEREGGSEARCHING na busca da biblioteca de cenários.
  *
  * Todos os jogos são originais, feitos só com <canvas> e Web Audio, sem nada da internet.

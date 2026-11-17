@@ -126,7 +126,7 @@ const buildConfig = baseConfig.clone()
         chunks: ['gui'],
         filename: 'editor.html',
         template: 'src/playground/index.ejs',
-        title: 'Adventiscratch – Editor'
+        title: 'Adventiblocks – Editor'
     }))
     .addPlugin(new HtmlWebpackPlugin({
         chunks: [],
@@ -151,21 +151,21 @@ const buildConfig = baseConfig.clone()
         chunks: ['blocksonly'],
         filename: 'blocks-only.html',
         template: 'src/playground/index.ejs',
-        title: 'Adventiscratch: Somente blocos'
+        title: 'Adventiblocks: Somente blocos'
     }))
     .addPlugin(new HtmlWebpackPlugin({
         ...commonHtmlWebpackPluginOptions,
         chunks: ['compatibilitytesting'],
         filename: 'compatibility-testing.html',
         template: 'src/playground/index.ejs',
-        title: 'Adventiscratch: Teste de compatibilidade'
+        title: 'Adventiblocks: Teste de compatibilidade'
     }))
     .addPlugin(new HtmlWebpackPlugin({
         ...commonHtmlWebpackPluginOptions,
         chunks: ['player'],
         filename: 'player.html',
         template: 'src/playground/index.ejs',
-        title: 'Adventiscratch: Player'
+        title: 'Adventiblocks: Player'
     }))
     .addPlugin(new CopyWebpackPlugin({
         patterns: [
@@ -187,7 +187,7 @@ const buildConfig = baseConfig.clone()
 // `BUILD_MODE=dist npm run build`
 const buildDist = process.env.NODE_ENV === 'production' || process.env.BUILD_MODE === 'dist';
 
-// Adventiscratch: BUILD_MODE=site gera só o site (pasta build/), sem dist/ e sem mapas de código.
+// Adventiblocks: BUILD_MODE=site gera só o site (pasta build/), sem dist/ e sem mapas de código.
 // Usa bem menos memória; é o modo usado para publicar no GitHub Pages.
 if (process.env.BUILD_MODE === 'site') {
     module.exports = {...buildConfig.get(), devtool: false};

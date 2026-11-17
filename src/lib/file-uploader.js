@@ -35,7 +35,7 @@ const handleFileUpload = function (fileInput, onload, onerror) {
         const file = files[i];
         const reader = new FileReader();
         reader.onload = () => {
-            // Adventiscratch: o Windows costuma não informar o tipo dos .ogg; completa pela extensão
+            // Adventiblocks: o Windows costuma não informar o tipo dos .ogg; completa pela extensão
             const fileType = tipoDoArquivo(file);
             const fileName = extractFileName(file.name);
             onload(reader.result, fileType, fileName, i, files.length);
@@ -182,7 +182,7 @@ const costumeUpload = function (fileData, fileType, storage, handleCostume, hand
  * @param {Function} handleError The function to execute if there is an error parsing the sound
  */
 const soundUpload = function (fileData, fileType, storage, handleSound, handleError) {
-    // Adventiscratch: .ogg vira WAV (o projeto do Scratch só guarda WAV e MP3)
+    // Adventiblocks: .ogg vira WAV (o projeto do Scratch só guarda WAV e MP3)
     if (ehOgg(fileType)) {
         oggParaWav(fileData)
             .then(convertido => {

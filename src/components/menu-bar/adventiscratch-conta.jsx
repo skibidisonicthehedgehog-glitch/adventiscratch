@@ -1,5 +1,5 @@
 /**
- * Menu da conta do Adventiscratch na barra superior: nome do aluno, turma, denunciar, moderação e sair.
+ * Menu da conta do Adventiblocks na barra superior: nome do aluno, turma, denunciar, moderação e sair.
  */
 import React from 'react';
 

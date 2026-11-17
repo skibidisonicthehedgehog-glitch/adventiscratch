@@ -1,5 +1,5 @@
 """
-Modelos de contas e moderação do Adventiscratch.
+Modelos de contas e moderação do Adventiblocks.
 
 - Perfil: dados extras do aluno (nome de exibição e turma). Não guardamos e-mail nem dados pessoais.
 - CodigoTurma: código que o aluno usa para criar conta (dificulta criar contas para burlar suspensões).

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Prepara o banco e inicia o servidor do Adventiscratch.
+# Prepara o banco e inicia o servidor do Adventiblocks.
 set -e
 # espera o banco (PostgreSQL pode demorar alguns segundos para subir)
 tentativa=1

@@ -41,7 +41,7 @@ class AdventiscratchRitmo {
             try {
                 this.despacharEventos();
             } catch (e) {
-                console.warn('Adventiscratch: erro no jogo de ritmo', e); // eslint-disable-line no-console
+                console.warn('Adventiblocks: erro no jogo de ritmo', e); // eslint-disable-line no-console
             }
             passoOriginal();
         };

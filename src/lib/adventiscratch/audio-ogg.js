@@ -1,5 +1,5 @@
 /**
- * Suporte a sons .ogg (Ogg Vorbis / Opus) no Adventiscratch.
+ * Suporte a sons .ogg (Ogg Vorbis / Opus) no Adventiblocks.
  *
  * O formato de projeto do Scratch só guarda sons WAV ou MP3, então o .ogg é decodificado pelo navegador
  * e salvo como WAV mono 16 bits. Assim o som funciona em todo lugar: tocar, editar no editor de sons,

@@ -1,5 +1,5 @@
 /**
- * Extensão "Extras Adventiscratch".
+ * Extensão "Extras Adventiblocks".
  * Blocos que não existem no Scratch original, com textos em pt-BR.
  */
 import icone from './icone.svg';
@@ -33,7 +33,7 @@ class AdventiscratchExtras {
     getInfo () {
         return {
             id: 'adventiscratch',
-            name: 'Extras Adventiscratch',
+            name: 'Extras Adventiblocks',
             color1: '#6D4FC2',
             color2: '#5B3FA8',
             color3: '#4A3290',
@@ -104,7 +104,7 @@ class AdventiscratchExtras {
                     blockType: BlockType.REPORTER,
                     text: '[TEXTO] em [MODO]',
                     arguments: {
-                        TEXTO: {type: ArgumentType.STRING, defaultValue: 'Adventiscratch'},
+                        TEXTO: {type: ArgumentType.STRING, defaultValue: 'Adventiblocks'},
                         MODO: {type: ArgumentType.STRING, menu: 'modos', defaultValue: 'maiusculas'}
                     }
                 },

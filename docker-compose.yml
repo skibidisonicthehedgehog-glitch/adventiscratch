@@ -1,4 +1,4 @@
-# Adventiscratch com Docker Engine.
+# Adventiblocks com Docker Engine.
 #
 #   cp .env.example .env        (e edite o .env)
 #   docker compose up -d --build

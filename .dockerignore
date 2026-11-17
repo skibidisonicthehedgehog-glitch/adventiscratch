@@ -5,7 +5,7 @@ dist
 server/dados
 server/staticfiles
 **/__pycache__
-.env
-server/.env
+**/.env
+**/.env.*
 static/microbit
 src/generated

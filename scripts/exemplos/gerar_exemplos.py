@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Gera os projetos de exemplo do Adventiscratch (arquivos .asp em static/exemplos/).
+Gera os projetos de exemplo do Adventiblocks (arquivos .asp em static/exemplos/).
 
     python scripts/exemplos/gerar_exemplos.py
 
@@ -328,7 +328,7 @@ class Blocos:
     def toque_som(self, nome):
         return self.p.b('sound_play', {'SOUND_MENU': Menu('sound_sounds_menu', 'SOUND_MENU', nome)})
 
-    # Extras Adventiscratch
+    # Extras Adventiblocks
     def x(self, opcode, menus=None, tipos=None, **entradas):
         """Bloco da extensão Extras. O menu "modos" não aceita reporters: vira campo do próprio bloco."""
         campos = {nome: valor for nome, (menu, valor) in (menus or {}).items()}
@@ -446,7 +446,7 @@ def montar(p, nome_arquivo, atores, musicas=(), mapas=()):
             'size': a.get('tamanho', 100), 'direction': 90, 'draggable': False, 'rotationStyle': 'all around',
         })
     projeto = {'targets': alvos, 'monitors': p.monitores, 'extensions': sorted(p.extensoes),
-               'meta': {'semver': '3.0.0', 'vm': '0.2.0', 'agent': 'Adventiscratch exemplos'}}
+               'meta': {'semver': '3.0.0', 'vm': '0.2.0', 'agent': 'Adventiblocks exemplos'}}
     os.makedirs(SAIDA, exist_ok=True)
     destino = os.path.join(SAIDA, nome_arquivo)
     with zipfile.ZipFile(destino, 'w', zipfile.ZIP_DEFLATED) as z:
@@ -458,7 +458,7 @@ def montar(p, nome_arquivo, atores, musicas=(), mapas=()):
         for i, m in enumerate(mapas):
             z.writestr(f'adventiscratch/mapas/{i}.json', json.dumps(m, ensure_ascii=False))
         z.writestr('adventiscratch/manifest.json', json.dumps(
-            {'format': 'asp', 'version': 3, 'editor': 'Adventiscratch', 'models': [], 'instrumentos': [],
+            {'format': 'asp', 'version': 3, 'editor': 'Adventiblocks', 'models': [], 'instrumentos': [],
              'musicas': [{'nome': m['nome'], 'arquivo': f'musicas/{i}.json'} for i, m in enumerate(musicas)],
              'mapas': [{'nome': m['nome'], 'arquivo': f'mapas/{i}.json'} for i, m in enumerate(mapas)]}))
     print(f'  {nome_arquivo}: {sum(len(b) for b in p.alvos.values())} blocos')
@@ -535,7 +535,7 @@ def calculadora():
                             k.x('caixa', menus={'MODO': ('modos', 'maiusculas')}, tipos={'TEXTO': 'txt'},
                                 TEXTO='coruja sabida')), 2),
              k.diga(k.junte('Hoje é ', k.x('dataHoje')), 3))
-    p.comentario(520, 20, 'Este exemplo usa os blocos roxos da extensão "Extras Adventiscratch": potência, raiz, '
+    p.comentario(520, 20, 'Este exemplo usa os blocos roxos da extensão "Extras Adventiblocks": potência, raiz, '
                           '≥, "se … então … senão …" e maiúsculas.\nClique na bandeira e responda às perguntas!')
     montar(p, 'calculadora-coruja.asp', [coruja(x=0, y=-40, tamanho=150)])
 

@@ -1,10 +1,10 @@
 @echo off
 chcp 65001 >nul
-title Adventiscratch - publicar na internet
+title Adventiblocks - publicar na internet
 cd /d "%~dp0"
 echo.
 echo  ======================================================
-echo     Adventiscratch - publicar na internet (Cloudflare)
+echo     Adventiblocks - publicar na internet (Cloudflare)
 echo  ======================================================
 echo.
 echo  Isto cria um endereco publico https://....trycloudflare.com
@@ -48,7 +48,7 @@ set DJANGO_CSRF_TRUSTED_ORIGINS=https://*.trycloudflare.com
 set ADVENTISCRATCH_ATRAS_DE_PROXY=1
 python manage.py migrate --noinput || (popd & goto erro)
 python manage.py collectstatic --noinput -v 0 || (popd & goto erro)
-start "Adventiscratch - servidor publico" /min cmd /k python -m daphne -b 127.0.0.1 -p 8000 --proxy-headers adventiscratch_server.asgi:application
+start "Adventiblocks - servidor publico" /min cmd /k python -m daphne -b 127.0.0.1 -p 8000 --proxy-headers adventiscratch_server.asgi:application
 popd
 timeout /t 4 /nobreak >nul
 

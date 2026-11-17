@@ -1,10 +1,10 @@
 @echo off
 chcp 65001 >nul
-title Adventiscratch
+title Adventiblocks
 cd /d "%~dp0"
 echo.
 echo  ==============================================
-echo     Adventiscratch - iniciando no seu computador
+echo     Adventiblocks - iniciando no seu computador
 echo  ==============================================
 echo.
 
@@ -37,8 +37,8 @@ python manage.py migrate --noinput || (popd & goto erro)
 popd
 
 echo Abrindo o servidor e o editor em duas janelas (deixe as duas abertas^)...
-start "Adventiscratch - servidor (porta 8000)" /d "%~dp0server" cmd /k python manage.py runserver 8000
-start "Adventiscratch - editor (porta 8601)" /d "%~dp0" cmd /k npm start
+start "Adventiblocks - servidor (porta 8000)" /d "%~dp0server" cmd /k python manage.py runserver 8000
+start "Adventiblocks - editor (porta 8601)" /d "%~dp0" cmd /k npm start
 
 echo Esperando o editor compilar...
 timeout /t 30 /nobreak >nul

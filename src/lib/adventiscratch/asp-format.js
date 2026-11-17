@@ -1,5 +1,5 @@
 /**
- * Formato .asp (AdventiScratch Project).
+ * Formato .asp (projeto Adventiblocks).
  *
  * Um .asp é um .sb3 (zip com project.json + fantasias + sons) com uma pasta extra:
  *   adventiscratch/manifest.json  -> {"format": "asp", "version": 1, "models": [...]}
@@ -10,7 +10,7 @@
  *   adventiscratch/controladores.json  -> controladores de animação (pelo nome do ator)
  *   adventiscratch/mapas/<n>.json  -> mapas do Jogo de Ritmo
  *
- * Por isso o Adventiscratch abre .asp e .sb3, e um .asp renomeado para .sb3 ainda abre
+ * Por isso o Adventiblocks abre .asp e .sb3, e um .asp renomeado para .sb3 ainda abre
  * no Scratch comum (os blocos 3D só não funcionam lá).
  */
 import JSZip from 'jszip';
@@ -49,7 +49,7 @@ export const patchVmForAsp = (vm, onProjectChanged) => {
         zip.file(`${ASP_DIR}manifest.json`, JSON.stringify({
             format: 'asp',
             version: 3,
-            editor: 'Adventiscratch',
+            editor: 'Adventiblocks',
             musicas: todasMusicas().map((m, i) => ({nome: m.nome, arquivo: `musicas/${i}.json`})),
             mapas: todosMapas().map((m, i) => ({nome: m.nome, arquivo: `mapas/${i}.json`})),
             instrumentos: instrumentosExtras().map((inst, i) => ({id: inst.id, arquivo: `instrumentos/${i}`})),
@@ -130,7 +130,7 @@ export const patchVmForAsp = (vm, onProjectChanged) => {
                             adicionarInstrumento(JSON.parse(await j.async('string')),
                                 new Int16Array(await p.async('arraybuffer')), {silencioso: true, id: item.id});
                         } catch (e) {
-                            console.warn('Adventiscratch: instrumento .sf2 danificado no projeto', e); // eslint-disable-line no-console
+                            console.warn('Adventiblocks: instrumento .sf2 danificado no projeto', e); // eslint-disable-line no-console
                         }
                     }
                     const ctrl = zip.file(`${ASP_DIR}controladores.json`);
@@ -138,7 +138,7 @@ export const patchVmForAsp = (vm, onProjectChanged) => {
                         try {
                             carregarControladores(JSON.parse(await ctrl.async('string')));
                         } catch (e) {
-                            console.warn('Adventiscratch: controladores de animação danificados', e); // eslint-disable-line no-console
+                            console.warn('Adventiblocks: controladores de animação danificados', e); // eslint-disable-line no-console
                         }
                     }
                     for (const item of manifest.mapas || []) {
@@ -147,7 +147,7 @@ export const patchVmForAsp = (vm, onProjectChanged) => {
                         try {
                             gravarMapa(normalizarMapa(JSON.parse(await f.async('string'))), null, true);
                         } catch (e) {
-                            console.warn('Adventiscratch: mapa de ritmo danificado', e); // eslint-disable-line no-console
+                            console.warn('Adventiblocks: mapa de ritmo danificado', e); // eslint-disable-line no-console
                         }
                     }
                     for (const item of manifest.musicas || []) {
@@ -156,13 +156,13 @@ export const patchVmForAsp = (vm, onProjectChanged) => {
                         try {
                             gravarMusica(normalizar(JSON.parse(await f.async('string'))), null, true);
                         } catch (e) {
-                            console.warn('Adventiscratch: música danificada no projeto', e); // eslint-disable-line no-console
+                            console.warn('Adventiblocks: música danificada no projeto', e); // eslint-disable-line no-console
                         }
                     }
                 }
             } catch (e) {
-                // projeto sem dados do Adventiscratch: segue normalmente
-                console.warn('Adventiscratch: não foi possível ler os modelos 3D do projeto', e); // eslint-disable-line no-console
+                // projeto sem dados do Adventiblocks: segue normalmente
+                console.warn('Adventiblocks: não foi possível ler os modelos 3D do projeto', e); // eslint-disable-line no-console
             }
         }
         if (onProjectChanged) onProjectChanged();

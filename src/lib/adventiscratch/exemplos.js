@@ -22,7 +22,7 @@ export const iniciarExemplos = vm => {
                     Object.keys(a.blocks._blocks).length ? t : a), alvos[0]);
                 if (maior && vm.editingTarget !== maior) vm.setEditingTarget(maior.id);
             }, 400);
-            document.title = `Adventiscratch – Exemplo: ${nome.replace(/-/g, ' ')}`;
+            document.title = `Adventiblocks – Exemplo: ${nome.replace(/-/g, ' ')}`;
         } catch (e) {
             // eslint-disable-next-line no-alert
             alert(`Não foi possível abrir o exemplo "${nome}". (${e.message})`);

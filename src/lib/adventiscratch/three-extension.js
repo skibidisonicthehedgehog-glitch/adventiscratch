@@ -1,5 +1,5 @@
 /**
- * Extensão "3D" do Adventiscratch: blocos para Three.js e modelos 3D.
+ * Extensão "3D" do Adventiblocks: blocos para Three.js e modelos 3D.
  */
 import icone from './icone-3d.svg';
 import {
@@ -502,7 +502,7 @@ class Adventiscratch3D {
             try {
                 await e.createModel(`modelo:${model.name}`, () => Promise.resolve(model), NOME);
             } catch (err) {
-                console.warn('Adventiscratch 3D: erro ao abrir o modelo', err); // eslint-disable-line no-console
+                console.warn('Adventiblocks 3D: erro ao abrir o modelo', err); // eslint-disable-line no-console
             }
         });
     }
@@ -519,7 +519,7 @@ class Adventiscratch3D {
                     return {data: await res.arrayBuffer(), ext};
                 }, NOME);
             } catch (err) {
-                console.warn('Adventiscratch 3D: não consegui baixar o modelo', err); // eslint-disable-line no-console
+                console.warn('Adventiblocks 3D: não consegui baixar o modelo', err); // eslint-disable-line no-console
             }
         });
     }

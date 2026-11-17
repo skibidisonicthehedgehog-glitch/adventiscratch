@@ -78,7 +78,7 @@ const renderizar = () => {
     } else if (fase === 'suspensa') {
         telaSuspensao(situacao, {baixarProjeto, sair, pedirRevisao, atualizar});
     } else if (fase === 'offline' && exigeLogin()) {
-        telaSemConexao('Não foi possível falar com o servidor do Adventiscratch.', atualizar);
+        telaSemConexao('Não foi possível falar com o servidor do Adventiblocks.', atualizar);
     } else if (fase === 'ok' && situacao.advertencias.length) {
         const adv = situacao.advertencias[0];
         telaAdvertencia(adv, situacao.conta.nome, async () => {

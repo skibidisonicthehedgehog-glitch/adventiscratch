@@ -1,5 +1,5 @@
 /**
- * Detector de erros nos blocos do Adventiscratch.
+ * Detector de erros nos blocos do Adventiblocks.
  *
  * Analisa os scripts do ator/palco que está sendo editado e marca os blocos com problema:
  *  - erro  (vermelho): o código vai falhar ou fazer algo errado com certeza;
@@ -378,7 +378,7 @@ export const analisarAgora = () => {
         try {
             ultimos = analisar(vmAtual.editingTarget, vmAtual.runtime);
         } catch (e) {
-            console.warn('Adventiscratch: erro no detector de erros', e); // eslint-disable-line no-console
+            console.warn('Adventiblocks: erro no detector de erros', e); // eslint-disable-line no-console
             ultimos = [];
         }
         injetarEstilo();
