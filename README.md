@@ -22,6 +22,7 @@ Fork do [scratch-gui oficial](https://github.com/scratchfoundation/scratch-gui) 
 | Extensão **Animações**: spritesheets (.png + .xml/.json) e **controlador de animação** | `src/lib/adventiscratch/spritesheet/` |
 | Extensão **Jogo de Ritmo** (setas estilo FNF, círculos estilo osu!) e editor de mapas | `src/lib/adventiscratch/ritmo/` |
 | **Loja de Instrumentos Virtuais** (.sf2) | `server/conteudo/` (`InstrumentoSF2`) e `src/lib/adventiscratch/conta/telas-nuvem.js` |
+| Sons **.ogg** (Ogg Vorbis/Opus), convertidos em WAV ao enviar | `src/lib/adventiscratch/audio-ogg.js` e `src/lib/file-uploader.js` |
 | Formato de projeto **.asp** (AdventiScratch Project) | `src/lib/adventiscratch/asp-format.js`, `src/containers/sb3-downloader.jsx`, `src/lib/sb-file-uploader-hoc.jsx` |
 | Registro das extensões na VM | `src/lib/adventiscratch/index.js` e `src/lib/libraries/extensions/index.jsx` |
 
@@ -182,7 +183,9 @@ Extensão **Jogo de Ritmo** → **🎯 Editor de mapas de ritmo…** (tela cheia
   arrastar move (tempo e pista), puxar a ponta faz **nota longa**; botão direito apaga. **Círculos**: clique no
   palco põe um círculo no marcador amarelo (que anda sozinho uma divisão), arrastar move; na faixa de baixo,
   arrastar muda o tempo.
-- **Áudio**: uma música do Criador de Músicas, um **som do projeto** (importe a música como som) ou só o tempo;
+- **Áudio**: uma música do Criador de Músicas, um **som do projeto** ou só o tempo. **🎵 Enviar áudio** põe a
+  música (.ogg, .mp3 ou .wav) nos sons do Palco e já escolhe ela; escolhendo `Inst.ogg` e `Voices.ogg` juntos, as
+  duas faixas são misturadas numa só;
   BPM, **ajuste (ms)** para sincronizar, velocidade, encaixe (1, 1/2, 1/4, 1/8, 1/3 de batida ou livre), zoom,
   "tique" quando a agulha passa por uma nota, desfazer/refazer.
 - **⏺ Gravar**: com a música tocando, as setas / D F J K (ou cliques e Z/X nos círculos) viram notas; segurar

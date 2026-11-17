@@ -2,6 +2,7 @@ import {BitmapAdapter, sanitizeSvg} from 'scratch-svg-renderer';
 import randomizeSpritePosition from './randomize-sprite-position.js';
 import bmpConverter from './bmp-converter';
 import gifDecoder from './gif-decoder';
+import {avisar, ehOgg, oggParaWav, tipoDoArquivo} from './adventiscratch/audio-ogg.js';
 
 /**
  * Extract the file name given a string of the form fileName + ext
@@ -34,7 +35,8 @@ const handleFileUpload = function (fileInput, onload, onerror) {
         const file = files[i];
         const reader = new FileReader();
         reader.onload = () => {
-            const fileType = file.type;
+            // Adventiscratch: o Windows costuma não informar o tipo dos .ogg; completa pela extensão
+            const fileType = tipoDoArquivo(file);
             const fileName = extractFileName(file.name);
             onload(reader.result, fileType, fileName, i, files.length);
             readFile(i + 1, files);
@@ -180,6 +182,30 @@ const costumeUpload = function (fileData, fileType, storage, handleCostume, hand
  * @param {Function} handleError The function to execute if there is an error parsing the sound
  */
 const soundUpload = function (fileData, fileType, storage, handleSound, handleError) {
+    // Adventiscratch: .ogg vira WAV (o projeto do Scratch só guarda WAV e MP3)
+    if (ehOgg(fileType)) {
+        oggParaWav(fileData)
+            .then(convertido => {
+                const vmSound = createVMAsset(
+                    storage,
+                    storage.AssetType.Sound,
+                    storage.DataFormat.WAV,
+                    convertido.wav);
+                vmSound.rate = convertido.taxa;
+                vmSound.sampleCount = convertido.amostras;
+                if (convertido.grande) {
+                    avisar('Som .ogg muito longo: ele toca normalmente, mas é grande demais para o editor de sons.');
+                } else if (convertido.reduzido) {
+                    avisar('Som .ogg longo: convertido em qualidade 22 kHz para caber no projeto.');
+                }
+                handleSound(vmSound);
+            })
+            .catch(e => {
+                avisar(e.message);
+                handleError(e.message);
+            });
+        return;
+    }
     let soundFormat;
     switch (fileType) {
     case 'audio/mp3':

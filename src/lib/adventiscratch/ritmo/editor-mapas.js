@@ -14,6 +14,7 @@ import {
 } from './dados.js';
 import {RelogioDoMapa, sonsDoProjeto} from './audio.js';
 import {lerArquivoDeMapa} from './importar-mapas.js';
+import {audioParaWav} from '../audio-ogg.js';
 import {nomesMusicas, obterMusica, PASSOS_POR_BATIDA} from '../musica/dados.js';
 
 const ESQ = 70; // coluna dos nomes das pistas
@@ -95,6 +96,8 @@ export const abrirEditorMapas = vm => {
         <label>Nome <input class="nome" maxlength="40" style="width:130px"></label>
         <label>Tipo <select class="modo"><option value="setas">⬅ Setas (FNF)</option><option value="circulos">⭕ Círculos (osu!)</option></select></label>
         <label>Áudio <select class="audio" style="max-width:180px"></select></label>
+        <button class="enviarAudio" title="Enviar a música (.ogg, .mp3 ou .wav). Escolha Inst e Voices juntos para misturar as duas.">🎵 Enviar áudio</button>
+        <input type="file" class="arquivoAudio" accept=".ogg,.oga,.opus,.mp3,.wav" multiple hidden>
         <label>BPM <input class="bpm" type="number" min="20" max="400" step="any" style="width:62px"></label>
         <label title="Atraso do áudio em relação às notas, em milissegundos">Ajuste (ms) <input class="offset" type="number" step="5" style="width:62px"></label>
         <label>Velocidade <input class="vel" type="number" min="0.2" max="5" step="0.1" style="width:52px"></label>
@@ -772,9 +775,53 @@ export const abrirEditorMapas = vm => {
             selecionado = null;
             preencher();
             aviso(`${f.name}: ${m.modo === 'circulos' ? `${m.circulos.length} círculos` : `${m.notas.length} notas`}. ` +
-                'Escolha o áudio (importe a música como som do projeto) e ajuste o "Ajuste (ms)" se precisar.');
+                'Agora use "🎵 Enviar áudio" com a música (.ogg, .mp3 ou .wav) e ajuste o "Ajuste (ms)" se precisar.');
         } catch (e) {
             aviso(`⚠ ${e.message}`);
+        }
+    };
+
+    // Enviar música: vira um som do Palco (o .ogg é convertido; Inst + Voices do FNF são misturados)
+    $('.enviarAudio').onclick = () => $('.arquivoAudio').click();
+    $('.arquivoAudio').onchange = async () => {
+        const arquivos = Array.from($('.arquivoAudio').files);
+        $('.arquivoAudio').value = '';
+        if (!arquivos.length) return;
+        const botao = $('.enviarAudio');
+        botao.disabled = true;
+        aviso(arquivos.length > 1 ? `Misturando ${arquivos.length} faixas…` : `Convertendo ${arquivos[0].name}…`);
+        try {
+            const r = await audioParaWav(await Promise.all(arquivos.map(f => f.arrayBuffer())));
+            const storage = vm.runtime.storage;
+            const asset = storage.createAsset(storage.AssetType.Sound, storage.DataFormat.WAV, r.wav, null, true);
+            const palco = vm.runtime.getTargetForStage();
+            const usados = new Set();
+            vm.runtime.targets.forEach(t => t.isOriginal && t.sprite.sounds.forEach(x => usados.add(x.name)));
+            const base = (arquivos.length > 1 ? `${m.nome} (música)` : arquivos[0].name.replace(/\.[^.]+$/, '')) ||
+                'Música';
+            let nome = base;
+            for (let i = 2; usados.has(nome); i++) nome = `${base} ${i}`;
+            await vm.addSound({
+                name: nome,
+                dataFormat: 'wav',
+                asset,
+                assetId: asset.assetId,
+                md5: `${asset.assetId}.wav`,
+                rate: r.taxa,
+                sampleCount: r.amostras
+            }, palco.id);
+            registrar();
+            m.audio = {tipo: 'som', nome};
+            relogio.parar();
+            preencherAudio();
+            atualizarBotoes();
+            preencher();
+            aviso(`🎵 "${nome}" foi adicionado aos sons do Palco e escolhido como áudio deste mapa` +
+                `${r.reduzido ? ' (música longa: salva em 22 kHz)' : ''}.`);
+        } catch (e) {
+            aviso(`⚠ ${e.message}`);
+        } finally {
+            botao.disabled = false;
         }
     };
 
