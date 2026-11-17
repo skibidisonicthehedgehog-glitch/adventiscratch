@@ -9,6 +9,7 @@ import {
 } from '../lib/adventiscratch/three-extension.js';
 import {abrirCentral} from '../lib/adventiscratch/conta/telas-nuvem.js';
 import {CRIADOR_CALLBACK} from '../lib/adventiscratch/musica/musica-extension.js';
+import {CONTROLADOR_CALLBACK, SPRITESHEET_CALLBACK} from '../lib/adventiscratch/spritesheet/animacoes-extension.js';
 import {definirWorkspaceDetector} from '../lib/adventiscratch/detector-erros.js';
 import VMScratchBlocks from '../lib/blocks';
 import VM from 'scratch-vm';
@@ -134,6 +135,15 @@ class Blocks extends React.Component {
         toolboxWorkspace.registerButtonCallback(CRIADOR_CALLBACK, () => {
             import(/* webpackChunkName: "adventiscratch-musica" */ '../lib/adventiscratch/musica/editor.js')
                 .then(m => m.abrirCriadorDeMusicas(this.props.vm));
+        });
+        // Adventiscratch: botão "Importar spritesheet…" da extensão Animações
+        toolboxWorkspace.registerButtonCallback(SPRITESHEET_CALLBACK, () => {
+            import(/* webpackChunkName: "adventiscratch-spritesheet" */ '../lib/adventiscratch/spritesheet/importar.js')
+                .then(m => m.abrirImportadorSpritesheet(this.props.vm));
+        });
+        toolboxWorkspace.registerButtonCallback(CONTROLADOR_CALLBACK, () => {
+            import(/* webpackChunkName: "adventiscratch-spritesheet" */ '../lib/adventiscratch/spritesheet/controlador-editor.js')
+                .then(m => m.abrirEditorControlador(this.props.vm));
         });
         // Adventiscratch: detector de erros (brilho vermelho + ⚠ nos blocos com problema)
         definirWorkspaceDetector(this.workspace);

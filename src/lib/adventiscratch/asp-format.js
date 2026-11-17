@@ -7,6 +7,7 @@
  *   adventiscratch/models/<nome>.files/<arquivo>  -> texturas, .mtl e .bin de cada modelo
  *   adventiscratch/musicas/<n>.json  -> músicas do Criador de Músicas
  *   adventiscratch/instrumentos/<n>.json + <n>.pcm  -> instrumentos .sf2 (só o preset escolhido)
+ *   adventiscratch/controladores.json  -> controladores de animação (pelo nome do ator)
  *
  * Por isso o Adventiscratch abre .asp e .sb3, e um .asp renomeado para .sb3 ainda abre
  * no Scratch comum (os blocos 3D só não funcionam lá).
@@ -15,6 +16,7 @@ import JSZip from 'jszip';
 import {addModel, clearModels, getAllModels} from './model-store.js';
 import {gravarMusica, limparMusicas, normalizar, todasMusicas} from './musica/dados.js';
 import {adicionarInstrumento, instrumentosExtras, limparInstrumentos} from './musica/soundfont-store.js';
+import {carregarControladores, limparControladores, serializarControladores} from './spritesheet/controladores.js';
 
 export const PROJECT_EXTENSION = 'asp';
 export const ACCEPTED_PROJECT_EXTENSIONS = '.asp,.sb,.sb2,.sb3';
@@ -59,6 +61,10 @@ export const patchVmForAsp = (vm, onProjectChanged) => {
             }))
         }, null, 2));
         todasMusicas().forEach((m, i) => zip.file(`${ASP_DIR}musicas/${i}.json`, JSON.stringify(m)));
+        const controladores = serializarControladores(vm.runtime);
+        if (Object.keys(controladores).length) {
+            zip.file(`${ASP_DIR}controladores.json`, JSON.stringify(controladores));
+        }
         instrumentosExtras().forEach((inst, i) => {
             zip.file(`${ASP_DIR}instrumentos/${i}.json`, JSON.stringify(inst.info));
             zip.file(`${ASP_DIR}instrumentos/${i}.pcm`, inst.pcm.buffer.slice(inst.pcm.byteOffset,
@@ -83,6 +89,7 @@ export const patchVmForAsp = (vm, onProjectChanged) => {
         clearModels(true);
         limparMusicas(true);
         limparInstrumentos(true);
+        limparControladores();
         if (isZip(input)) {
             try {
                 const zip = await JSZip.loadAsync(input);
@@ -119,6 +126,14 @@ export const patchVmForAsp = (vm, onProjectChanged) => {
                                 new Int16Array(await p.async('arraybuffer')), {silencioso: true, id: item.id});
                         } catch (e) {
                             console.warn('Adventiscratch: instrumento .sf2 danificado no projeto', e); // eslint-disable-line no-console
+                        }
+                    }
+                    const ctrl = zip.file(`${ASP_DIR}controladores.json`);
+                    if (ctrl) {
+                        try {
+                            carregarControladores(JSON.parse(await ctrl.async('string')));
+                        } catch (e) {
+                            console.warn('Adventiscratch: controladores de animação danificados', e); // eslint-disable-line no-console
                         }
                     }
                     for (const item of manifest.musicas || []) {

@@ -350,6 +350,44 @@
       </article>
     </section>
 
+    <section data-id="animacoes" data-titulo="Animações e spritesheets" data-nivel="intermediario" data-tempo="15 min">
+      <article>
+        <h3>Spritesheet: muitas fantasias numa imagem só</h3>
+        <p>Jogos como o FNF guardam todos os quadros de um personagem numa imagem grande (.png) e um mapa (.xml) que diz
+          onde fica cada quadro. Adicione a extensão <b>Animações</b> e clique em <b>🖼️ Importar spritesheet</b>.</p>
+        <ul>
+          <li>Escolha (ou arraste) a <b>.png</b> e o <b>.xml</b> juntos. Também aceita <b>.json</b> do TexturePacker.</li>
+          <li>Sem mapa? Diga quantas <b>colunas</b> e <b>linhas</b> a imagem tem.</li>
+          <li>Marque as animações, escolha o tamanho e se vai para um <b>ator novo</b> ou para o atual.</li>
+        </ul>
+        <div class="dica">Só use imagens que você fez ou que têm permissão de uso.</div>
+      </article>
+      <article>
+        <h3>Tocando animações</h3>
+        <div class="pilha">
+          <span class="bl eve chapeu">quando ⚑ for clicado</span>
+          <span class="bl an">tocar animação <span class="s">idle ▾</span> a <span class="s">24</span> quadros por segundo <span class="s">em loop ▾</span></span>
+        </div>
+        <p>Qualquer fantasia com número no fim forma uma animação: <b>andar1</b>, <b>andar2</b>, <b>andar3</b>… viram
+          a animação <b>andar</b>.</p>
+      </article>
+      <article>
+        <h3>Controlador de animação</h3>
+        <p>Em vez de trocar animações à mão em todo script, monte um <b>controlador</b> (🎛️ na categoria Animações):</p>
+        <ul>
+          <li><b>⚡ Estados das animações</b> cria um estado para cada animação. O <b>▶ inicial</b> toca ao clicar na bandeira.</li>
+          <li>Crie <b>parâmetros</b> à esquerda: número (ex.: <i>velocidade</i>), sim/não (ex.: <i>no chão</i>) ou gatilho (ex.: <i>pular</i>).</li>
+          <li>Puxe a <b>bolinha amarela</b> de um estado até outro e escolha as condições, ou marque "esperar a animação terminar".</li>
+          <li><b>Qualquer estado</b>: transições que valem de onde o ator estiver (ex.: levou dano).</li>
+        </ul>
+        <div class="pilha">
+          <span class="bl eve chapeu">quando a tecla espaço for pressionada</span>
+          <span class="bl an">disparar gatilho <span class="s">pular ▾</span></span>
+        </div>
+        <p>Use <b>quando entrar no estado</b> para tocar um som ou mudar algo quando a animação troca.</p>
+      </article>
+    </section>
+
     <section data-id="plataforma-2d" data-titulo="Jogo de plataforma 2D" data-nivel="iniciante" data-tempo="15 min" data-exemplo="coruja-saltitante">
       <article>
         <h3>A extensão Plataforma 2D</h3>

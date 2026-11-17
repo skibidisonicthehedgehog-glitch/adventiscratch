@@ -9,6 +9,7 @@ import adventiscratch2dIconURL from '../../adventiscratch/capa2d.png';
 import adventiscratch2dInsetIconURL from '../../adventiscratch/icone-2d.svg';
 import adventiscratchMusicaIconURL from '../../adventiscratch/musica/capa-musica.png';
 import adventiscratchMusicaInsetIconURL from '../../adventiscratch/musica/icone-musica.svg';
+import adventiscratchAnimIconURL from '../../adventiscratch/spritesheet/capa-animacoes.png';
 import musicIconURL from './music/music.png';
 import musicInsetIconURL from './music/music-small.svg';
 
@@ -85,6 +86,13 @@ export default [
         iconURL: adventiscratchMusicaIconURL,
         insetIconURL: adventiscratchMusicaInsetIconURL,
         description: 'Criador de Músicas (piano, bateria e instrumentos .sf2) e blocos para tocar, pausar e continuar no jogo.',
+        featured: true
+    },
+    {
+        name: 'Animações',
+        extensionId: 'adventiscratchanim',
+        iconURL: adventiscratchAnimIconURL,
+        description: 'Importe spritesheets (.png + .xml do FNF ou .json) e toque animações pelo nome.',
         featured: true
     },
     {

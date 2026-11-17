@@ -19,6 +19,7 @@ Fork do [scratch-gui oficial](https://github.com/scratchfoundation/scratch-gui) 
 | Extensão **3D (Three.js)** com modelos 3D | `src/lib/adventiscratch/three-extension.js` e `three-engine.js` |
 | Extensão **Plataforma 2D** (gravidade, pulo, chão, paredes) | `src/lib/adventiscratch/plataforma2d-extension.js` |
 | **Criador de Músicas**, extensão **Músicas** e instrumentos **.sf2** | `src/lib/adventiscratch/musica/` |
+| Extensão **Animações**: spritesheets (.png + .xml/.json) e **controlador de animação** | `src/lib/adventiscratch/spritesheet/` |
 | **Loja de Instrumentos Virtuais** (.sf2) | `server/conteudo/` (`InstrumentoSF2`) e `src/lib/adventiscratch/conta/telas-nuvem.js` |
 | Formato de projeto **.asp** (AdventiScratch Project) | `src/lib/adventiscratch/asp-format.js`, `src/containers/sb3-downloader.jsx`, `src/lib/sb-file-uploader-hoc.jsx` |
 | Registro das extensões na VM | `src/lib/adventiscratch/index.js` e `src/lib/libraries/extensions/index.jsx` |
@@ -151,10 +152,32 @@ para conferir e ação de ocultar. API: `GET/POST /api/instrumentos`, `/api/inst
 `/api/instrumentos/<id>/arquivo`, `/api/instrumentos/<id>/apagar`; denúncias aceitam `{"instrumento": id}`.
 Para testes, `python -m conteudo.sf2_teste saida.sf2` (dentro de `server/`) gera um .sf2 pequeno com 3 sons.
 
+## Animações, spritesheets e controlador de animação
+
+Extensão **Animações** → **🖼️ Importar spritesheet (.png + .xml)…**: aceita o XML "Sparrow" do FNF
+(`<SubTexture name x y width height frameX frameY frameWidth frameHeight rotated>`, com recortes e quadros
+girados, lidos como no Flixel), o JSON do TexturePacker (hash ou array) ou uma grade simples (colunas × linhas).
+Mostra as animações (nome sem os números do fim: `BF idle dance0003` → `BF idle dance`) com prévia, e cria as
+fantasias num **ator novo** (monta um `.sprite3`) ou no **ator atual**, com o quadro inteiro (o vazio em volta
+fica, então a animação não "treme"), em resolução 2× e tamanho 100/75/50/25% ou "caber no palco". Quadros
+repetidos usam a mesma imagem. Máximo de 600 quadros por vez.
+
+Blocos: **tocar animação [nome] a [24] quadros por segundo [uma vez/em loop]**, tocar até o fim, parar, animação
+tocando, "animação está tocando?", quadro da animação, quadros da animação. Qualquer fantasia com número no fim
+(`andar1`, `andar2`…) forma uma animação.
+
+**🎛️ Controlador de animação…** (máquina de estados, como o Animator da Unity), um por ator: estados (cada um
+toca uma animação, com quadros por segundo e loop), estado inicial, **transições** puxadas no grafo com condições
+sobre **parâmetros** (número com `> < = ≠ ≥ ≤`, sim/não, **gatilho**) e/ou "esperar a animação terminar", e o nó
+**Qualquer estado**. Ao clicar na bandeira, cada ator (e cada clone) começa no estado inicial e troca sozinho.
+Blocos: definir/mudar parâmetro, disparar gatilho, parâmetro, estado da animação, ir para o estado, **quando
+entrar no estado**, ligar/desligar controlador. Fica no `.asp` em `adventiscratch/controladores.json` (pelo nome
+do ator; renomear o ator leva o controlador junto).
+
 ## Tutoriais e exemplos
 
-- **`tutoriais.html`**: 12 lições interativas em português (primeiros passos, jogo 2D, Extras, mundo 3D, modelos e
-  texturas, Criador de Músicas, jogo de plataforma 2D, jogo de plataforma 3D, nuvem, detector de erros, salvar/entregar, conta e regras). Desenhos dos blocos em HTML/CSS,
+- **`tutoriais.html`**: 13 lições interativas em português (primeiros passos, jogo 2D, Extras, mundo 3D, modelos e
+  texturas, Criador de Músicas, Animações e spritesheets, jogo de plataforma 2D, jogo de plataforma 3D, nuvem, detector de erros, salvar/entregar, conta e regras). Desenhos dos blocos em HTML/CSS,
   progresso salvo no navegador, link direto para cada passo (`tutoriais.html#plataforma/3`). O botão "Tutoriais" do
   editor abre esta página. O conteúdo fica em `src/playground/tutoriais.html` (cada `<section>` é uma lição e cada
   `<article>` é um passo).
