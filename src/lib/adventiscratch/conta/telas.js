@@ -132,7 +132,7 @@ export const ocupado = async (botao, fn) => {
 // ---------------------------------------------------------------- entrar / criar conta
 
 /**
- * @param {object} acoes {entrar(usuario, senha), registrar(dados), semConta?: function}
+ * @param {object} acoes {entrar(usuario, senha), registrar(dados), semConta?: function, aba?: 'entrar'|'criar'}
  */
 export const telaLogin = acoes => {
     const tela = abrirTela(`
@@ -182,6 +182,7 @@ export const telaLogin = acoes => {
             if (primeiro) primeiro.focus();
         };
     });
+    if (acoes.aba === 'criar') tela.querySelector('[data-aba="criar"]').click();
     const formEntrar = tela.querySelector('[data-form="entrar"]');
     formEntrar.onsubmit = async e => {
         e.preventDefault();

@@ -43,11 +43,19 @@
     .nav ul { display: flex; gap: 6px; list-style: none; align-items: center; }
     .nav ul a {
       text-decoration: none; color: #fff; font-weight: 700;
-      padding: 8px 14px; border-radius: 999px; transition: background .2s;
+      padding: 8px 14px; border-radius: 999px; transition: background .2s; white-space: nowrap;
     }
     .nav ul a:hover { background: rgba(255,255,255,.18); }
     .nav ul a.botao-nav { background: #fff; color: #855CD6; }
     .nav ul a.botao-nav:hover { background: var(--amarelo); color: var(--tinta); }
+    .nav ul a.botao-entrar { box-shadow: inset 0 0 0 2px rgba(255,255,255,.75); }
+    .nav ul a.botao-criar-conta { background: var(--amarelo); color: var(--tinta); }
+    .nav ul a.botao-criar-conta:hover { background: #fff; color: #855CD6; }
+    .nav ul li.conta-ola a { display: inline-flex; align-items: center; gap: 8px; }
+    .nav .avatar-mini {
+      width: 26px; height: 26px; border-radius: 50%; background: var(--amarelo); color: var(--tinta);
+      display: inline-flex; align-items: center; justify-content: center; font-weight: 900; font-size: .8rem;
+    }
 
     /* Hero */
     .hero {
@@ -162,7 +170,18 @@
       .mascote { order: -1; }
       .mascote img { width: 200px; }
       .grade, .passos { grid-template-columns: 1fr; }
-      .nav ul li:not(:last-child) { display: none; }
+    }
+    @media (max-width: 1120px) { .nav ul li.nav-extra { display: none; } }
+    @media (max-width: 760px) { .nav ul li.nav-extra2 { display: none; } }
+    @media (max-width: 640px) {
+      .nav ul a { padding: 7px 10px; font-size: .9rem; }
+      .nav .marca img { height: 30px; }
+    }
+    @media (max-width: 480px) {
+      .nav { gap: 6px; }
+      .nav ul { gap: 2px; }
+      .nav ul a { padding: 6px 8px; font-size: .82rem; }
+      .nav .marca img { height: 26px; }
     }
     @media (prefers-reduced-motion: reduce) {
       .mascote img { animation: none; }
@@ -177,12 +196,17 @@
         <img src="static/adventiscratch/logo.svg" alt="Adventiscratch">
       </a>
       <ul>
-        <li><a href="#sobre">Sobre</a></li>
-        <li><a href="#recursos">Recursos</a></li>
-        <li><a href="#comecar">Como começar</a></li>
-        <li><a href="tutoriais.html">Tutoriais</a></li>
-        <li><a href="exemplos.html">Exemplos</a></li>
+        <li class="nav-extra"><a href="#sobre">Sobre</a></li>
+        <li class="nav-extra"><a href="#recursos">Recursos</a></li>
+        <li class="nav-extra"><a href="#comecar">Como começar</a></li>
+        <li class="nav-extra2"><a href="tutoriais.html">Tutoriais</a></li>
+        <li class="nav-extra2"><a href="exemplos.html">Exemplos</a></li>
         <li><a class="botao-nav" href="editor.html">Criar</a></li>
+        <li data-conta="anonimo"><a class="botao-entrar" href="editor.html?conta=entrar">Entrar</a></li>
+        <li data-conta="anonimo"><a class="botao-criar-conta" href="editor.html?conta=criar">Criar conta</a></li>
+        <li data-conta="logado" class="conta-ola" hidden>
+          <a href="editor.html" title="Abrir o editor"><span class="avatar-mini" data-conta-inicial></span><span data-conta-nome></span></a>
+        </li>
       </ul>
     </nav>
   </header>
@@ -323,5 +347,39 @@
       </div>
     </div>
   </footer>
+  <script src="static/adventiscratch/config.js"></script>
+  <script>
+    /* Botões "Entrar" / "Criar conta": somem se as contas estiverem desligadas
+       e viram "Olá, <nome>" quando o aluno já entrou neste navegador. */
+    (function () {
+      var cfg = window.ADVENTISCRATCH_CONFIG || {};
+      var api = String(cfg.api || '').trim();
+      var anonimos = document.querySelectorAll('[data-conta="anonimo"]');
+      var logado = document.querySelector('[data-conta="logado"]');
+      var mostrar = function (lista, visivel) {
+        Array.prototype.forEach.call(lista, function (el) { el.hidden = !visivel; });
+      };
+      if (api === 'desligado') { mostrar(anonimos, false); return; }
+      var base = api ? api.replace(/\/+$/, '') :
+        (location.port === '8601' ? location.protocol + '//' + location.hostname + ':8000/api' : '/api');
+      var token = null;
+      try { token = localStorage.getItem('adventiscratch.token'); } catch (e) { /* sem armazenamento */ }
+      if (!token || !window.fetch) return;
+      fetch(base + '/eu', {headers: {Authorization: 'Token ' + token}})
+        .then(function (r) {
+          if (r.status === 401) { try { localStorage.removeItem('adventiscratch.token'); } catch (e) {} }
+          return r.ok ? r.json() : null;
+        })
+        .then(function (dados) {
+          if (!dados || !dados.conta) return;
+          var nome = dados.conta.nome || dados.conta.usuario || '';
+          logado.querySelector('[data-conta-nome]').textContent = 'Olá, ' + nome;
+          logado.querySelector('[data-conta-inicial]').textContent = nome.charAt(0).toUpperCase();
+          mostrar(anonimos, false);
+          logado.hidden = false;
+        })
+        .catch(function () { /* servidor fora do ar: mantém os botões */ });
+    })();
+  </script>
 </body>
 </html>

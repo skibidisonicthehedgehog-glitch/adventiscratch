@@ -21,6 +21,8 @@ const estilos = {
         width: '1.6rem', height: '1.6rem', borderRadius: '50%', background: '#FFD54A', color: '#1E1B3A',
         display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.8rem'
     },
+    botaoTexto: {padding: '0.3rem 0.85rem'},
+    botaoDestaque: {padding: '0.3rem 0.85rem', marginLeft: '0.4rem', background: '#FFD54A', color: '#1E1B3A'},
     salvar: {background: '#FFD54A', color: '#1E1B3A', padding: '0.3rem 0.8rem', marginRight: '0.4rem'},
     status: {color: 'rgba(255,255,255,0.85)', fontSize: '0.72rem', marginRight: '0.5rem', whiteSpace: 'nowrap'},
     menu: {
@@ -41,6 +43,8 @@ class AdventiscratchConta extends React.Component {
         super(props);
         this.state = {conta: obterEstado(), nuvem: obterNuvem(), aberto: false};
         this.fecharFora = this.fecharFora.bind(this);
+        this.entrar = () => abrirLogin('entrar');
+        this.criarConta = () => abrirLogin('criar');
         this.raiz = React.createRef();
     }
     componentDidMount () {
@@ -71,9 +75,13 @@ class AdventiscratchConta extends React.Component {
             return (
                 <div style={estilos.raiz}>
                     <button
-                        style={estilos.botao}
-                        onClick={abrirLogin}
+                        style={{...estilos.botao, ...estilos.botaoTexto}}
+                        onClick={this.entrar}
                     >{'Entrar'}</button>
+                    <button
+                        style={{...estilos.botao, ...estilos.botaoDestaque}}
+                        onClick={this.criarConta}
+                    >{'Criar conta'}</button>
                 </div>
             );
         }

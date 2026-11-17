@@ -24,6 +24,25 @@ let vmAtual = null;
 let telaChave = '';
 let timer = null;
 
+/**
+ * Aba pedida pelo endereço (ex.: editor.html?conta=criar, vindo dos botões da página inicial).
+ * Lida uma vez ao carregar; depois o parâmetro sai do endereço para não reabrir a janela no F5.
+ */
+const lerAbaDoEndereco = () => {
+    try {
+        const url = new URL(window.location.href);
+        const pedido = url.searchParams.get('conta');
+        if (!pedido) return null;
+        url.searchParams.delete('conta');
+        window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
+        return pedido === 'criar' ? 'criar' : 'entrar';
+    } catch (e) {
+        return null;
+    }
+};
+let abaPedida = 'entrar';
+let abrirAoCarregar = false;
+
 export const obterEstado = () => estado;
 
 export const aoMudar = fn => {
@@ -55,7 +74,7 @@ const renderizar = () => {
     telaChave = chave;
 
     if (fase === 'anonimo' && exigeLogin() && !estado.semContaEscolhido) {
-        telaLogin({entrar, registrar});
+        telaLogin({entrar, registrar, aba: abaPedida});
     } else if (fase === 'suspensa') {
         telaSuspensao(situacao, {baixarProjeto, sair, pedirRevisao, atualizar});
     } else if (fase === 'offline' && exigeLogin()) {
@@ -90,8 +109,13 @@ export const atualizar = async () => {
         estado.situacao = null;
         renderizar();
         avisar();
+        if (abrirAoCarregar) {
+            abrirAoCarregar = false;
+            if (!exigeLogin()) abrirLogin(abaPedida);
+        }
         return;
     }
+    abrirAoCarregar = false;
     try {
         aplicar(await chamar('/eu'));
     } catch (e) {
@@ -128,6 +152,7 @@ export const sair = async () => {
     estado.fase = 'anonimo';
     estado.situacao = null;
     estado.semContaEscolhido = false;
+    abaPedida = 'entrar';
     renderizar();
     avisar();
 };
@@ -152,11 +177,12 @@ export const abrirDenuncia = async () => {
 };
 
 /** Mostra a tela de login (quando o login é opcional e o aluno clica em "Entrar"). */
-export const abrirLogin = () => {
+export const abrirLogin = (aba = 'entrar') => {
     telaChave = 'login';
     telaLogin({
         entrar,
         registrar,
+        aba: aba === 'criar' ? 'criar' : 'entrar',
         semConta: exigeLogin() ? null : () => {
             estado.semContaEscolhido = true;
             telaChave = '';
@@ -172,6 +198,11 @@ export const abrirLogin = () => {
 export const iniciarContas = vm => {
     vmAtual = vm;
     if (timer) return;
+    const aba = lerAbaDoEndereco();
+    if (aba) {
+        abaPedida = aba;
+        abrirAoCarregar = true;
+    }
     atualizar();
     timer = setInterval(atualizar, INTERVALO_MS);
     document.addEventListener('visibilitychange', () => {
