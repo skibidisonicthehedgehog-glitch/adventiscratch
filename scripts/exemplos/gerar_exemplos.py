@@ -85,6 +85,8 @@ class Projeto:
             self.extensoes.add('adventiscratch2d')
         elif opcode.startswith('adventiscratchmusica_'):
             self.extensoes.add('adventiscratchmusica')
+        elif opcode.startswith('adventiscratchritmo_'):
+            self.extensoes.add('adventiscratchritmo')
         elif opcode.startswith('adventiscratch_'):
             self.extensoes.add('adventiscratch')
         return bid
@@ -359,6 +361,13 @@ class Blocos:
             entradas['MUSICA'] = Menu('adventiscratchmusica_menu_musicas', 'musicas', musica)
         return self.p.b(f'adventiscratchmusica_{opcode}', entradas, campos=dict(menus or {}), tipos=tipos or {})
 
+    # Jogo de Ritmo: menu de mapas aceita reporters (sombra); os outros menus são campos
+    def ri(self, opcode, menus=None, mapa=None, tipos=None, **entradas):
+        entradas = dict(entradas)
+        if mapa is not None:
+            entradas['MAPA'] = Menu('adventiscratchritmo_menu_mapas', 'mapas', mapa)
+        return self.p.b(f'adventiscratchritmo_{opcode}', entradas, campos=dict(menus or {}), tipos=tipos or {})
+
     def tamanho_mude(self, n):
         return self.p.b('looks_changesizeby', {'CHANGE': n})
 
@@ -404,7 +413,7 @@ def fantasia(nome, arquivo_svg, dados, cx, cy):
             'bitmapResolution': 1, 'rotationCenterX': cx, 'rotationCenterY': cy}, (f'{h}.svg', dados)
 
 
-def montar(p, nome_arquivo, atores, musicas=()):
+def montar(p, nome_arquivo, atores, musicas=(), mapas=()):
     """atores: lista de dicts {nome, fantasias:[(nome, dados, cx, cy)], sons:bool, visivel, x, y, tamanho}"""
     arquivos = {}
     pio = ler(os.path.join(PADRAO, PIO_WAV))
@@ -446,9 +455,12 @@ def montar(p, nome_arquivo, atores, musicas=()):
             z.writestr(n, d)
         for i, m in enumerate(musicas):
             z.writestr(f'adventiscratch/musicas/{i}.json', json.dumps(m, ensure_ascii=False))
+        for i, m in enumerate(mapas):
+            z.writestr(f'adventiscratch/mapas/{i}.json', json.dumps(m, ensure_ascii=False))
         z.writestr('adventiscratch/manifest.json', json.dumps(
             {'format': 'asp', 'version': 3, 'editor': 'Adventiscratch', 'models': [], 'instrumentos': [],
-             'musicas': [{'nome': m['nome'], 'arquivo': f'musicas/{i}.json'} for i, m in enumerate(musicas)]}))
+             'musicas': [{'nome': m['nome'], 'arquivo': f'musicas/{i}.json'} for i, m in enumerate(musicas)],
+             'mapas': [{'nome': m['nome'], 'arquivo': f'mapas/{i}.json'} for i, m in enumerate(mapas)]}))
     print(f'  {nome_arquivo}: {sum(len(b) for b in p.alvos.values())} blocos')
 
 
@@ -885,6 +897,93 @@ def show_da_coruja():
     montar(p, 'show-da-coruja.asp', [coruja(x=0, y=-30, tamanho=120)], musicas=[musica])
 
 
+# ------------------------------------------------------------------ 8. Batalha da Coruja (Jogo de Ritmo)
+
+TUCANO_SVG = (b'<svg xmlns="http://www.w3.org/2000/svg" width="110" height="130" viewBox="0 0 110 130">'
+              b'<ellipse cx="45" cy="75" rx="32" ry="50" fill="#18161F"/>'
+              b'<ellipse cx="45" cy="62" rx="22" ry="20" fill="#FFF5D6"/>'
+              b'<ellipse cx="45" cy="95" rx="16" ry="14" fill="#E8392C"/>'
+              b'<path d="M55 45 Q105 40 108 58 Q85 58 55 57 Z" fill="#FF9F1C"/>'
+              b'<path d="M55 57 Q85 60 104 62 Q80 70 55 64 Z" fill="#FFD23F"/>'
+              b'<circle cx="47" cy="41" r="9" fill="#4FC3F7"/><circle cx="49" cy="41" r="4.5" fill="#18161F"/>'
+              b'<path d="M18 40 A30 30 0 0 1 72 35" fill="none" stroke="#E8742C" stroke-width="6"/>'
+              b'<rect x="9" y="33" width="12" height="22" rx="5" fill="#E8742C"/>'
+              b'<rect x="30" y="122" width="10" height="6" fill="#FF9F1C"/><rect x="50" y="122" width="10" height="6" fill="#FF9F1C"/></svg>')
+
+
+def mapa_da_melodia(musica, nome):
+    """Mesma regra do botão ✨ Gerar do editor: o oponente canta 2 compassos, você responde nos 2 seguintes."""
+    ms_passo = 60000 / musica['bpm'] / 4
+    mb = 60000 / musica['bpm']
+    mel = sorted(musica['faixas'][0]['notas'], key=lambda n: n['p'])
+    vistos = set()
+    notas = []
+    for n in mel:
+        if n['p'] in vistos:
+            continue
+        vistos.add(n['p'])
+        t = round(n['p'] * ms_passo)
+        d = n['d'] * ms_passo
+        notas.append({'t': t, 'pista': n['n'] % 4, 'quem': 'op' if (t // (mb * 8)) % 2 == 0 else 'eu',
+                      'dur': round(d - 40) if d >= mb else 0})
+    # repete a melodia trocando os lados, para o jogador também cantar a primeira metade
+    total = musica['compassos'] * 4 * mb
+    for n in list(notas):
+        notas.append({**n, 't': round(n['t'] + total), 'quem': 'eu' if n['quem'] == 'op' else 'op'})
+    return {'nome': nome, 'modo': 'setas', 'audio': {'tipo': 'musica', 'nome': musica['nome']}, 'bpm': musica['bpm'],
+            'offset': 0, 'velocidade': 1, 'oponente': True, 'notas': sorted(notas, key=lambda x: x['t']),
+            'circulos': [], 'duracao': 0}
+
+
+def batalha_da_coruja():
+    p = Projeto()
+    k = Blocos(p)
+    musica = json.loads(ler(os.path.join(os.path.dirname(__file__), 'musica-tema-coruja.json')))
+    musica = dict(musica, compassos=4)
+    mapa = mapa_da_melodia(musica, 'Batalha da Coruja')
+    # a música toca duas vezes (repetir) para cobrir o mapa inteiro: dobramos os compassos
+    musica2 = json.loads(json.dumps(musica))
+    passos = musica['compassos'] * 16
+    for f in musica2['faixas']:
+        f['notas'] = f['notas'] + [{**n, 'p': n['p'] + passos} for n in f['notas']]
+    for linha, lista in musica2['bateria']['linhas'].items():
+        musica2['bateria']['linhas'][linha] = lista + [x + passos for x in lista]
+    musica2['compassos'] = musica['compassos'] * 2
+
+    p.alvo('Palco')
+    p.script(20, 20, k.bandeira(),
+             k.ri('lado', menus={'LADO': 'direita'}),
+             k.ri('teclas', menus={'TECLAS': 'setas-dfjk'}),
+             k.ri('comecarEsperar', mapa='Batalha da Coruja'),
+             k.envie('fim'))
+    p.comentario(380, 20, 'O mapa "Batalha da Coruja" foi feito no 🎯 Editor de mapas de ritmo (categoria Jogo de Ritmo).\n'
+                          'Ele toca a música "Tema da Coruja", feita no Criador de Músicas.\n'
+                          'Jogue com as setas ou D F J K!', 330, 140)
+
+    p.alvo('Coruja Sabida')
+    p.script(20, 20, k.bandeira(), k.va_para(150, -80), k.tamanho(110), k.diga('Sua vez quando as setas subirem!', 2))
+    p.script(20, 270, k.ri('quandoAcertar', menus={'PISTA': 'qualquer'}),
+             k.tamanho_mude(8), k.espere(0.06), k.tamanho_mude(-8))
+    p.script(20, 540, k.ri('quandoErrar', menus={'PISTA': 'qualquer'}), k.diga('Ops!', 0.4))
+    p.script(20, 720, k.quando_receber('fim'),
+             k.diga(k.junte('Fim! Precisão: ', k.junte(k.ri('precisao'), '%')), 3))
+    p.script(480, 270, k.ri('quandoAcertar', menus={'PISTA': 'esquerda'}), k.mude_x(-6), k.espere(0.08), k.mude_x(6))
+    p.script(480, 540, k.ri('quandoAcertar', menus={'PISTA': 'direita'}), k.mude_x(6), k.espere(0.08), k.mude_x(-6))
+    p.comentario(20, 880, '"quando acertar" e "quando errar" animam a coruja. Troque por "tocar animação" '
+                           '(extensão Animações) para usar uma spritesheet!', 300, 110)
+
+    p.alvo('Tucano DJ')
+    p.script(20, 20, k.bandeira(), k.va_para(-150, -80), k.tamanho(100))
+    p.script(20, 230, k.ri('quandoOponente', menus={'PISTA': 'qualquer'}),
+             k.tamanho_mude(8), k.espere(0.06), k.tamanho_mude(-8))
+    p.comentario(420, 230, '"quando o oponente cantar" acontece em cada nota do lado do oponente.', 260, 80)
+
+    montar(p, 'batalha-da-coruja.asp', [
+        coruja(x=150, y=-80, tamanho=110),
+        {'nome': 'Tucano DJ', 'fantasias': [('tucano', TUCANO_SVG, 55, 65)], 'x': -150, 'y': -80},
+    ], musicas=[musica2], mapas=[mapa])
+
+
 if __name__ == '__main__':
     print('Gerando exemplos em', SAIDA)
     coruja_coletora()
@@ -894,3 +993,4 @@ if __name__ == '__main__':
     corrida_3d()
     coruja_saltitante()
     show_da_coruja()
+    batalha_da_coruja()

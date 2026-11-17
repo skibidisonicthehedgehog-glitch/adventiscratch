@@ -9,6 +9,7 @@ import {AdventiscratchMusicas, ligarMusicasNaVm} from './musica/musica-extension
 import {iniciarInstrumentos} from './musica/soundfont-store.js';
 import {AdventiscratchAnimacoes, ID_ANIM} from './spritesheet/animacoes-extension.js';
 import {aoMudarControladores, renomearControlador} from './spritesheet/controladores.js';
+import {AdventiscratchRitmo, ligarRitmoNaVm} from './ritmo/ritmo-extension.js';
 import {patchVmForAsp} from './asp-format.js';
 import {iniciarContas} from './conta/conta.js';
 import {aoCarregarProjeto, iniciarNuvem} from './conta/nuvem.js';
@@ -22,7 +23,8 @@ const EXTENSIONS = {
     adventiscratch3d: Adventiscratch3D,
     adventiscratch2d: AdventiscratchPlataforma2D,
     adventiscratchmusica: AdventiscratchMusicas,
-    adventiscratchanim: AdventiscratchAnimacoes
+    adventiscratchanim: AdventiscratchAnimacoes,
+    adventiscratchritmo: AdventiscratchRitmo
 };
 
 /**
@@ -62,6 +64,7 @@ const setupAdventiscratch = vm => {
     iniciarExemplos(vm);
     iniciarInstrumentos(vm);
     ligarMusicasNaVm(vm);
+    ligarRitmoNaVm(vm);
     // controlador de animação: menus de parâmetros/estados atualizam e o projeto fica "alterado"
     aoMudarControladores(() => {
         if (vm.extensionManager.isExtensionLoaded(ID_ANIM)) vm.extensionManager.refreshBlocks();

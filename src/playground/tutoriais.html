@@ -388,6 +388,55 @@
       </article>
     </section>
 
+    <section data-id="ritmo" data-titulo="Jogo de ritmo (FNF e osu!)" data-nivel="intermediario" data-tempo="20 min" data-exemplo="batalha-da-coruja">
+      <article>
+        <h3>Seu próprio jogo de ritmo</h3>
+        <p>Adicione a extensão <b>Jogo de Ritmo</b> e clique em <b>🎯 Editor de mapas de ritmo</b>. Escolha o tipo:</p>
+        <ul>
+          <li><b>Setas</b> (estilo FNF): as setas sobem e você aperta ← ↓ ↑ → (ou D F J K) quando chegam em cima.</li>
+          <li><b>Círculos</b> (estilo osu!): círculos aparecem no palco e você clica (ou aperta Z/X) no tempo certo.</li>
+        </ul>
+        <p>Em <b>Áudio</b>, escolha uma música do Criador de Músicas ou um som do projeto.</p>
+        <div class="dica azul"><b>Exemplo pronto</b>Abra a <b>Batalha da Coruja</b> na página de exemplos.</div>
+      </article>
+      <article>
+        <h3>Fazendo o mapa</h3>
+        <ul>
+          <li><b>✨ Gerar</b> cria as notas a partir da melodia da música. Depois é só ajustar.</li>
+          <li><b>⏺ Gravar</b>: toque a música e aperte as setas no ritmo; elas viram notas. Segure para nota longa.</li>
+          <li>Clique para pôr uma nota, clique nela para tirar, arraste para mover, puxe a ponta para nota longa.</li>
+          <li>As notas do <b>oponente</b> ele canta sozinho; as suas, você joga.</li>
+          <li>As notas estão adiantadas ou atrasadas? Mude o <b>Ajuste (ms)</b>.</li>
+          <li><b>📂 Importar</b>: aceita mapas .osu e .json do FNF (o áudio você importa como som do projeto).</li>
+        </ul>
+      </article>
+      <article>
+        <h3>Jogando</h3>
+        <div class="pilha">
+          <span class="bl eve chapeu">quando ⚑ for clicado</span>
+          <span class="bl ri">começar mapa <span class="s">Batalha da Coruja ▾</span> e esperar terminar</span>
+          <span class="bl apa">diga (junte <span class="s">Precisão: </span> <span class="r">precisão (%)</span>)</span>
+        </div>
+        <p>Animando os personagens:</p>
+        <div class="pilha">
+          <span class="bl ri chapeu">quando o oponente cantar <span class="s">← esquerda ▾</span></span>
+          <span class="bl an">tocar animação <span class="s">cantar esquerda ▾</span> a <span class="s">24</span> quadros por segundo <span class="s">uma vez ▾</span></span>
+        </div>
+        <p>Também tem <b>quando acertar</b>, <b>quando errar</b>, <b>quando o mapa terminar</b> e <b>quando a vida acabar</b>,
+          e os valores <b>pontos</b>, <b>combo</b>, <b>precisão</b> e <b>vida</b>.</p>
+      </article>
+      <article>
+        <h3>Suas próprias setas</h3>
+        <p>Desenhe (ou importe uma spritesheet) num ator com fantasias chamadas <b>nota esquerda</b>, <b>receptor esquerda</b>,
+          <b>acerto esquerda</b>… (e o mesmo para baixo, cima e direita). Os nomes do FNF também funcionam
+          (<i>purple</i>, <i>arrowLEFT</i>, <i>left confirm</i>…). Depois:</p>
+        <div class="pilha">
+          <span class="bl ri">usar as fantasias do ator <span class="s">Minhas Setas ▾</span> nas setas e círculos</span>
+        </div>
+        <p>Mude o lado, a rolagem (<b>downscroll</b>), a velocidade, as teclas e a posição com os blocos de configuração.</p>
+      </article>
+    </section>
+
     <section data-id="plataforma-2d" data-titulo="Jogo de plataforma 2D" data-nivel="iniciante" data-tempo="15 min" data-exemplo="coruja-saltitante">
       <article>
         <h3>A extensão Plataforma 2D</h3>

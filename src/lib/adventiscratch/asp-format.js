@@ -8,6 +8,7 @@
  *   adventiscratch/musicas/<n>.json  -> músicas do Criador de Músicas
  *   adventiscratch/instrumentos/<n>.json + <n>.pcm  -> instrumentos .sf2 (só o preset escolhido)
  *   adventiscratch/controladores.json  -> controladores de animação (pelo nome do ator)
+ *   adventiscratch/mapas/<n>.json  -> mapas do Jogo de Ritmo
  *
  * Por isso o Adventiscratch abre .asp e .sb3, e um .asp renomeado para .sb3 ainda abre
  * no Scratch comum (os blocos 3D só não funcionam lá).
@@ -17,6 +18,7 @@ import {addModel, clearModels, getAllModels} from './model-store.js';
 import {gravarMusica, limparMusicas, normalizar, todasMusicas} from './musica/dados.js';
 import {adicionarInstrumento, instrumentosExtras, limparInstrumentos} from './musica/soundfont-store.js';
 import {carregarControladores, limparControladores, serializarControladores} from './spritesheet/controladores.js';
+import {gravarMapa, limparMapas, normalizarMapa, todosMapas} from './ritmo/dados.js';
 
 export const PROJECT_EXTENSION = 'asp';
 export const ACCEPTED_PROJECT_EXTENSIONS = '.asp,.sb,.sb2,.sb3';
@@ -49,6 +51,7 @@ export const patchVmForAsp = (vm, onProjectChanged) => {
             version: 3,
             editor: 'Adventiscratch',
             musicas: todasMusicas().map((m, i) => ({nome: m.nome, arquivo: `musicas/${i}.json`})),
+            mapas: todosMapas().map((m, i) => ({nome: m.nome, arquivo: `mapas/${i}.json`})),
             instrumentos: instrumentosExtras().map((inst, i) => ({id: inst.id, arquivo: `instrumentos/${i}`})),
             models: models.map(m => ({
                 name: m.name,
@@ -61,6 +64,7 @@ export const patchVmForAsp = (vm, onProjectChanged) => {
             }))
         }, null, 2));
         todasMusicas().forEach((m, i) => zip.file(`${ASP_DIR}musicas/${i}.json`, JSON.stringify(m)));
+        todosMapas().forEach((m, i) => zip.file(`${ASP_DIR}mapas/${i}.json`, JSON.stringify(m)));
         const controladores = serializarControladores(vm.runtime);
         if (Object.keys(controladores).length) {
             zip.file(`${ASP_DIR}controladores.json`, JSON.stringify(controladores));
@@ -90,6 +94,7 @@ export const patchVmForAsp = (vm, onProjectChanged) => {
         limparMusicas(true);
         limparInstrumentos(true);
         limparControladores();
+        limparMapas();
         if (isZip(input)) {
             try {
                 const zip = await JSZip.loadAsync(input);
@@ -134,6 +139,15 @@ export const patchVmForAsp = (vm, onProjectChanged) => {
                             carregarControladores(JSON.parse(await ctrl.async('string')));
                         } catch (e) {
                             console.warn('Adventiscratch: controladores de animação danificados', e); // eslint-disable-line no-console
+                        }
+                    }
+                    for (const item of manifest.mapas || []) {
+                        const f = zip.file(`${ASP_DIR}${item.arquivo}`);
+                        if (!f) continue;
+                        try {
+                            gravarMapa(normalizarMapa(JSON.parse(await f.async('string'))), null, true);
+                        } catch (e) {
+                            console.warn('Adventiscratch: mapa de ritmo danificado', e); // eslint-disable-line no-console
                         }
                     }
                     for (const item of manifest.musicas || []) {

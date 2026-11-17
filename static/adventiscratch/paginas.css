@@ -60,7 +60,7 @@ a { color: var(--roxo); }
 .bl .fim { display: block; height: 10px; }
 .mov { background: #4C97FF; } .apa { background: #9966FF; } .som { background: #CF63CF; }
 .eve { background: #FFBF00; } .ctl { background: #FFAB19; } .sen { background: #5CB1D6; }
-.ope { background: #59C059; } .var { background: #FF8C1A; } .ext { background: #6D4FC2; } .d3 { background: #0FA3B1; } .p2 { background: #E8742C; } .mu { background: #C24BCF; } .an { background: #1E9C8A; }
+.ope { background: #59C059; } .var { background: #FF8C1A; } .ext { background: #6D4FC2; } .d3 { background: #0FA3B1; } .p2 { background: #E8742C; } .mu { background: #C24BCF; } .an { background: #1E9C8A; } .ri { background: #E0457B; }
 .bl.erro { box-shadow: 0 0 0 3px #fff, 0 0 12px 4px #ff1f1f; }
 
 kbd { background: var(--tinta); color: #fff; border-radius: 6px; padding: 1px 7px; font-family: inherit; font-size: .9em; }

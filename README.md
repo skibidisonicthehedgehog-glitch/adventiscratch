@@ -20,6 +20,7 @@ Fork do [scratch-gui oficial](https://github.com/scratchfoundation/scratch-gui) 
 | Extensão **Plataforma 2D** (gravidade, pulo, chão, paredes) | `src/lib/adventiscratch/plataforma2d-extension.js` |
 | **Criador de Músicas**, extensão **Músicas** e instrumentos **.sf2** | `src/lib/adventiscratch/musica/` |
 | Extensão **Animações**: spritesheets (.png + .xml/.json) e **controlador de animação** | `src/lib/adventiscratch/spritesheet/` |
+| Extensão **Jogo de Ritmo** (setas estilo FNF, círculos estilo osu!) e editor de mapas | `src/lib/adventiscratch/ritmo/` |
 | **Loja de Instrumentos Virtuais** (.sf2) | `server/conteudo/` (`InstrumentoSF2`) e `src/lib/adventiscratch/conta/telas-nuvem.js` |
 | Formato de projeto **.asp** (AdventiScratch Project) | `src/lib/adventiscratch/asp-format.js`, `src/containers/sb3-downloader.jsx`, `src/lib/sb-file-uploader-hoc.jsx` |
 | Registro das extensões na VM | `src/lib/adventiscratch/index.js` e `src/lib/libraries/extensions/index.jsx` |
@@ -174,15 +175,48 @@ Blocos: definir/mudar parâmetro, disparar gatilho, parâmetro, estado da anima�
 entrar no estado**, ligar/desligar controlador. Fica no `.asp` em `adventiscratch/controladores.json` (pelo nome
 do ator; renomear o ator leva o controlador junto).
 
+## Jogo de Ritmo (setas estilo FNF e círculos estilo osu!)
+
+Extensão **Jogo de Ritmo** → **🎯 Editor de mapas de ritmo…** (tela cheia):
+- **Setas**: linha do tempo com as 4 pistas do oponente e as 4 do jogador; clique põe nota, clique na nota tira,
+  arrastar move (tempo e pista), puxar a ponta faz **nota longa**; botão direito apaga. **Círculos**: clique no
+  palco põe um círculo no marcador amarelo (que anda sozinho uma divisão), arrastar move; na faixa de baixo,
+  arrastar muda o tempo.
+- **Áudio**: uma música do Criador de Músicas, um **som do projeto** (importe a música como som) ou só o tempo;
+  BPM, **ajuste (ms)** para sincronizar, velocidade, encaixe (1, 1/2, 1/4, 1/8, 1/3 de batida ou livre), zoom,
+  "tique" quando a agulha passa por uma nota, desfazer/refazer.
+- **⏺ Gravar**: com a música tocando, as setas / D F J K (ou cliques e Z/X nos círculos) viram notas; segurar
+  faz nota longa. **✨ Gerar**: notas a partir da melodia da música (o oponente canta 2 compassos, você responde)
+  ou pelo BPM. **📂 Importar**: `.osu` (círculos; osu!mania de 4 teclas vira setas, com notas longas) e `.json`
+  do FNF (formato antigo/Psych, com `mustHitSection`, e o formato novo V-Slice).
+
+Mapas ficam no `.asp` em `adventiscratch/mapas/<n>.json`. No jogo, o motor desenha numa camada por cima do palco
+(e da camada 3D), usando o relógio do áudio. Avaliações: Perfeito (±45 ms), Bom (±90), Ok (±135), Errou;
+círculos ±50/100/150. Vida (estilo FNF), combo, precisão, notas longas (soltar cedo conta como erro), oponente
+automático, "ghost tapping" sem castigo e trava de ordem nos círculos (como no osu!).
+
+Blocos: começar mapa (e esperar terminar), pausar, continuar, parar; **quando acertar [seta]**, **quando errar
+[seta]**, **quando o oponente cantar [seta]**, quando o mapa terminar, quando a vida acabar; pontos, combo, maior
+combo, precisão, vida, quantidade de perfeitos/bons/oks/erros, última avaliação, última seta, tempo do mapa,
+"mapa tocando?", "seta apertada?"; e configuração: **usar as fantasias do ator [X] nas setas e círculos** (pele),
+lado do jogador, mostrar oponente, **rolagem para cima/baixo (downscroll)**, velocidade das notas, teclas
+(setas + DFJK / setas + WASD / só setas), posição das setas, tamanho, placar, pode perder.
+
+**Pele**: as fantasias de um ator viram as setas, com nomes em português (`nota esquerda`, `receptor esquerda`,
+`apertado esquerda`, `acerto esquerda`, `segurar esquerda`, `fim segurar esquerda`) ou os nomes do FNF
+(`purple`, `arrowLEFT`, `left press`, `left confirm`, `purple hold piece`, `pruple end hold`…): importe o
+`NOTE_assets.png` + `.xml` com a extensão Animações e use esse ator. Círculos: `circulo`/`hitcircle`,
+`aproximacao`/`approachcircle`, `borda`/`hitcircleoverlay`.
+
 ## Tutoriais e exemplos
 
-- **`tutoriais.html`**: 13 lições interativas em português (primeiros passos, jogo 2D, Extras, mundo 3D, modelos e
-  texturas, Criador de Músicas, Animações e spritesheets, jogo de plataforma 2D, jogo de plataforma 3D, nuvem, detector de erros, salvar/entregar, conta e regras). Desenhos dos blocos em HTML/CSS,
+- **`tutoriais.html`**: 14 lições interativas em português (primeiros passos, jogo 2D, Extras, mundo 3D, modelos e
+  texturas, Criador de Músicas, Animações e spritesheets, Jogo de Ritmo, jogo de plataforma 2D, jogo de plataforma 3D, nuvem, detector de erros, salvar/entregar, conta e regras). Desenhos dos blocos em HTML/CSS,
   progresso salvo no navegador, link direto para cada passo (`tutoriais.html#plataforma/3`). O botão "Tutoriais" do
   editor abre esta página. O conteúdo fica em `src/playground/tutoriais.html` (cada `<section>` é uma lição e cada
   `<article>` é um passo).
-- **`exemplos.html`**: 7 projetos prontos que abrem no editor com um clique (`editor.html?exemplo=nome`):
-  Coruja Coletora (2D), Calculadora da Coruja (Extras), Coruja Saltitante (Plataforma 2D), Show da Coruja (Músicas), Mundo 3D, Visualizador de Modelos e Corrida 3D (plataforma
+- **`exemplos.html`**: 8 projetos prontos que abrem no editor com um clique (`editor.html?exemplo=nome`):
+  Coruja Coletora (2D), Calculadora da Coruja (Extras), Coruja Saltitante (Plataforma 2D), Show da Coruja (Músicas), Batalha da Coruja (Jogo de Ritmo), Mundo 3D, Visualizador de Modelos e Corrida 3D (plataforma
   com física, câmera em 3ª pessoa e animações por estado). A Corrida 3D e o Visualizador usam **o modelo que o
   aluno importar**.
 - Os exemplos são gerados por `python scripts/exemplos/gerar_exemplos.py` (saem em `static/exemplos/*.asp`).

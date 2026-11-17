@@ -10,6 +10,7 @@ import adventiscratch2dInsetIconURL from '../../adventiscratch/icone-2d.svg';
 import adventiscratchMusicaIconURL from '../../adventiscratch/musica/capa-musica.png';
 import adventiscratchMusicaInsetIconURL from '../../adventiscratch/musica/icone-musica.svg';
 import adventiscratchAnimIconURL from '../../adventiscratch/spritesheet/capa-animacoes.png';
+import adventiscratchRitmoIconURL from '../../adventiscratch/ritmo/capa-ritmo.png';
 import musicIconURL from './music/music.png';
 import musicInsetIconURL from './music/music-small.svg';
 
@@ -93,6 +94,13 @@ export default [
         extensionId: 'adventiscratchanim',
         iconURL: adventiscratchAnimIconURL,
         description: 'Importe spritesheets (.png + .xml do FNF ou .json) e toque animações pelo nome.',
+        featured: true
+    },
+    {
+        name: 'Jogo de Ritmo',
+        extensionId: 'adventiscratchritmo',
+        iconURL: adventiscratchRitmoIconURL,
+        description: 'Crie jogos de ritmo com setas (estilo FNF) ou círculos (estilo osu!): editor de mapas, pontos e combos.',
         featured: true
     },
     {
