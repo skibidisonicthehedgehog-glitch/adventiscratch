@@ -226,6 +226,19 @@ lado do jogador, mostrar oponente, **rolagem para cima/baixo (downscroll)**, vel
 (`purple`, `arrowLEFT`, `left press`, `left confirm`, `purple hold piece`, `pruple end hold`…): importe o
 `NOTE_assets.png` + `.xml` com a extensão Animações e use esse ator. Círculos: `circulo`/`hitcircle`,
 `aproximacao`/`approachcircle`, `borda`/`hitcircleoverlay`.
+A pele também troca o texto das **avaliações** (`perfeito`/`sick`, `bom`/`good`, `ok`/`bad`, `errou`/`miss`),
+os **números do combo** (`num0`…`num9`, como no FNF, ou `numero 0`…`numero 9`) e a **contagem regressiva**
+(`contagem 3`, `pronto`/`ready`, `prepara`/`set`, `vai`/`go`).
+
+**Ícones da barra de vida** (estilo FNF): `ícone do [jogador/oponente] com as fantasias do ator [X]` usa as
+fantasias `icone`, `icone perdendo` e `icone ganhando` (ou `normal`/`perdendo`/`ganhando`, `icon`/`losing`/
+`winning`); sem esses nomes, usa a fantasia atual, e uma grade de ícones do FNF (`icon-bf.png`, 300×150 ou
+450×150) é cortada sozinha em normal/perdendo/ganhando. O ícone pula na batida, troca para "perdendo" abaixo de 20%
+de vida (e "ganhando" acima de 80%), e o do jogador fica espelhado, como no FNF. Sem ator, são emojis
+(`ícone do [quem]: emoji [🦉]`); também dá para escolher as **cores da barra de vida** e esconder os ícones.
+
+**Contagem regressiva**: `contagem regressiva (3, 2, 1, vai!) antes do mapa: sim` espera 4 batidas antes do
+áudio (o tempo do mapa começa negativo) e dispara `quando a contagem mostrar [3/2/1/vai!]` (para tocar os sons).
 
 ## Tutoriais e exemplos
 

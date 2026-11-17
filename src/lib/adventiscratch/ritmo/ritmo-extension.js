@@ -5,7 +5,7 @@
 import {MotorRitmo} from './motor.js';
 import {nomesMapas, obterMapa, aoMudarMapas, PISTAS, ITENS, itensPersonalizados, todosMapas} from './dados.js';
 
-const A = {NUMBER: 'number', STRING: 'string'};
+const A = {NUMBER: 'number', STRING: 'string', COLOR: 'color'};
 const B = {COMMAND: 'command', REPORTER: 'reporter', BOOLEAN: 'Boolean', HAT: 'hat', BUTTON: 'button'};
 export const ID_RITMO = 'adventiscratchritmo';
 export const EDITOR_MAPAS_CALLBACK = 'ADVENTISCRATCH_EDITOR_MAPAS';
@@ -34,6 +34,7 @@ class AdventiscratchRitmo {
         runtime.on('PROJECT_LOADED', () => {
             this.motor.parar();
             this.motor.pele = null;
+            this.motor.icones = {eu: {emoji: '🦉'}, op: {emoji: '🤖'}};
         });
         const passoOriginal = runtime._step.bind(runtime);
         runtime._step = () => {
@@ -61,6 +62,8 @@ class AdventiscratchRitmo {
                 const op = e.tipo === 'item' ? 'quandoPegarItem' : 'quandoItemPassar';
                 hat(op, {ITEM: 'qualquer'});
                 hat(op, {ITEM: e.item});
+            } else if (e.tipo === 'contagem') {
+                hat('quandoContagem', {N: e.item});
             } else if (e.tipo === 'terminou') {
                 hat('quandoTerminar', {});
             } else if (e.tipo === 'perdeu') {
@@ -113,6 +116,11 @@ class AdventiscratchRitmo {
                     text: 'quando deixar passar item [ITEM]',
                     arguments: {ITEM: {type: A.STRING, menu: 'itens', defaultValue: 'qualquer'}}
                 },
+                {
+                    opcode: 'quandoContagem', blockType: B.HAT, isEdgeActivated: false,
+                    text: 'quando a contagem mostrar [N]',
+                    arguments: {N: {type: A.STRING, menu: 'contagens', defaultValue: '3'}}
+                },
                 {opcode: 'quandoTerminar', blockType: B.HAT, isEdgeActivated: false, text: 'quando o mapa terminar'},
                 {opcode: 'quandoPerder', blockType: B.HAT, isEdgeActivated: false, text: 'quando a vida acabar'},
                 '---',
@@ -129,6 +137,10 @@ class AdventiscratchRitmo {
                 {opcode: 'ultimaPista', blockType: B.REPORTER, text: 'última seta'},
                 {opcode: 'ultimoItem', blockType: B.REPORTER, text: 'último item'},
                 {opcode: 'tempo', blockType: B.REPORTER, text: 'tempo do mapa (s)'},
+                {
+                    opcode: 'estadoIcone', blockType: B.REPORTER, text: 'ícone do [QUEM] (normal/perdendo/ganhando)',
+                    arguments: {QUEM: {type: A.STRING, menu: 'quem', defaultValue: 'eu'}}
+                },
                 {opcode: 'tocando', blockType: B.BOOLEAN, text: 'mapa tocando?'},
                 {
                     opcode: 'apertada', blockType: B.BOOLEAN, text: 'seta [PISTA] apertada?',
@@ -179,6 +191,38 @@ class AdventiscratchRitmo {
                 {
                     opcode: 'perder', blockType: B.COMMAND, text: 'pode perder quando a vida acaba: [SIM]',
                     arguments: {SIM: {type: A.STRING, menu: 'simNao', defaultValue: 'sim'}}
+                },
+                {
+                    opcode: 'contagemRegressiva', blockType: B.COMMAND,
+                    text: 'contagem regressiva (3, 2, 1, vai!) antes do mapa: [SIM]',
+                    arguments: {SIM: {type: A.STRING, menu: 'simNao', defaultValue: 'sim'}}
+                },
+                '---',
+                {
+                    opcode: 'iconeAtor', blockType: B.COMMAND, text: 'ícone do [QUEM] com as fantasias do ator [ATOR]',
+                    arguments: {
+                        QUEM: {type: A.STRING, menu: 'quem', defaultValue: 'eu'},
+                        ATOR: {type: A.STRING, menu: 'atores'}
+                    }
+                },
+                {
+                    opcode: 'iconeEmoji', blockType: B.COMMAND, text: 'ícone do [QUEM]: emoji [EMOJI]',
+                    arguments: {
+                        QUEM: {type: A.STRING, menu: 'quem', defaultValue: 'op'},
+                        EMOJI: {type: A.STRING, defaultValue: '🤖'}
+                    }
+                },
+                {
+                    opcode: 'mostrarIcones', blockType: B.COMMAND, text: 'mostrar ícones na barra de vida: [SIM]',
+                    arguments: {SIM: {type: A.STRING, menu: 'simNao', defaultValue: 'sim'}}
+                },
+                {
+                    opcode: 'coresBarra', blockType: B.COMMAND,
+                    text: 'cores da barra de vida: jogador [COR1] oponente [COR2]',
+                    arguments: {
+                        COR1: {type: A.COLOR, defaultValue: '#7A4FC8'},
+                        COR2: {type: A.COLOR, defaultValue: '#E8742C'}
+                    }
                 }
             ],
             menus: {
@@ -196,7 +240,9 @@ class AdventiscratchRitmo {
                     {text: 'baixo (downscroll)', value: 'baixo'}]},
                 teclas: {acceptReporters: false, items: [{text: 'setas e D F J K', value: 'setas-dfjk'},
                     {text: 'setas e A S W D', value: 'setas-wasd'}, {text: 'só as setas', value: 'setas'}]},
-                quem: {acceptReporters: false, items: [{text: 'jogador', value: 'eu'}, {text: 'oponente', value: 'op'}]}
+                quem: {acceptReporters: false, items: [{text: 'jogador', value: 'eu'}, {text: 'oponente', value: 'op'}]},
+                contagens: {acceptReporters: false, items: [{text: '3', value: '3'}, {text: '2', value: '2'},
+                    {text: '1', value: '1'}, {text: 'vai!', value: 'vai'}]}
             }
         };
     }
@@ -264,6 +310,44 @@ class AdventiscratchRitmo {
 
     quandoItemPassar () {
         return true;
+    }
+
+    quandoContagem () {
+        return true;
+    }
+
+    estadoIcone (args) {
+        return this.motor.estadoIcone(args.QUEM === 'op' ? 'op' : 'eu');
+    }
+
+    contagemRegressiva (args) {
+        this.motor.config.contagem = args.SIM !== 'nao';
+    }
+
+    iconeAtor (args, util) {
+        if (!util.stackFrame.promessa) {
+            const alvo = this.runtime.getSpriteTargetByName(String(args.ATOR));
+            if (!alvo) return;
+            util.stackFrame.pronto = false;
+            util.stackFrame.promessa = this.motor.usarIcone(args.QUEM === 'op' ? 'op' : 'eu', alvo).then(() => {
+                util.stackFrame.pronto = true;
+            });
+        }
+        if (!util.stackFrame.pronto) util.yield();
+    }
+
+    iconeEmoji (args) {
+        this.motor.usarIconeEmoji(args.QUEM === 'op' ? 'op' : 'eu', args.EMOJI);
+    }
+
+    mostrarIcones (args) {
+        this.motor.config.icones = args.SIM !== 'nao';
+    }
+
+    coresBarra (args) {
+        const cor = (v, p) => (/^#[0-9a-f]{6}$/i.test(String(v)) ? String(v) : p);
+        this.motor.config.corJogador = cor(args.COR1, '#7A4FC8');
+        this.motor.config.corOponente = cor(args.COR2, '#E8742C');
     }
 
     quandoTerminar () {

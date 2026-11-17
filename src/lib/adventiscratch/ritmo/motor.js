@@ -11,6 +11,14 @@
  *   fim:       "fim segurar esquerda" | "purple hold end" | "pruple end hold"
  *   círculos:  "circulo" | "hitcircle"; "aproximacao" | "approachcircle"
  *   itens:     "item perigo" (ou "item perigo esquerda" para cada seta), "item vida", "item moeda"…
+ *   avaliações: "perfeito" | "sick", "bom" | "good", "ok" | "bad", "errou" | "miss"
+ *   números do combo: "num0" … "num9" (como no FNF) ou "numero 0" … "numero 9"
+ *   contagem:  "contagem 3", "contagem 2" | "pronto" | "ready", "contagem 1" | "prepara" | "set",
+ *              "contagem vai" | "vai" | "go"
+ *
+ * Ícones da barra de vida (estilo FNF) vêm de outro ator: fantasias "icone", "icone perdendo",
+ * "icone ganhando" (ou "normal"/"perdendo"/"ganhando", "icon"/"losing"/"winning"); sem esses nomes, usa a
+ * fantasia atual e, se ela for uma grade de ícones do FNF (300×150 ou 450×150), corta em normal/perdendo/ganhando.
  */
 import {RelogioDoMapa} from './audio.js';
 import {fimDasNotas, PISTAS, ITENS, iconeItem} from './dados.js';
@@ -57,8 +65,8 @@ const carregarImg = src => new Promise(resolve => {
     img.src = src;
 });
 
-/** Lê as fantasias de um ator e monta a pele {papel: {pista: [quadros]}}. */
-const montarPele = async alvo => {
+/** Agrupa as fantasias de um ator pelo nome (sem o número do fim): "num3" -> grupo "num", número 3. */
+const gruposDeFantasias = alvo => {
     const grupos = new Map();
     alvo.getCostumes().forEach(c => {
         const {animacao, numero} = separarNome(c.name);
@@ -66,6 +74,17 @@ const montarPele = async alvo => {
         if (!grupos.has(k)) grupos.set(k, []);
         grupos.get(k).push({c, numero});
     });
+    return grupos;
+};
+
+const quadroDe = async c => {
+    const img = await carregarImg(c.asset.encodeDataURI());
+    return img ? {img, w: img.naturalWidth, h: img.naturalHeight} : null;
+};
+
+/** Lê as fantasias de um ator e monta a pele {papel: {pista: [quadros]}}. */
+const montarPele = async alvo => {
+    const grupos = gruposDeFantasias(alvo);
     const imgs = async nomes => {
         for (const nome of nomes) {
             const g = grupos.get(nome.toLowerCase());
@@ -94,6 +113,39 @@ const montarPele = async alvo => {
         const q = await imgs([k]);
         if (q) pele.itens[k.slice(5).trim()] = q;
     }
+    // avaliações (imagens no lugar do texto "Perfeito!", "Bom"…)
+    pele.avaliacoes = {
+        perfeito: await imgs(['perfeito', 'sick']),
+        bom: await imgs(['bom', 'good']),
+        ok: await imgs(['ok', 'bad', 'shit']),
+        errou: await imgs(['errou', 'miss'])
+    };
+    // números do combo: "num0".."num9" ou "numero 0".."numero 9" (o número fica no fim do nome)
+    pele.numeros = null;
+    for (const k of ['num', 'numero', 'número', 'numeros', 'números']) {
+        const g = grupos.get(k);
+        if (!g) continue;
+        const r = {};
+        for (const {c, numero} of g) {
+            if (numero >= 0 && numero <= 9 && !r[numero]) r[numero] = await quadroDe(c);
+        }
+        if (Object.keys(r).length >= 10) {
+            pele.numeros = r;
+            break;
+        }
+    }
+    // contagem regressiva
+    const contagem = {};
+    const gc = grupos.get('contagem');
+    if (gc) {
+        for (const {c, numero} of gc) {
+            if (numero >= 1 && numero <= 3) contagem[String(numero)] = [await quadroDe(c)];
+        }
+    }
+    contagem['2'] = contagem['2'] || await imgs(['pronto', 'ready']);
+    contagem['1'] = contagem['1'] || await imgs(['prepara', 'set']);
+    contagem.vai = await imgs(['contagem vai', 'vai', 'go']);
+    pele.contagem = contagem;
     pele.circulo = await imgs(['circulo', 'círculo', 'hitcircle']);
     pele.aproximacao = await imgs(['aproximacao', 'aproximação', 'approachcircle']);
     pele.borda = await imgs(['borda', 'hitcircleoverlay']);
@@ -105,6 +157,59 @@ const montarPele = async alvo => {
     return pele;
 };
 
+const NOMES_ICONE = {
+    normal: ['icone', 'ícone', 'icone normal', 'ícone normal', 'normal', 'icon', 'icon normal', 'neutral'],
+    perdendo: ['icone perdendo', 'ícone perdendo', 'perdendo', 'losing', 'icon losing', 'lose'],
+    ganhando: ['icone ganhando', 'ícone ganhando', 'ganhando', 'winning', 'icon winning', 'win']
+};
+
+/** Corta uma imagem em n quadros lado a lado (grade de ícones do FNF). */
+const cortarEmQuadros = (q, n) => {
+    const larg = q.w / n;
+    const r = [];
+    for (let i = 0; i < n; i++) {
+        const cv = document.createElement('canvas');
+        cv.width = Math.round(larg);
+        cv.height = q.h;
+        cv.getContext('2d').drawImage(q.img, -i * larg, 0);
+        r.push({img: cv, w: cv.width, h: cv.height});
+    }
+    return r;
+};
+
+/** Monta o ícone da barra de vida a partir das fantasias de um ator: {normal, perdendo, ganhando}. */
+const montarIcone = async alvo => {
+    const grupos = gruposDeFantasias(alvo);
+    const primeiro = async nomes => {
+        for (const nome of nomes) {
+            const g = grupos.get(nome);
+            if (g) return quadroDe(g.sort((a, b) => a.numero - b.numero)[0].c);
+        }
+        return null;
+    };
+    const r = {
+        normal: await primeiro(NOMES_ICONE.normal),
+        perdendo: await primeiro(NOMES_ICONE.perdendo),
+        ganhando: await primeiro(NOMES_ICONE.ganhando)
+    };
+    if (!r.normal) {
+        const atual = alvo.getCostumes()[alvo.currentCostume];
+        const q = atual && await quadroDe(atual);
+        if (!q) return null;
+        const proporcao = q.w / q.h;
+        const n = Math.round(proporcao);
+        if (n >= 2 && n <= 3 && Math.abs(proporcao - n) < 0.15) {
+            const quadros = cortarEmQuadros(q, n);
+            r.normal = quadros[0];
+            r.perdendo = r.perdendo || quadros[1];
+            r.ganhando = r.ganhando || quadros[2] || null;
+        } else {
+            r.normal = q;
+        }
+    }
+    return r;
+};
+
 export class MotorRitmo {
     constructor (runtime) {
         this.runtime = runtime;
@@ -113,8 +218,11 @@ export class MotorRitmo {
         this.config = {
             lado: 'direita', mostrarOponente: true, rolagem: 'cima', velocidade: 1, teclas: 'setas-dfjk',
             placar: true, permitirPerder: true, tamanho: 42, xJogador: null, yJogador: null, xOponente: null,
-            yOponente: null, tamanhoCirculo: 34, aproximacao: 900
+            yOponente: null, tamanhoCirculo: 34, aproximacao: 900,
+            icones: true, corJogador: '#7A4FC8', corOponente: '#E8742C', contagem: false
         };
+        // ícones da barra de vida: {emoji} ou {imagens: {normal, perdendo, ganhando}}
+        this.icones = {eu: {emoji: '🦉'}, op: {emoji: '🤖'}};
         this.pele = null;
         this.eventos = [];
         this.apertadas = [false, false, false, false];
@@ -150,11 +258,34 @@ export class MotorRitmo {
         this.ultimoItem = '';
         this.popup = null;
         this.popupItem = null;
+        this.contagemAtual = null; // {valor: '3' | '2' | '1' | 'vai', ini}
     }
 
     // ---------------------------------------------------------------- pele
     async usarPele (alvo) {
         this.pele = alvo ? await montarPele(alvo) : null;
+    }
+
+    async usarIcone (quem, alvo) {
+        const imagens = alvo ? await montarIcone(alvo) : null;
+        if (imagens) this.icones[quem] = {imagens};
+    }
+
+    usarIconeEmoji (quem, emoji) {
+        this.icones[quem] = {emoji: String(emoji || '').slice(0, 8) || (quem === 'eu' ? '🦉' : '🤖')};
+    }
+
+    /** "normal", "perdendo" ou "ganhando", conforme a vida (como no FNF: abaixo de 20% / acima de 80%). */
+    estadoIcone (quem) {
+        const v = quem === 'op' ? 1 - this.vida : this.vida;
+        if (v < 0.2) return 'perdendo';
+        if (v > 0.8) return 'ganhando';
+        return 'normal';
+    }
+
+    /** Duração de uma batida do mapa (ms). */
+    _batida () {
+        return 60000 / ((this.mapa && this.mapa.bpm) || 120);
     }
 
     // ---------------------------------------------------------------- controle
@@ -169,7 +300,9 @@ export class MotorRitmo {
         this.efeitos = [];
         this.apertadas = [false, false, false, false];
         this._fimVisivelAte = 0;
-        this.relogio.tocar(0);
+        this._ultimaContagem = -1;
+        // contagem regressiva: 4 batidas antes do áudio (3, 2, 1, vai!); o tempo do mapa começa negativo
+        this.relogio.tocar(0, this.config.contagem ? this._batida() * 4 : 0);
         this.estado = 'tocando';
         this._ligarCamada(true);
     }
@@ -300,7 +433,7 @@ export class MotorRitmo {
         this.ultimaAvaliacao = nome.replace('!', '').toLowerCase();
         this.ultimaPista = pista === null ? '' : PISTAS[pista];
         this.popup = {txt: nome, cor: nome === 'Perfeito!' ? '#7CFF8A' : (nome === 'Bom' ? '#7FD3FF' : '#FFC928'),
-            ate: performance.now() + 450};
+            tipo: this.ultimaAvaliacao, ate: performance.now() + 450};
         this._evento('acertou', pista);
     }
 
@@ -311,7 +444,7 @@ export class MotorRitmo {
         this.vida -= dano;
         this.ultimaAvaliacao = 'errou';
         this.ultimaPista = pista === null ? '' : PISTAS[pista];
-        this.popup = {txt, cor: '#FF5A5A', ate: performance.now() + 450};
+        this.popup = {txt, cor: '#FF5A5A', tipo: 'errou', ate: performance.now() + 450};
         this._evento('errou', pista);
         if (this.vida <= 0 && this.config.permitirPerder) {
             this.vida = 0;
@@ -418,6 +551,16 @@ export class MotorRitmo {
     // ---------------------------------------------------------------- lógica a cada quadro
     _logica () {
         const agora = this.tempo();
+        if (this.config.contagem && agora < 0) {
+            const b = this._batida();
+            const i = Math.floor((agora + (b * 4)) / b);
+            if (i >= 0 && i <= 3 && i !== this._ultimaContagem) {
+                this._ultimaContagem = i;
+                const valor = ['3', '2', '1', 'vai'][i];
+                this.contagemAtual = {valor, ini: performance.now()};
+                this._evento('contagem', null, valor);
+            }
+        }
         if (this.mapa.modo === 'circulos') {
             for (const c of this.circulos) {
                 if (c.estado) continue;
@@ -817,13 +960,95 @@ export class MotorRitmo {
         return Math.round(((this.contagem.perfeito + (this.contagem.bom * 0.75) + (this.contagem.ok * 0.4)) / total) * 1000) / 10;
     }
 
+    /** Imagem da pele com a altura dada (em px do palco), centralizada em (x, y). */
+    _imagemAltura (q, x, y, altura, alfa = 1, espelhar = false) {
+        const g = this.g;
+        const esc = (altura / q.h) * this.s;
+        const w = q.w * esc;
+        const h = q.h * esc;
+        g.save();
+        g.globalAlpha = alfa;
+        g.translate(this._x(x), this._y(y));
+        if (espelhar) g.scale(-1, 1);
+        g.drawImage(q.img, -w / 2, -h / 2, w, h);
+        g.restore();
+        return q.w * (altura / q.h);
+    }
+
+    /** "Perfeito!", "Bom"… com a imagem da pele (se tiver) e o combo em números. */
+    _desenharPopup (agoraMs) {
+        const p = this.popup;
+        const k = (p.ate - agoraMs) / 450;
+        const av = this.pele && this.pele.avaliacoes && this.pele.avaliacoes[p.tipo];
+        const y = 30 + (k * 8);
+        if (av) this._imagemAltura(av[0], 0, y, 30, Math.min(1, k * 3));
+        else this._texto(p.txt, 0, y, 26, p.cor);
+        if (this.combo < 5 || p.tipo === 'errou') return;
+        const nums = this.pele && this.pele.numeros;
+        if (nums) {
+            const digitos = String(this.combo).padStart(3, '0').split('');
+            const alt = 20;
+            const larg = digitos.map(d => nums[d].w * (alt / nums[d].h));
+            let x = -larg.reduce((a, b) => a + b, 0) / 2;
+            digitos.forEach((d, i) => {
+                this._imagemAltura(nums[d], x + (larg[i] / 2), 2, alt, Math.min(1, k * 3));
+                x += larg[i];
+            });
+        } else {
+            this._texto(`${this.combo}×`, 0, 2, 18, '#fff');
+        }
+    }
+
+    _desenharContagem (agoraMs) {
+        const c = this.contagemAtual;
+        if (!c || this.tempo() >= this._batida() * 0.9) return;
+        const k = Math.min(1, (agoraMs - c.ini) / this._batida()); // 0 -> 1 ao longo da batida
+        if (k >= 1) return;
+        const alfa = 1 - (k * k);
+        const img = this.pele && this.pele.contagem && this.pele.contagem[c.valor];
+        if (img) {
+            this._imagemAltura(img[0], 0, 10, 70 * (1 + ((1 - k) * 0.08)), alfa);
+        } else {
+            const g = this.g;
+            g.save();
+            g.globalAlpha = alfa;
+            this._texto(c.valor === 'vai' ? 'Vai!' : c.valor, 0, 10, 64 * (1 + ((1 - k) * 0.15)),
+                c.valor === 'vai' ? '#FFC928' : '#FFFFFF');
+            g.restore();
+        }
+    }
+
+    /** Ícone da barra de vida (com o "pulo" na batida, como no FNF). */
+    _desenharIcone (quem, x, y, tam) {
+        const ic = this.icones[quem];
+        if (!ic) return;
+        const estado = this.estadoIcone(quem);
+        const b = this._batida();
+        const fase = (((this.tempo() % b) + b) % b) / b;
+        const pulo = 1 + (0.22 * Math.max(0, 1 - (fase * 4)));
+        const t = tam * pulo;
+        const g = this.g;
+        if (ic.imagens) {
+            const q = ic.imagens[estado] || ic.imagens.normal;
+            // o ícone do jogador fica espelhado, olhando para o oponente (igual no FNF)
+            this._imagemAltura(q, x, y, t, 1, quem === 'eu');
+            return;
+        }
+        g.save();
+        if (estado === 'perdendo') {
+            g.filter = 'grayscale(0.8)';
+            x += Math.sin(performance.now() / 30) * 1.2;
+        }
+        g.font = `${Math.round(t * 0.9 * this.s)}px ${FONTE_EMOJI}`;
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
+        g.fillText(ic.emoji, this._x(x), this._y(y));
+        g.restore();
+    }
+
     _desenharHud () {
         const agoraMs = performance.now();
-        if (this.popup && this.popup.ate > agoraMs) {
-            const k = (this.popup.ate - agoraMs) / 450;
-            this._texto(this.popup.txt, 0, 30 + (k * 8), 26, this.popup.cor);
-            if (this.combo >= 5 && this.popup.cor !== '#FF5A5A') this._texto(`${this.combo}×`, 0, 2, 18, '#fff');
-        }
+        if (this.popup && this.popup.ate > agoraMs) this._desenharPopup(agoraMs);
         if (this.popupItem && this.popupItem.ate > agoraMs) {
             const k = (this.popupItem.ate - agoraMs) / 650;
             const g = this.g;
@@ -832,22 +1057,31 @@ export class MotorRitmo {
             this._texto(this.popupItem.txt, 0, 62 + ((1 - k) * 14), 18, this.popupItem.cor);
             g.restore();
         }
+        if (this.config.contagem && this.estado === 'tocando') this._desenharContagem(agoraMs);
         if (!this.config.placar) return;
         const g = this.g;
+        const embaixo = this.mapa.modo === 'setas' && this.config.rolagem === 'baixo';
         if (this.mapa.modo === 'setas') {
-            // barra de vida (roxo = você)
+            // barra de vida: oponente à esquerda, jogador à direita (a parte do jogador cresce)
             const w = 200 * this.s;
             const h = 9 * this.s;
             const x = this._x(-100);
-            const y = this._y(this.config.rolagem === 'baixo' ? 160 : -152);
+            const yPalco = embaixo ? 152 : -150; // centro da barra
+            const y = this._y(yPalco + 4.5);
             g.fillStyle = '#1B1338';
             g.fillRect(x - (2 * this.s), y - (2 * this.s), w + (4 * this.s), h + (4 * this.s));
-            g.fillStyle = '#E8742C';
+            g.fillStyle = this.config.corOponente;
             g.fillRect(x, y, w, h);
-            g.fillStyle = '#7A4FC8';
+            g.fillStyle = this.config.corJogador;
             g.fillRect(x + (w * (1 - this.vida)), y, w * this.vida, h);
+            if (this.config.icones) {
+                const divisa = -100 + (200 * (1 - this.vida));
+                const tam = 30;
+                this._desenharIcone('op', divisa - 13, yPalco, tam);
+                this._desenharIcone('eu', divisa + 13, yPalco, tam);
+            }
         }
-        const yTexto = this.mapa.modo === 'setas' && this.config.rolagem === 'baixo' ? 172 : -168;
+        const yTexto = embaixo ? 174 : -171;
         this._texto(`Pontos ${this.pontos} · Erros ${this.contagem.errou} · ${this.precisao()}%`, 0, yTexto, 12, '#fff');
         if (this.estado === 'terminado' || this.estado === 'perdeu') {
             g.fillStyle = 'rgba(15,8,40,.55)';

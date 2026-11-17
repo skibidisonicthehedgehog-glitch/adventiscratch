@@ -82,30 +82,45 @@ export class RelogioDoMapa {
         return this.duracaoAudio;
     }
 
-    /** Começa a tocar a partir de "desde" (ms do áudio). */
-    tocar (desde = 0) {
+    /**
+     * Começa a tocar a partir de "desde" (ms do áudio).
+     * @param {number} desde ms do áudio
+     * @param {number} atraso ms de espera antes do áudio começar (contagem regressiva): durante a espera,
+     *   tempo() fica negativo e vai chegando a 0.
+     */
+    tocar (desde = 0, atraso = 0) {
         this._pararFontes();
         const c = this.ctx;
         if (c.state === 'suspended') c.resume();
         const inicio = Math.max(0, desde);
-        this.t0 = c.currentTime + 0.06 - (inicio / 1000);
+        const espera = Math.max(0, atraso) / 1000;
+        this.t0 = c.currentTime + 0.06 + espera - (inicio / 1000);
         if (this.musica) {
-            this.tocador = new Tocador(() => this.ctx, () => this._saida());
-            this.tocador.repetir = false;
-            const msPorPasso = 60000 / this.musica.bpm / PASSOS_POR_BATIDA;
-            this.tocador.tocar(this.musica, inicio / msPorPasso);
-            this.t0 = this.tocador.t0; // o Tocador já calcula quando o passo 0 "aconteceu"
+            const comecarMusica = () => {
+                this._esperaMusica = null;
+                this.tocador = new Tocador(() => this.ctx, () => this._saida());
+                this.tocador.repetir = false;
+                const msPorPasso = 60000 / this.musica.bpm / PASSOS_POR_BATIDA;
+                this.tocador.tocar(this.musica, inicio / msPorPasso);
+                this.t0 = this.tocador.t0; // o Tocador já calcula quando o passo 0 "aconteceu"
+            };
+            if (espera > 0) this._esperaMusica = setTimeout(comecarMusica, espera * 1000);
+            else comecarMusica();
         } else if (this.buffer && inicio < this.duracaoAudio) {
             const f = c.createBufferSource();
             f.buffer = this.buffer;
             f.connect(this._saida());
-            f.start(c.currentTime + 0.06, inicio / 1000);
+            f.start(c.currentTime + 0.06 + espera, inicio / 1000);
             this.fonte = f;
         }
         this.estado = 'tocando';
     }
 
     _pararFontes () {
+        if (this._esperaMusica) {
+            clearTimeout(this._esperaMusica);
+            this._esperaMusica = null;
+        }
         if (this.fonte) {
             try {
                 this.fonte.stop();
