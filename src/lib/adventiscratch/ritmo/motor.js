@@ -10,9 +10,10 @@
  *   segurar:   "segurar esquerda" | "purple hold piece"
  *   fim:       "fim segurar esquerda" | "purple hold end" | "pruple end hold"
  *   círculos:  "circulo" | "hitcircle"; "aproximacao" | "approachcircle"
+ *   itens:     "item perigo" (ou "item perigo esquerda" para cada seta), "item vida", "item moeda"…
  */
 import {RelogioDoMapa} from './audio.js';
-import {fimDasNotas, PISTAS} from './dados.js';
+import {fimDasNotas, PISTAS, ITENS, iconeItem} from './dados.js';
 import {separarNome} from '../spritesheet/spritesheet.js';
 
 const LARG = 480;
@@ -23,6 +24,12 @@ const EN = ['left', 'down', 'up', 'right'];
 const COR_FNF = ['purple', 'blue', 'green', 'red'];
 const JANELAS = {perfeito: 45, bom: 90, ok: 135};
 const JANELAS_CIRCULO = {c300: 50, c100: 100, c50: 150};
+const FONTE_EMOJI = '"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",Helvetica,Arial,sans-serif';
+const ehPerigo = item => Boolean(item && ITENS[item] && ITENS[item].perigo);
+const ehOpcional = item => Boolean(item && ITENS[item] && ITENS[item].opcional);
+const VIDA_ITEM = 0.2;
+const PONTOS_BONUS = 500;
+const DANO_PERIGO = 0.25;
 const TECLAS = {
     'setas-dfjk': {ArrowLeft: 0, ArrowDown: 1, ArrowUp: 2, ArrowRight: 3, d: 0, f: 1, j: 2, k: 3},
     'setas-wasd': {ArrowLeft: 0, ArrowDown: 1, ArrowUp: 2, ArrowRight: 3, a: 0, s: 1, w: 2, d: 3},
@@ -80,6 +87,13 @@ const montarPele = async alvo => {
         for (const papel of Object.keys(nomes)) r[papel] = await imgs(nomes[papel]);
         pele.setas.push(r);
     }
+    // itens: fantasias "item <nome>" ou "item <nome> <seta>"
+    pele.itens = {};
+    for (const k of grupos.keys()) {
+        if (!k.startsWith('item ')) continue;
+        const q = await imgs([k]);
+        if (q) pele.itens[k.slice(5).trim()] = q;
+    }
     pele.circulo = await imgs(['circulo', 'círculo', 'hitcircle']);
     pele.aproximacao = await imgs(['aproximacao', 'aproximação', 'approachcircle']);
     pele.borda = await imgs(['borda', 'hitcircleoverlay']);
@@ -130,10 +144,12 @@ export class MotorRitmo {
         this.combo = 0;
         this.maiorCombo = 0;
         this.vida = 0.5;
-        this.contagem = {perfeito: 0, bom: 0, ok: 0, errou: 0};
+        this.contagem = {perfeito: 0, bom: 0, ok: 0, errou: 0, itens: 0, perigo: 0};
         this.ultimaAvaliacao = '';
         this.ultimaPista = '';
+        this.ultimoItem = '';
         this.popup = null;
+        this.popupItem = null;
     }
 
     // ---------------------------------------------------------------- pele
@@ -180,8 +196,8 @@ export class MotorRitmo {
         return this.relogio.tempo();
     }
 
-    _evento (tipo, pista) {
-        this.eventos.push({tipo, pista});
+    _evento (tipo, pista, item) {
+        this.eventos.push({tipo, pista, item});
     }
 
     // ---------------------------------------------------------------- camada sobre o palco
@@ -288,11 +304,11 @@ export class MotorRitmo {
         this._evento('acertou', pista);
     }
 
-    _errar (pista, txt = 'Errou') {
+    _errar (pista, txt = 'Errou', dano = 0.0475) {
         this.contagem.errou++;
         this.combo = 0;
         this.pontos = Math.max(0, this.pontos - 10);
-        this.vida -= 0.0475;
+        this.vida -= dano;
         this.ultimaAvaliacao = 'errou';
         this.ultimaPista = pista === null ? '' : PISTAS[pista];
         this.popup = {txt, cor: '#FF5A5A', ate: performance.now() + 450};
@@ -305,6 +321,33 @@ export class MotorRitmo {
         }
     }
 
+    /** Pegou um item (nota especial acertada). */
+    _pegarItem (item, pista) {
+        this.contagem.itens++;
+        this.ultimoItem = item;
+        let txt = `${iconeItem(item)} ${item}`;
+        if (item === 'vida') {
+            this.vida = Math.min(1, this.vida + VIDA_ITEM);
+            txt = '❤ +vida';
+        } else if (item === 'bonus') {
+            this.pontos += PONTOS_BONUS;
+            txt = `⭐ +${PONTOS_BONUS}`;
+        } else if (item === 'fantasma') {
+            txt = '';
+        }
+        if (txt) this.popupItem = {txt, cor: (ITENS[item] && ITENS[item].cor) || '#FFFFFF', ate: performance.now() + 650};
+        this._evento('item', pista, item);
+    }
+
+    /** Apertou um item de perigo: conta como erro e tira bastante vida. */
+    _pegarPerigo (item, pista) {
+        this.contagem.perigo++;
+        this.ultimoItem = item;
+        this.popupItem = {txt: '☠ Perigo!', cor: '#FF5A5A', ate: performance.now() + 650};
+        this._evento('item', pista, item);
+        this._errar(pista, 'Perigo!', DANO_PERIGO);
+    }
+
     _apertar (pista) {
         const agora = this.tempo();
         let melhor = null;
@@ -315,21 +358,37 @@ export class MotorRitmo {
             if (n.t > agora + JANELAS.ok) break;
         }
         if (!melhor) return; // apertar sem nota não tira ponto
+        if (ehPerigo(melhor.item)) {
+            melhor.estado = 'pegou';
+            this._pegarPerigo(melhor.item, pista);
+            return;
+        }
         const d = Math.abs(agora - melhor.t);
         melhor.estado = melhor.dur > 0 ? 'segurando' : 'acertou';
         this.brilho[pista] = 1;
         if (d <= JANELAS.perfeito) this._avaliar('Perfeito!', 350, 0.023, pista);
         else if (d <= JANELAS.bom) this._avaliar('Bom', 200, 0.015, pista);
         else this._avaliar('Ok', 100, 0.004, pista);
+        if (melhor.item) this._pegarItem(melhor.item, pista);
     }
 
     _clicarCirculo (x, y) {
         const agora = this.tempo();
-        const alvo = this.circulos.find(c => !c.estado);
+        const r = this.config.tamanhoCirculo;
+        // clicou num círculo de perigo que está na hora?
+        const perigo = this.circulos.find(c => !c.estado && ehPerigo(c.item) &&
+            Math.abs(agora - c.t) <= JANELAS_CIRCULO.c100 && Math.hypot(x - c.x, y - c.y) <= r * 1.1);
+        if (perigo) {
+            perigo.estado = 'pegou';
+            this.efeitos.push({x: perigo.x, y: perigo.y, ini: performance.now(), tipo: 'erro'});
+            this._pegarPerigo(perigo.item, null);
+            return;
+        }
+        // os de perigo não entram na ordem (é para deixar passar)
+        const alvo = this.circulos.find(c => !c.estado && !ehPerigo(c.item));
         if (!alvo) return;
         const d = agora - alvo.t;
         if (d < -JANELAS_CIRCULO.c50) return; // cedo demais
-        const r = this.config.tamanhoCirculo;
         if (Math.hypot(x - alvo.x, y - alvo.y) > r * 1.1) return;
         alvo.estado = 'acertou';
         const ad = Math.abs(d);
@@ -337,6 +396,23 @@ export class MotorRitmo {
         if (ad <= JANELAS_CIRCULO.c300) this._avaliar('Perfeito!', 300, 0.02, null);
         else if (ad <= JANELAS_CIRCULO.c100) this._avaliar('Bom', 100, 0.012, null);
         else this._avaliar('Ok', 50, 0.004, null);
+        if (alvo.item) this._pegarItem(alvo.item, null);
+    }
+
+    /** Uma nota/círculo passou sem ser pego. Devolve true se isso contou como erro. */
+    _deixouPassar (nota, pista) {
+        if (ehPerigo(nota.item)) {
+            nota.estado = 'evitou'; // era para deixar passar mesmo
+            return false;
+        }
+        if (nota.item) this._evento('itemPassou', pista, nota.item);
+        if (ehOpcional(nota.item)) {
+            nota.estado = 'passou';
+            return false;
+        }
+        nota.estado = 'errou';
+        this._errar(pista);
+        return true;
     }
 
     // ---------------------------------------------------------------- lógica a cada quadro
@@ -346,9 +422,9 @@ export class MotorRitmo {
             for (const c of this.circulos) {
                 if (c.estado) continue;
                 if (agora - c.t > JANELAS_CIRCULO.c50) {
-                    c.estado = 'errou';
-                    this.efeitos.push({x: c.x, y: c.y, ini: performance.now(), tipo: 'erro'});
-                    this._errar(null);
+                    if (this._deixouPassar(c, null)) {
+                        this.efeitos.push({x: c.x, y: c.y, ini: performance.now(), tipo: 'erro'});
+                    }
                     if (this.estado !== 'tocando') return;
                 } else if (c.t > agora) {
                     break;
@@ -358,7 +434,9 @@ export class MotorRitmo {
             for (const n of this.notas) {
                 if (n.t > agora + 50) break;
                 if (n.quem === 'op') {
-                    if (!n.estado && agora >= n.t) {
+                    if (!n.estado && agora >= n.t && ehPerigo(n.item)) {
+                        n.estado = 'evitou'; // o oponente não aperta perigo
+                    } else if (!n.estado && agora >= n.t) {
                         n.estado = 'cantou';
                         this.brilhoOp[n.pista] = 1;
                         this._evento('oponente', n.pista);
@@ -366,8 +444,7 @@ export class MotorRitmo {
                     continue;
                 }
                 if (!n.estado && agora - n.t > JANELAS.ok) {
-                    n.estado = 'errou';
-                    this._errar(n.pista);
+                    this._deixouPassar(n, n.pista);
                     if (this.estado !== 'tocando') return;
                 } else if (n.estado === 'segurando') {
                     if (agora >= n.t + n.dur) {
@@ -440,7 +517,7 @@ export class MotorRitmo {
         g.restore();
     }
 
-    _setaPadrao (x, y, pista, tam, {vazia = false, brilho = 0, alfa = 1} = {}) {
+    _setaPadrao (x, y, pista, tam, {vazia = false, brilho = 0, alfa = 1, cor = null, borda = null} = {}) {
         const g = this.g;
         const s = tam * this.s / 2;
         g.save();
@@ -458,7 +535,7 @@ export class MotorRitmo {
         g.closePath();
         g.lineJoin = 'round';
         if (brilho > 0) {
-            g.shadowColor = CORES[pista];
+            g.shadowColor = cor || CORES[pista];
             g.shadowBlur = 22 * brilho * this.s;
         }
         if (vazia) {
@@ -468,13 +545,50 @@ export class MotorRitmo {
             g.strokeStyle = 'rgba(25,18,55,.85)';
             g.stroke();
         } else {
-            g.fillStyle = CORES[pista];
+            g.fillStyle = cor || CORES[pista];
             g.fill();
             g.lineWidth = 3.5 * this.s;
-            g.strokeStyle = '#1B1338';
+            g.strokeStyle = borda || '#1B1338';
             g.stroke();
         }
         g.restore();
+    }
+
+    /** Ícone (emoji) centralizado num ponto do palco. */
+    _icone (txt, x, y, tam, alfa = 1) {
+        const g = this.g;
+        g.save();
+        g.globalAlpha = alfa;
+        g.font = `${Math.round(tam * this.s)}px ${FONTE_EMOJI}`;
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
+        g.fillText(txt, this._x(x), this._y(y));
+        g.restore();
+    }
+
+    /** Fantasias da pele para um item ("item perigo esquerda" ou "item perigo"). */
+    _peleItem (item, pista) {
+        const it = this.pele && this.pele.itens;
+        if (!it || !item) return null;
+        const k = item.toLowerCase();
+        return (pista !== null && it[`${k} ${PISTAS[pista]}`]) || it[k] || null;
+    }
+
+    /** Desenha a cabeça de uma nota (comum ou item). */
+    _desenharNota (n, x, y, tam, alfa, sp) {
+        const pi = this._peleItem(n.item, n.pista);
+        if (pi) {
+            this._imagem(pi, x, y, tam, 0, alfa);
+            return;
+        }
+        const perigo = ehPerigo(n.item);
+        if (sp && sp.nota && !perigo) this._imagem(sp.nota, x, y, tam, 0, alfa);
+        else if (perigo) this._setaPadrao(x, y, n.pista, tam, {alfa, cor: ITENS.perigo.cor, borda: '#FF3B3B'});
+        else {
+            this._setaPadrao(x, y, n.pista, tam, {alfa, brilho: n.item === 'bonus' ? 0.8 : 0,
+                cor: null});
+        }
+        if (n.item && n.item !== 'fantasma') this._icone(iconeItem(n.item), x, y, tam * 0.48, alfa);
     }
 
     _posicoesLado (quem) {
@@ -549,10 +663,12 @@ export class MotorRitmo {
                         }
                     }
                 }
-                if (n.estado === 'segurando' || n.estado === 'cantou' || n.estado === 'acertou') continue;
-                const alfa = n.estado === 'errou' ? 0.35 : 1;
-                if (sp && sp.nota) this._imagem(sp.nota, xs[n.pista], yN, tam, 0, alfa);
-                else this._setaPadrao(xs[n.pista], yN, n.pista, tam, {alfa});
+                if (n.estado === 'segurando' || n.estado === 'cantou' || n.estado === 'acertou' ||
+                    n.estado === 'pegou') continue;
+                let alfa = n.estado === 'errou' || n.estado === 'passou' ? 0.35 : 1;
+                // fantasma: some quando chega perto dos receptores
+                if (n.item === 'fantasma') alfa *= Math.max(0, Math.min(1, (Math.abs(yN - ry) - 70) / 90));
+                if (alfa > 0.01) this._desenharNota(n, xs[n.pista], yN, tam, alfa, sp);
             }
         }
         for (let p = 0; p < 4; p++) {
@@ -572,9 +688,16 @@ export class MotorRitmo {
         for (let i = visiveis.length - 1; i >= 0; i--) {
             const c = visiveis[i];
             const falta = c.t - agora;
-            const alfa = Math.max(0, Math.min(1, (pre - falta) / (pre / 3)));
-            const cor = CORES[(c.numero - 1) % 4];
-            if (pele) {
+            let alfa = Math.max(0, Math.min(1, (pre - falta) / (pre / 3)));
+            // fantasma: some antes da hora (como o "Hidden" do osu!)
+            if (c.item === 'fantasma') alfa *= Math.max(0, Math.min(1, falta / (pre * 0.4)));
+            if (alfa <= 0.01) continue;
+            const perigo = ehPerigo(c.item);
+            const cor = perigo ? ITENS.perigo.cor : CORES[(c.numero - 1) % 4];
+            const pi = this._peleItem(c.item, null);
+            if (pi) {
+                this._imagemCirculo(pi, c.x, c.y, r * 2, alfa);
+            } else if (pele && !perigo) {
                 const escala = r * 2;
                 this._imagemCirculo(pele.circulo, c.x, c.y, escala, alfa);
                 if (pele.borda) this._imagemCirculo(pele.borda, c.x, c.y, escala, alfa);
@@ -586,9 +709,28 @@ export class MotorRitmo {
                 g.fillStyle = cor;
                 g.fill();
                 g.lineWidth = 4 * this.s;
-                g.strokeStyle = '#fff';
+                g.strokeStyle = perigo ? '#FF3B3B' : '#fff';
+                if (c.item === 'bonus') {
+                    g.shadowColor = '#FFC928';
+                    g.shadowBlur = 18 * this.s;
+                }
                 g.stroke();
                 g.restore();
+            }
+            if (c.item && c.item !== 'fantasma') {
+                if (!pi) this._icone(iconeItem(c.item), c.x, c.y, r * 1.05, alfa);
+                if (falta > 0 && c.item !== 'fantasma') {
+                    const rr = r * (1 + (2.2 * falta / pre));
+                    g.save();
+                    g.globalAlpha = alfa;
+                    g.beginPath();
+                    g.arc(this._x(c.x), this._y(c.y), rr * this.s, 0, Math.PI * 2);
+                    g.lineWidth = 3 * this.s;
+                    g.strokeStyle = perigo ? '#FF3B3B' : cor;
+                    g.stroke();
+                    g.restore();
+                }
+                continue;
             }
             g.save();
             g.globalAlpha = alfa;
@@ -601,7 +743,7 @@ export class MotorRitmo {
             g.fillStyle = '#fff';
             g.fillText(String(c.numero), this._x(c.x), this._y(c.y));
             g.restore();
-            if (falta > 0) {
+            if (falta > 0 && c.item !== 'fantasma') {
                 const rr = r * (1 + (2.2 * falta / pre));
                 if (pele && pele.aproximacao) {
                     this._imagemCirculo(pele.aproximacao, c.x, c.y, rr * 2, alfa);
@@ -681,6 +823,14 @@ export class MotorRitmo {
             const k = (this.popup.ate - agoraMs) / 450;
             this._texto(this.popup.txt, 0, 30 + (k * 8), 26, this.popup.cor);
             if (this.combo >= 5 && this.popup.cor !== '#FF5A5A') this._texto(`${this.combo}×`, 0, 2, 18, '#fff');
+        }
+        if (this.popupItem && this.popupItem.ate > agoraMs) {
+            const k = (this.popupItem.ate - agoraMs) / 650;
+            const g = this.g;
+            g.save();
+            g.globalAlpha = Math.min(1, k * 2);
+            this._texto(this.popupItem.txt, 0, 62 + ((1 - k) * 14), 18, this.popupItem.cor);
+            g.restore();
         }
         if (!this.config.placar) return;
         const g = this.g;

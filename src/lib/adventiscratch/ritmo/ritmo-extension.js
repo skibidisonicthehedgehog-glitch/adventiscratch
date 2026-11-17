@@ -3,7 +3,7 @@
  * estilo osu!) por cima do palco, com pontos, combo, precisão, vida e eventos para animar os personagens.
  */
 import {MotorRitmo} from './motor.js';
-import {nomesMapas, obterMapa, aoMudarMapas, PISTAS} from './dados.js';
+import {nomesMapas, obterMapa, aoMudarMapas, PISTAS, ITENS, itensPersonalizados, todosMapas} from './dados.js';
 
 const A = {NUMBER: 'number', STRING: 'string'};
 const B = {COMMAND: 'command', REPORTER: 'reporter', BOOLEAN: 'Boolean', HAT: 'hat', BUTTON: 'button'};
@@ -57,6 +57,10 @@ class AdventiscratchRitmo {
                 const op = {acertou: 'quandoAcertar', errou: 'quandoErrar', oponente: 'quandoOponente'}[e.tipo];
                 hat(op, {PISTA: 'qualquer'});
                 if (pista) hat(op, {PISTA: pista});
+            } else if (e.tipo === 'item' || e.tipo === 'itemPassou') {
+                const op = e.tipo === 'item' ? 'quandoPegarItem' : 'quandoItemPassar';
+                hat(op, {ITEM: 'qualquer'});
+                hat(op, {ITEM: e.item});
             } else if (e.tipo === 'terminou') {
                 hat('quandoTerminar', {});
             } else if (e.tipo === 'perdeu') {
@@ -100,6 +104,15 @@ class AdventiscratchRitmo {
                     opcode: 'quandoOponente', blockType: B.HAT, isEdgeActivated: false, text: 'quando o oponente cantar [PISTA]',
                     arguments: {PISTA: {type: A.STRING, menu: 'pistas', defaultValue: 'qualquer'}}
                 },
+                {
+                    opcode: 'quandoPegarItem', blockType: B.HAT, isEdgeActivated: false, text: 'quando pegar item [ITEM]',
+                    arguments: {ITEM: {type: A.STRING, menu: 'itens', defaultValue: 'qualquer'}}
+                },
+                {
+                    opcode: 'quandoItemPassar', blockType: B.HAT, isEdgeActivated: false,
+                    text: 'quando deixar passar item [ITEM]',
+                    arguments: {ITEM: {type: A.STRING, menu: 'itens', defaultValue: 'qualquer'}}
+                },
                 {opcode: 'quandoTerminar', blockType: B.HAT, isEdgeActivated: false, text: 'quando o mapa terminar'},
                 {opcode: 'quandoPerder', blockType: B.HAT, isEdgeActivated: false, text: 'quando a vida acabar'},
                 '---',
@@ -114,6 +127,7 @@ class AdventiscratchRitmo {
                 },
                 {opcode: 'ultima', blockType: B.REPORTER, text: 'última avaliação'},
                 {opcode: 'ultimaPista', blockType: B.REPORTER, text: 'última seta'},
+                {opcode: 'ultimoItem', blockType: B.REPORTER, text: 'último item'},
                 {opcode: 'tempo', blockType: B.REPORTER, text: 'tempo do mapa (s)'},
                 {opcode: 'tocando', blockType: B.BOOLEAN, text: 'mapa tocando?'},
                 {
@@ -173,7 +187,9 @@ class AdventiscratchRitmo {
                 pistas: {acceptReporters: false, items: PISTA_MENU},
                 pistasSo: {acceptReporters: false, items: PISTA_MENU.slice(1)},
                 avaliacoes: {acceptReporters: false, items: [{text: 'perfeitos', value: 'perfeito'},
-                    {text: 'bons', value: 'bom'}, {text: 'oks', value: 'ok'}, {text: 'erros', value: 'errou'}]},
+                    {text: 'bons', value: 'bom'}, {text: 'oks', value: 'ok'}, {text: 'erros', value: 'errou'},
+                    {text: 'itens pegos', value: 'itens'}, {text: 'perigos apertados', value: 'perigo'}]},
+                itens: {acceptReporters: false, items: 'menuItens'},
                 lados: {acceptReporters: false, items: ['direita', 'esquerda']},
                 simNao: {acceptReporters: false, items: [{text: 'sim', value: 'sim'}, {text: 'não', value: 'nao'}]},
                 rolagens: {acceptReporters: false, items: [{text: 'cima (padrão)', value: 'cima'},
@@ -188,6 +204,12 @@ class AdventiscratchRitmo {
     menuMapas () {
         const n = nomesMapas();
         return n.length ? n : [{text: '(crie um mapa)', value: ''}];
+    }
+
+    menuItens () {
+        return [{text: 'qualquer item', value: 'qualquer'}]
+            .concat(Object.keys(ITENS).map(k => ({text: `${ITENS[k].icone} ${ITENS[k].nome.toLowerCase()}`, value: k})))
+            .concat(itensPersonalizados(todosMapas()).map(n => ({text: `🏷 ${n}`, value: n})));
     }
 
     menuAtores () {
@@ -236,6 +258,14 @@ class AdventiscratchRitmo {
         return true;
     }
 
+    quandoPegarItem () {
+        return true;
+    }
+
+    quandoItemPassar () {
+        return true;
+    }
+
     quandoTerminar () {
         return true;
     }
@@ -274,6 +304,10 @@ class AdventiscratchRitmo {
 
     ultimaPista () {
         return this.motor.ultimaPista;
+    }
+
+    ultimoItem () {
+        return this.motor.ultimoItem;
     }
 
     tempo () {

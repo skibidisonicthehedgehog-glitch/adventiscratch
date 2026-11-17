@@ -86,6 +86,16 @@ export const lerOsu = (texto, nomeArquivo) => {
  * @param {string} nomeArquivo nome do arquivo
  * @returns {object} mapa
  */
+/** Tipo de nota do FNF (Psych "Hurt Note", V-Slice "hurt"/"mine"…) → item do Adventiscratch. */
+const itemDoTipoFnf = tipo => {
+    const t = typeof tipo === 'string' ? tipo.trim() : '';
+    if (!t) return '';
+    if (/hurt|mine|bomb|danger|kill|death/i.test(t)) return 'perigo';
+    if (/heal|health/i.test(t)) return 'vida';
+    if (/^(normal|default)$/i.test(t)) return '';
+    return t.slice(0, 30); // ex.: "Alt Animation", "GF Sing": vira item personalizado com o mesmo nome
+};
+
 export const lerFnf = (texto, nomeArquivo) => {
     let j;
     try {
@@ -99,7 +109,8 @@ export const lerFnf = (texto, nomeArquivo) => {
     if (j && j.notes && !Array.isArray(j.notes) && typeof j.notes === 'object') {
         // formato novo (V-Slice): notas por dificuldade; d 0-3 = jogador, 4-7 = oponente
         const dif = j.notes.normal || j.notes.hard || j.notes.easy || Object.values(j.notes)[0] || [];
-        dif.forEach(n => m.notas.push({t: n.t, pista: n.d % 4, quem: n.d < 4 ? 'eu' : 'op', dur: n.l || 0}));
+        dif.forEach(n => m.notas.push({t: n.t, pista: n.d % 4, quem: n.d < 4 ? 'eu' : 'op', dur: n.l || 0,
+            item: itemDoTipoFnf(n.k)}));
         const v = j.scrollSpeed && (j.scrollSpeed.normal || Object.values(j.scrollSpeed)[0]);
         if (v) m.velocidade = Math.max(0.5, Math.min(3, v / 1.5));
     } else {
@@ -112,12 +123,13 @@ export const lerFnf = (texto, nomeArquivo) => {
         if (song.speed) m.velocidade = Math.max(0.5, Math.min(3, Number(song.speed) / 1.5));
         song.notes.forEach(secao => {
             (secao.sectionNotes || []).forEach(n => {
-                const [t, lane, dur] = n;
+                const [t, lane, dur, tipo] = n;
                 if (!(lane >= 0) || lane > 7) return; // eventos usam lane -1
                 // no formato antigo: 0-3 é quem "está cantando" na seção (mustHitSection = jogador)
                 const primeiraMetade = lane < 4;
                 const eu = secao.mustHitSection ? primeiraMetade : !primeiraMetade;
-                m.notas.push({t, pista: lane % 4, quem: eu ? 'eu' : 'op', dur: Number(dur) || 0});
+                m.notas.push({t, pista: lane % 4, quem: eu ? 'eu' : 'op', dur: Number(dur) || 0,
+                    item: itemDoTipoFnf(tipo)});
             });
         });
     }

@@ -193,6 +193,22 @@ Extensão **Jogo de Ritmo** → **🎯 Editor de mapas de ritmo…** (tela cheia
   ou pelo BPM. **📂 Importar**: `.osu` (círculos; osu!mania de 4 teclas vira setas, com notas longas) e `.json`
   do FNF (formato antigo/Psych, com `mustHitSection`, e o formato novo V-Slice).
 
+**Itens** (notas especiais): no editor, escolha o **Item** antes de pôr as notas (ou **Shift+clique** numa nota
+para aplicar/tirar). Funcionam nas setas e nos círculos:
+
+| Item | O que faz |
+|---|---|
+| ❤ Vida | recupera 20% da vida; deixar passar não é erro |
+| ⭐ Bônus | +500 pontos; deixar passar não é erro |
+| ☠ Perigo | **não aperte!** Apertar conta como erro e tira 25% da vida; o oponente nunca aperta |
+| 👻 Fantasma | nota comum que some antes de chegar (como o "Hidden" do osu!) |
+| 🏷 personalizado | qualquer nome inventado (moeda, chave…): nota comum que dispara **quando pegar item [nome]** |
+
+Blocos: **quando pegar item [item]**, **quando deixar passar item [item]**, **último item**, e "quantidade de
+itens pegos / perigos apertados". Pele: fantasias `item perigo` (ou `item perigo esquerda` para cada seta),
+`item vida`, `item moeda`… No `.json` do FNF, as notas "Hurt Note" (Psych) / `hurt` (V-Slice) viram ☠ perigo e os
+outros tipos de nota viram itens personalizados com o mesmo nome.
+
 Mapas ficam no `.asp` em `adventiscratch/mapas/<n>.json`. No jogo, o motor desenha numa camada por cima do palco
 (e da camada 3D), usando o relógio do áudio. Avaliações: Perfeito (±45 ms), Bom (±90), Ok (±135), Errou;
 círculos ±50/100/150. Vida (estilo FNF), combo, precisão, notas longas (soltar cedo conta como erro), oponente

@@ -6,13 +6,42 @@
  *   audio: {tipo: 'musica' | 'som' | 'nenhum', nome},   // música do Criador de Músicas ou som de um ator/palco
  *   bpm, offset (ms: atraso do áudio em relação às notas), velocidade (1 = normal),
  *   oponente: bool,                                       // setas: tem o lado do oponente?
- *   notas: [{t (ms), pista 0-3 (← ↓ ↑ →), quem: 'eu' | 'op', dur (ms, 0 = nota normal)}],
- *   circulos: [{t (ms), x, y}],                           // posição no palco (-240..240, -180..180)
+ *   notas: [{t (ms), pista 0-3 (← ↓ ↑ →), quem: 'eu' | 'op', dur (ms, 0 = nota normal), item?}],
+ *   circulos: [{t (ms), x, y, item?}],                    // posição no palco (-240..240, -180..180)
+ *   (item: nota especial — 'vida', 'bonus', 'perigo', 'fantasma' ou um nome inventado; sem item = nota comum)
  *   duracao (ms, 0 = automático)
  * }
  */
 
 export const PISTAS = ['esquerda', 'baixo', 'cima', 'direita'];
+
+/**
+ * Itens (notas especiais). Os que não estão aqui são itens personalizados: contam como nota comum
+ * e disparam "quando pegar item [nome]".
+ *  - opcional: deixar passar não conta como erro
+ *  - perigo: não pode apertar (apertar tira vida)
+ */
+export const ITENS = {
+    vida: {icone: '❤', nome: 'Vida', descricao: 'recupera vida ao pegar', cor: '#FF4F7B', opcional: true},
+    bonus: {icone: '⭐', nome: 'Bônus', descricao: '+500 pontos ao pegar', cor: '#FFC928', opcional: true},
+    perigo: {icone: '☠', nome: 'Perigo', descricao: 'não aperte! tira vida', cor: '#3A3A46', perigo: true},
+    fantasma: {icone: '👻', nome: 'Fantasma', descricao: 'some antes de chegar', cor: '#B8B0E8'}
+};
+export const ICONE_PERSONALIZADO = '🏷';
+export const iconeItem = item => (ITENS[item] ? ITENS[item].icone : ICONE_PERSONALIZADO);
+export const limparItem = v => String(v || '').trim()
+    .slice(0, 30);
+
+/** Nomes dos itens personalizados usados nos mapas (para os menus). */
+export const itensPersonalizados = lista => {
+    const r = new Set();
+    for (const m of lista) {
+        for (const x of [...(m.notas || []), ...(m.circulos || [])]) {
+            if (x.item && !ITENS[x.item]) r.add(x.item);
+        }
+    }
+    return Array.from(r).sort();
+};
 export const SIMBOLOS = ['←', '↓', '↑', '→'];
 
 const mapas = new Map();
@@ -51,11 +80,13 @@ export const normalizarMapa = m => {
     r.duracao = Math.max(0, n(m.duracao, 0));
     r.notas = (m.notas || []).filter(x => x && Number.isFinite(Number(x.t))).map(x => ({
         t: Math.max(0, Math.round(n(x.t, 0))), pista: Math.max(0, Math.min(3, Math.round(n(x.pista, 0)))),
-        quem: x.quem === 'op' ? 'op' : 'eu', dur: Math.max(0, Math.round(n(x.dur, 0)))
+        quem: x.quem === 'op' ? 'op' : 'eu', dur: Math.max(0, Math.round(n(x.dur, 0))),
+        ...(limparItem(x.item) ? {item: limparItem(x.item)} : {})
     })).sort((a2, b) => a2.t - b.t);
     r.circulos = (m.circulos || []).filter(x => x && Number.isFinite(Number(x.t))).map(x => ({
         t: Math.max(0, Math.round(n(x.t, 0))), x: Math.max(-240, Math.min(240, n(x.x, 0))),
-        y: Math.max(-180, Math.min(180, n(x.y, 0)))
+        y: Math.max(-180, Math.min(180, n(x.y, 0))),
+        ...(limparItem(x.item) ? {item: limparItem(x.item)} : {})
     })).sort((a2, b) => a2.t - b.t);
     return r;
 };

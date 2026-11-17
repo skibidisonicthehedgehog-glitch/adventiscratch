@@ -7,10 +7,12 @@
  *  - ⏺ Gravar: com a música tocando, as teclas (setas, D F J K) ou cliques viram notas.
  *  - ✨ Gerar: cria notas a partir da melodia de uma música do Criador (ou pelo BPM).
  *  - 📂 Importar: .osu (osu!) e .json (Friday Night Funkin').
+ *  - Itens: notas especiais (❤ vida, ⭐ bônus, ☠ perigo, 👻 fantasma ou um item com nome inventado).
+ *    As notas novas usam o item escolhido; Shift+clique numa nota aplica o item nela.
  */
 import {
     SIMBOLOS, mapaVazio, normalizarMapa, nomesMapas, obterMapa, copiarMapa, gravarMapa, apagarMapa,
-    nomeLivreMapa, fimDasNotas
+    nomeLivreMapa, fimDasNotas, ITENS, iconeItem, itensPersonalizados, limparItem, todosMapas
 } from './dados.js';
 import {RelogioDoMapa, sonsDoProjeto} from './audio.js';
 import {lerArquivoDeMapa} from './importar-mapas.js';
@@ -84,6 +86,8 @@ export const abrirEditorMapas = vm => {
     let gravarEm = 'eu';
     let selecionado = null;
     let arraste = null;
+    let itemAtual = '';
+    const itensNovos = new Set(); // itens personalizados criados agora (ainda sem nota)
     let ultimoTique = -1;
     const gravandoTeclas = {};
 
@@ -114,6 +118,7 @@ export const abrirEditorMapas = vm => {
         <label class="soSetas">no lado do <select class="gravarEm"><option value="eu">jogador</option><option value="op">oponente</option></select></label>
         <label>Encaixe <select class="encaixe"><option value="1">1 batida</option><option value="2">1/2</option>
           <option value="4" selected>1/4</option><option value="8">1/8</option><option value="3">1/3</option><option value="0">livre</option></select></label>
+        <label title="Item das notas novas. Shift+clique numa nota aplica o item nela.">Item <select class="item"></select></label>
         <label>Zoom <input class="zoom" type="range" min="0.06" max="0.8" step="0.01" value="0.25" style="width:110px"></label>
         <button class="gerar" title="Criar notas a partir da música">✨ Gerar</button>
         <button class="importar" title="Importar .osu ou .json do FNF">📂 Importar .osu / .json</button>
@@ -209,6 +214,24 @@ export const abrirEditorMapas = vm => {
         if (s.value !== `${m.audio.tipo}:${m.audio.nome}`) s.value = 'nenhum:';
     };
 
+    const preencherItens = () => {
+        const s = $('.item');
+        const pers = new Set([...itensPersonalizados([m, ...todosMapas()]), ...itensNovos]);
+        if (itemAtual && !ITENS[itemAtual]) pers.add(itemAtual);
+        const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+        s.innerHTML = '<option value="">● comum</option>' +
+            Object.keys(ITENS).map(k => `<option value="${k}" title="${esc(ITENS[k].descricao)}">${ITENS[k].icone} ${
+                ITENS[k].nome}</option>`).join('') +
+            Array.from(pers).sort().map(n => `<option value="${esc(n)}">🏷 ${esc(n)}</option>`).join('') +
+            '<option value="__novo__">＋ novo item…</option>';
+        s.value = itemAtual;
+    };
+    /** Põe (ou tira) o item numa nota/círculo. */
+    const aplicarItem = (alvo, item) => {
+        if (item) alvo.item = item;
+        else delete alvo.item;
+    };
+
     const preencherLista = () => {
         const s = $('.lista');
         s.innerHTML = '';
@@ -222,17 +245,20 @@ export const abrirEditorMapas = vm => {
         $('.adv-mapa-rodape').innerHTML = circulos() ?
             `<span>⭕ Clique no palco para pôr um círculo no marcador amarelo (ele anda sozinho) · arraste para mover</span>
              <span>Na faixa de baixo: clique para mover o marcador, arraste um círculo para mudar o tempo · <kbd>Delete</kbd> apaga</span>
-             <span>⏺ Gravar: clique ou aperte <kbd>Z</kbd>/<kbd>X</kbd> no palco com a música tocando</span>` :
+             <span>⏺ Gravar: clique ou aperte <kbd>Z</kbd>/<kbd>X</kbd> no palco com a música tocando</span>
+             <span>Item: os círculos novos usam o item escolhido · <kbd>Shift</kbd>+clique num círculo aplica o item</span>` :
             `<span>Clique para pôr nota · clique na nota para tirar · arraste para mover · puxe a ponta para nota longa</span>
              <span>⏺ Gravar: aperte as setas ou <kbd>D</kbd> <kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> com a música tocando</span>
-             <span><kbd>Espaço</kbd> toca/pausa · <kbd>Ctrl+Z</kbd> desfaz · clique na régua para mover o marcador</span>`;
+             <span><kbd>Espaço</kbd> toca/pausa · <kbd>Ctrl+Z</kbd> desfaz · clique na régua para mover o marcador</span>
+             <span>Item: as notas novas usam o item escolhido · <kbd>Shift</kbd>+clique numa nota aplica o item</span>`;
     };
 
     const atualizarInfo = () => {
         const qtd = circulos() ? m.circulos.length : m.notas.length;
         const meu = m.notas.filter(n => n.quem === 'eu').length;
-        $('.info').textContent = circulos() ? `${qtd} círculos` :
-            `${qtd} notas (${meu} do jogador, ${qtd - meu} do oponente)`;
+        const comItem = (circulos() ? m.circulos : m.notas).filter(x => x.item).length;
+        $('.info').textContent = (circulos() ? `${qtd} círculos` :
+            `${qtd} notas (${meu} do jogador, ${qtd - meu} do oponente)`) + (comItem ? ` · ${comItem} com item` : '');
     };
 
     const ajustarTamanho = () => {
@@ -261,6 +287,7 @@ export const abrirEditorMapas = vm => {
         $('.adv-mapa-palco').hidden = !circulos();
         preencherAudio();
         preencherLista();
+        preencherItens();
         atualizarRodape();
         atualizarInfo();
         ajustarTamanho();
@@ -306,6 +333,20 @@ export const abrirEditorMapas = vm => {
         o.stop(c.currentTime + 0.05);
     };
 
+    /** Selo com o ícone do item, no canto de uma nota. */
+    function desenharSelo (ctx, item, x, y, tam = 10) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, tam * 0.85, 0, Math.PI * 2);
+        ctx.fillStyle = item === 'perigo' ? '#FF3B3B' : '#fff';
+        ctx.fill();
+        ctx.font = `${Math.round(tam * 1.05)}px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(iconeItem(item), x, y + 1);
+        ctx.restore();
+    }
+
     const desenharLinhaTempo = () => {
         const W = cv.width;
         const H = cv.height;
@@ -346,6 +387,7 @@ export const abrirEditorMapas = vm => {
                 g.textAlign = 'center';
                 g.textBaseline = 'middle';
                 g.fillText(String((i % 8) + 1), x, y + 26);
+                if (c.item) desenharSelo(g, c.item, x + 11, y + 14); // eslint-disable-line no-use-before-define
             });
             g.textAlign = 'left';
             g.fillStyle = '#0D0920';
@@ -381,7 +423,7 @@ export const abrirEditorMapas = vm => {
                 const sel = selecionado === n;
                 g.beginPath();
                 g.arc(x, cy, 13, 0, Math.PI * 2);
-                g.fillStyle = CORES[n.pista];
+                g.fillStyle = n.item === 'perigo' ? ITENS.perigo.cor : CORES[n.pista];
                 g.fill();
                 g.lineWidth = sel ? 3 : 1.5;
                 g.strokeStyle = sel ? '#FFC928' : '#1B1338';
@@ -391,6 +433,7 @@ export const abrirEditorMapas = vm => {
                 g.textAlign = 'center';
                 g.textBaseline = 'middle';
                 g.fillText(SIMBOLOS[n.pista], x, cy + 1);
+                if (n.item) desenharSelo(g, n.item, x + 11, cy - 11); // eslint-disable-line no-use-before-define
             }
             g.textAlign = 'left';
             g.fillStyle = '#0D0920';
@@ -491,6 +534,7 @@ export const abrirEditorMapas = vm => {
             gp.textAlign = 'center';
             gp.textBaseline = 'middle';
             gp.fillText(String((i % 8) + 1), px(c.x), py(c.y));
+            if (c.item) desenharSelo(gp, c.item, px(c.x) + (R * 0.75 * ESCALA_PALCO), py(c.y) - (R * 0.75 * ESCALA_PALCO), 13);
             if (falta > 0) {
                 gp.beginPath();
                 gp.arc(px(c.x), py(c.y), R * (1 + (2.2 * falta / APROX)) * ESCALA_PALCO, 0, Math.PI * 2);
@@ -518,6 +562,13 @@ export const abrirEditorMapas = vm => {
     palco.addEventListener('mousedown', ev => {
         const {x, y} = pos(ev, palco);
         const c = circuloNoPalco(x, y);
+        if (c && ev.shiftKey) {
+            registrar();
+            aplicarItem(c, c.item === itemAtual ? '' : itemAtual);
+            selecionado = c;
+            atualizarInfo();
+            return;
+        }
         if (c) {
             selecionado = c;
             arraste = {tipo: 'moverCirculo', c, moveu: false};
@@ -527,6 +578,7 @@ export const abrirEditorMapas = vm => {
         registrar();
         const t = relogio.estado === 'tocando' ? encaixar(relogio.tempo()) : encaixar(cursor);
         const novo = {t, x: dentro(p.x, -240, 240), y: dentro(p.y, -180, 180)};
+        aplicarItem(novo, itemAtual);
         m.circulos.push(novo);
         m.circulos.sort((a, b) => a.t - b.t);
         selecionado = novo;
@@ -565,6 +617,13 @@ export const abrirEditorMapas = vm => {
         if (x < ESQ) return;
         if (circulos()) {
             const c = circuloNaFaixa(x);
+            if (c && ev.shiftKey) {
+                registrar();
+                aplicarItem(c, c.item === itemAtual ? '' : itemAtual);
+                selecionado = c;
+                atualizarInfo();
+                return;
+            }
             if (c) {
                 selecionado = c;
                 arraste = {tipo: 'tempoCirculo', c, moveu: false};
@@ -575,6 +634,13 @@ export const abrirEditorMapas = vm => {
             return;
         }
         const achou = notaEm(x, y);
+        if (achou && ev.shiftKey) {
+            registrar();
+            aplicarItem(achou.n, achou.n.item === itemAtual ? '' : itemAtual);
+            selecionado = achou.n;
+            atualizarInfo();
+            return;
+        }
         if (achou) {
             selecionado = achou.n;
             arraste = {tipo: achou.ponta ? 'ponta' : 'nota', n: achou.n, x0: x, y0: y, t0: achou.n.t, moveu: false};
@@ -584,6 +650,7 @@ export const abrirEditorMapas = vm => {
         if (!l) return;
         registrar();
         const nova = {t: encaixar(tempoDoX(x)), pista: l.pista, quem: l.quem, dur: 0};
+        aplicarItem(nova, itemAtual);
         m.notas.push(nova);
         selecionado = nova;
         cursor = nova.t;
@@ -689,6 +756,7 @@ export const abrirEditorMapas = vm => {
         if (desceu) {
             registrar();
             const n = {t: encaixar(t), pista, quem: gravarEm, dur: 0};
+            aplicarItem(n, itemAtual);
             m.notas.push(n);
             gravandoTeclas[pista] = {n, t};
             atualizarInfo();
@@ -794,7 +862,7 @@ export const abrirEditorMapas = vm => {
             const r = await audioParaWav(await Promise.all(arquivos.map(f => f.arrayBuffer())));
             const storage = vm.runtime.storage;
             const asset = storage.createAsset(storage.AssetType.Sound, storage.DataFormat.WAV, r.wav, null, true);
-            const palco = vm.runtime.getTargetForStage();
+            const alvoPalco = vm.runtime.getTargetForStage();
             const usados = new Set();
             vm.runtime.targets.forEach(t => t.isOriginal && t.sprite.sounds.forEach(x => usados.add(x.name)));
             const base = (arquivos.length > 1 ? `${m.nome} (música)` : arquivos[0].name.replace(/\.[^.]+$/, '')) ||
@@ -809,7 +877,7 @@ export const abrirEditorMapas = vm => {
                 md5: `${asset.assetId}.wav`,
                 rate: r.taxa,
                 sampleCount: r.amostras
-            }, palco.id);
+            }, alvoPalco.id);
             registrar();
             m.audio = {tipo: 'som', nome};
             relogio.parar();
@@ -848,6 +916,24 @@ export const abrirEditorMapas = vm => {
         relogio.parar();
         atualizarBotoes();
         preencher();
+    };
+    $('.item').onchange = e => {
+        let v = e.target.value;
+        if (v === '__novo__') {
+            // eslint-disable-next-line no-alert
+            v = limparItem(window.prompt('Nome do novo item (ex.: moeda, chave, power-up).\n' +
+                'Ele conta como nota comum e dispara o bloco "quando pegar item".', ''));
+            if (!v) {
+                e.target.value = itemAtual;
+                return;
+            }
+            if (!ITENS[v]) itensNovos.add(v);
+        }
+        itemAtual = v;
+        preencherItens();
+        aviso(itemAtual ? `Item: ${iconeItem(itemAtual)} ${ITENS[itemAtual] ? `${ITENS[itemAtual].nome} — ${
+            ITENS[itemAtual].descricao}` : itemAtual}. As notas novas já vêm com ele; Shift+clique aplica numa nota.` :
+            'Notas novas: comuns. Shift+clique numa nota com item tira o item.');
     };
     $('.bpm').onchange = e => {
         registrar();
