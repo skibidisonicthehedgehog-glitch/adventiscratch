@@ -146,8 +146,8 @@ PERSONAGENS = [
 # Siom, a mascote do Adventiblocks, e mioS (desenhos do Rene, em scripts/personagens/).
 # (nome, tags, [(fantasia, arquivo .svg, centro x, centro y)]); os centros são os que o Rene usou no editor.
 MASCOTES = [
-    ('Siom', ['fantasy', 'people'], [('siom', 'siom.svg', 35.3, 135.7), ('siom clássico', 'siom-classico.svg', 45, 137)]),
-    ('mioS', ['fantasy', 'people'], [('mioS', 'mios.svg', 195, 137)]),
+    ('Siom', ['fantasy', 'people'], [('calm', 'siom.svg', 55.81578, 140.7237), ('Tense', 'siom-tenso.svg', 55.49282, 140.7237)]),
+    ('mioS', ['fantasy', 'people'], [('mioS', 'mios.svg', 156.97325, 137)]),
 ]
 
 
@@ -176,7 +176,7 @@ def main():
     sprites = json.load(open(os.path.join(LIB, 'sprites.json')))
     costumes = json.load(open(os.path.join(LIB, 'costumes.json')))
     nomes = {p[0] for p in personagens}
-    nomes_fantasias = {f[0] for p in personagens for f in p[2]}
+    nomes_fantasias = {f[0] for p in personagens for f in p[2]} | {'siom', 'siom clássico'}  # nomes antigos
     sprites = [s for s in sprites if s['name'] not in nomes]
     costumes = [c for c in costumes if c['name'] not in nomes_fantasias]
     novos_sprites = []
@@ -207,11 +207,18 @@ def main():
     pos = 1 if sprites and sprites[0]['name'] == 'Coruja Sabida' else 0
     sprites[pos:pos] = turma
     sprites[0:0] = siom
-    fs_siom = [c for c in novas_fantasias if c['name'] in ('siom', 'siom clássico', 'mioS')]
+    fs_siom = [c for c in novas_fantasias if c['name'] in ('calm', 'Tense', 'mioS')]
     fs_turma = [c for c in novas_fantasias if c not in fs_siom]
     pos = 1 if costumes and costumes[0]['name'] == 'Coruja Sabida' else 0
     costumes[pos:pos] = fs_turma
     costumes[0:0] = fs_siom
+    # tira os desenhos antigos que nenhum ator ou fantasia usa mais
+    usados = {c['md5ext'] for x in sprites for c in x['costumes']} | {c['md5ext'] for c in costumes}
+    for arquivo in list(lista):
+        if arquivo not in usados:
+            lista.remove(arquivo)
+            if os.path.exists(os.path.join(ATORES, arquivo)):
+                os.remove(os.path.join(ATORES, arquivo))
     for nome_arq, dados in (('sprites.json', sprites), ('costumes.json', costumes),
                             ('adventiblocks-assets.json', lista)):
         with open(os.path.join(LIB, nome_arq), 'w', encoding='utf-8') as f:

@@ -9,22 +9,22 @@
         "variables": {},
         "costumes": [
             {
-                "assetId": "a7ad1a163497b92e2a0d83b6b8a474cb",
-                "name": "siom",
+                "assetId": "2bd04ed033cdabb560157420f696afc3",
+                "name": "calm",
                 "bitmapResolution": 1,
-                "md5ext": "a7ad1a163497b92e2a0d83b6b8a474cb.svg",
+                "md5ext": "2bd04ed033cdabb560157420f696afc3.svg",
                 "dataFormat": "svg",
-                "rotationCenterX": 35.3,
-                "rotationCenterY": 135.7
+                "rotationCenterX": 55.81578,
+                "rotationCenterY": 140.7237
             },
             {
-                "assetId": "695c0d29717cfc449c422718917caa69",
-                "name": "siom clássico",
+                "assetId": "54a20f367ba6510055036e7b67b4e092",
+                "name": "Tense",
                 "bitmapResolution": 1,
-                "md5ext": "695c0d29717cfc449c422718917caa69.svg",
+                "md5ext": "54a20f367ba6510055036e7b67b4e092.svg",
                 "dataFormat": "svg",
-                "rotationCenterX": 45,
-                "rotationCenterY": 137
+                "rotationCenterX": 55.49282,
+                "rotationCenterY": 140.7237
             }
         ],
         "sounds": [],
@@ -46,12 +46,12 @@
         "variables": {},
         "costumes": [
             {
-                "assetId": "b6bd56e1ff1cb13590b80b6d9ffdaa4a",
+                "assetId": "8084212d1dfc9e6c422f13283b025e30",
                 "name": "mioS",
                 "bitmapResolution": 1,
-                "md5ext": "b6bd56e1ff1cb13590b80b6d9ffdaa4a.svg",
+                "md5ext": "8084212d1dfc9e6c422f13283b025e30.svg",
                 "dataFormat": "svg",
-                "rotationCenterX": 195,
+                "rotationCenterX": 156.97325,
                 "rotationCenterY": 137
             }
         ],
