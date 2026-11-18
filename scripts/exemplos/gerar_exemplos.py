@@ -10,6 +10,7 @@ Cada exemplo é montado com uma pequena "linguagem" em Python que cria os blocos
 import hashlib
 import json
 import os
+import sys
 import zipfile
 
 RAIZ = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -42,6 +43,7 @@ class Projeto:
         self.monitores = []
         self.comentarios = {}
         self.extensoes = set()
+        self.locais = {}         # nome do ator -> {nome da variável: [id, valor]} (variáveis "só para este ator")
 
     def novo_id(self, prefixo='b'):
         self.n += 1
@@ -53,7 +55,16 @@ class Projeto:
         self.atual = nome
         return self
 
+    def var_local(self, nome, valor=0):
+        """Variável "só para este ator" (cada clone tem a sua)."""
+        locais = self.locais.setdefault(self.atual, {})
+        if nome not in locais:
+            locais[nome] = [self.novo_id('v'), valor]
+        return locais[nome][0]
+
     def var(self, nome, valor=0, monitor=None):
+        if nome in self.locais.get(self.atual, {}):
+            return self.locais[self.atual][nome][0]
         if nome not in self.variaveis:
             self.variaveis[nome] = [self.novo_id('v'), valor]
         if monitor:
@@ -79,16 +90,9 @@ class Projeto:
         if mutation:
             b['mutation'] = mutation
         self.alvos[self.atual][bid] = b
-        if opcode.startswith('adventiscratch3d_'):
-            self.extensoes.add('adventiscratch3d')
-        elif opcode.startswith('adventiscratch2d_'):
-            self.extensoes.add('adventiscratch2d')
-        elif opcode.startswith('adventiscratchmusica_'):
-            self.extensoes.add('adventiscratchmusica')
-        elif opcode.startswith('adventiscratchritmo_'):
-            self.extensoes.add('adventiscratchritmo')
-        elif opcode.startswith('adventiscratch_'):
-            self.extensoes.add('adventiscratch')
+        prefixo = opcode.split('_')[0]
+        if prefixo.startswith('adventiscratch'):
+            self.extensoes.add(prefixo)  # adventiscratch (Extras), adventiscratch3d, adventiscratchtilemap…
         return bid
 
     def _sombra_num(self, v):
@@ -371,6 +375,60 @@ class Blocos:
     def tamanho_mude(self, n):
         return self.p.b('looks_changesizeby', {'CHANGE': n})
 
+    # extensões novas (Animações, Câmera, Multiplayer, Tilemaps)
+    def ext(self, ext, opcode, campos=None, menus=None, tipos=None, **entradas):
+        """menus: ARG -> (nome_do_menu, valor) para menus que aceitam reporters (viram sombra);
+        campos: ARG -> valor para menus que não aceitam (viram campo do bloco)."""
+        entradas = dict(entradas)
+        tipos = dict(tipos or {})
+        for nome, (menu, valor) in (menus or {}).items():
+            m = Menu(f'{ext}_menu_{menu}', menu, valor)
+            if isinstance(entradas.get(nome), Bloco):
+                tipos[nome] = m
+            else:
+                entradas[nome] = m
+        for nome, valor in entradas.items():
+            if isinstance(valor, str) and nome not in tipos:
+                tipos[nome] = 'txt'
+        return self.p.b(f'{ext}_{opcode}', entradas, campos=dict(campos or {}), tipos=tipos)
+
+    def an(self, opcode, **kw):
+        return self.ext('adventiscratchanim', opcode, **kw)
+
+    def cam(self, opcode, **kw):
+        return self.ext('adventiscratchcamera', opcode, **kw)
+
+    def mp(self, opcode, **kw):
+        return self.ext('adventiscratchmulti', opcode, **kw)
+
+    def tm(self, opcode, **kw):
+        return self.ext('adventiscratchtilemap', opcode, **kw)
+
+    def aleatorio(self, a, b):
+        return self.p.b('operator_random', {'FROM': a, 'TO': b})
+
+    def direcao(self):
+        return self.p.b('motion_direction')
+
+    def x_pos(self):
+        return self.p.b('motion_xposition')
+
+    def mude_para_x(self, n):
+        return self.p.b('motion_setx', {'X': n})
+
+    def mude_para_y(self, n):
+        return self.p.b('motion_sety', {'Y': n})
+
+    def repita(self, n, *corpo):
+        return self.p.b('control_repeat', {'TIMES': n, 'SUBSTACK': Pilha(*corpo)})
+
+    def efeito(self, efeito, valor):
+        return self.p.b('looks_seteffectto', {'VALUE': valor}, campos={'EFFECT': efeito})
+
+    def pare_tudo(self):
+        return self.p.b('control_stop', campos={'STOP_OPTION': 'all'}, mutation={'tagName': 'mutation',
+                                                                                 'children': [], 'hasnext': 'false'})
+
     # 3D
     # menus da extensão 3D que NÃO aceitam reporters: no Scratch eles são campos do próprio bloco
     MENUS_CAMPO_3D = {'eixos', 'mostrar', 'propriedades', 'infoAnimacao', 'luzes', 'tiposFisica', 'eixosVel',
@@ -413,15 +471,18 @@ def fantasia(nome, arquivo_svg, dados, cx, cy):
             'bitmapResolution': 1, 'rotationCenterX': cx, 'rotationCenterY': cy}, (f'{h}.svg', dados)
 
 
-def montar(p, nome_arquivo, atores, musicas=(), mapas=()):
-    """atores: lista de dicts {nome, fantasias:[(nome, dados, cx, cy)], sons:bool, visivel, x, y, tamanho}"""
+def montar(p, nome_arquivo, atores, musicas=(), mapas=(), cenario=None, extras=None):
+    """atores: lista de dicts {nome, fantasias:[(nome, dados, cx, cy)], sons:bool, visivel, x, y, tamanho, estilo}
+    cenario: (dados_svg, cx, cy) no lugar do cenário branco; extras: {caminho dentro de adventiscratch/: dados}"""
     arquivos = {}
     pio = ler(os.path.join(PADRAO, PIO_WAV))
     som_pio = {'name': 'Pio', 'assetId': md5(pio), 'dataFormat': 'wav', 'format': '', 'rate': 48000,
                'sampleCount': 35313, 'md5ext': f'{md5(pio)}.wav'}
     arquivos[f'{md5(pio)}.wav'] = pio
-    cenario = ler(os.path.join(PADRAO, CENARIO_SVG))
-    fc, (n, d) = fantasia('cenário1', CENARIO_SVG, cenario, 240, 180)
+    if cenario:
+        fc, (n, d) = fantasia('cenário1', None, cenario[0], cenario[1], cenario[2])
+    else:
+        fc, (n, d) = fantasia('cenário1', CENARIO_SVG, ler(os.path.join(PADRAO, CENARIO_SVG)), 240, 180)
     arquivos[n] = d
     p.alvo('Palco')
     alvos = [{
@@ -439,11 +500,14 @@ def montar(p, nome_arquivo, atores, musicas=(), mapas=()):
             arquivos[n] = d
             fs.append(f)
         alvos.append({
-            'isStage': False, 'name': a['nome'], 'variables': {}, 'lists': {}, 'broadcasts': {},
+            'isStage': False, 'name': a['nome'],
+            'variables': {vid: [nome, valor] for nome, (vid, valor) in p.locais.get(a['nome'], {}).items()},
+            'lists': {}, 'broadcasts': {},
             'blocks': p.alvos.get(a['nome'], {}), 'comments': p.comentarios.get(a['nome'], {}),
             'currentCostume': 0, 'costumes': fs, 'sounds': [som_pio] if a.get('sons', True) else [],
             'volume': 100, 'layerOrder': i, 'visible': a.get('visivel', True), 'x': a.get('x', 0), 'y': a.get('y', 0),
-            'size': a.get('tamanho', 100), 'direction': 90, 'draggable': False, 'rotationStyle': 'all around',
+            'size': a.get('tamanho', 100), 'direction': 90, 'draggable': False,
+            'rotationStyle': a.get('estilo', 'all around'),
         })
     projeto = {'targets': alvos, 'monitors': p.monitores, 'extensions': sorted(p.extensoes),
                'meta': {'semver': '3.0.0', 'vm': '0.2.0', 'agent': 'Adventiblocks exemplos'}}
@@ -457,6 +521,8 @@ def montar(p, nome_arquivo, atores, musicas=(), mapas=()):
             z.writestr(f'adventiscratch/musicas/{i}.json', json.dumps(m, ensure_ascii=False))
         for i, m in enumerate(mapas):
             z.writestr(f'adventiscratch/mapas/{i}.json', json.dumps(m, ensure_ascii=False))
+        for caminho, dados in (extras or {}).items():
+            z.writestr(f'adventiscratch/{caminho}', dados)
         z.writestr('adventiscratch/manifest.json', json.dumps(
             {'format': 'asp', 'version': 3, 'editor': 'Adventiblocks', 'models': [], 'instrumentos': [],
              'musicas': [{'nome': m['nome'], 'arquivo': f'musicas/{i}.json'} for i, m in enumerate(musicas)],
@@ -984,13 +1050,464 @@ def batalha_da_coruja():
     ], musicas=[musica2], mapas=[mapa])
 
 
+# ------------------------------------------------------------------ 9. Fase de Blocos (Tilemaps + Plataforma 2D + Câmera)
+
+def svg32(conteudo):
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">{conteudo}</svg>').encode()
+
+
+TILES = [  # (nome, svg, tipo, camada sugerida)
+    ('grama', svg32('<rect width="32" height="32" fill="#9A5B2C"/><rect width="32" height="10" fill="#5BBF4A"/>'
+                    '<path d="M0 10 l4 4 l4 -4 l4 4 l4 -4 l4 4 l4 -4 l4 4 l4 -4 V10z" fill="#5BBF4A"/>'
+                    '<circle cx="8" cy="22" r="2" fill="#7A4420"/><circle cx="23" cy="26" r="2" fill="#7A4420"/>'), 'solido'),
+    ('terra', svg32('<rect width="32" height="32" fill="#9A5B2C"/><circle cx="7" cy="8" r="2" fill="#7A4420"/>'
+                    '<circle cx="22" cy="14" r="2.5" fill="#7A4420"/><circle cx="12" cy="25" r="2" fill="#7A4420"/>'), 'solido'),
+    ('tijolo', svg32('<rect width="32" height="32" fill="#C94A3A"/><g stroke="#8E2E22" stroke-width="2">'
+                     '<path d="M0 8H32M0 16H32M0 24H32M16 0V8M8 8V16M24 8V16M16 16V24M8 24V32M24 24V32"/></g>'
+                     '<rect width="32" height="32" fill="none" stroke="#8E2E22" stroke-width="2"/>'), 'solido'),
+    ('madeira', svg32('<rect y="0" width="32" height="10" rx="2" fill="#C98A4B"/><rect y="7" width="32" height="3" fill="#8C5426"/>'
+                      '<circle cx="5" cy="4" r="1.5" fill="#8C5426"/><circle cx="27" cy="4" r="1.5" fill="#8C5426"/>'), 'plataforma'),
+    ('moeda', svg32('<circle cx="16" cy="16" r="10" fill="#FDD835" stroke="#C49A0E" stroke-width="2.5"/>'
+                    '<rect x="14" y="10" width="4" height="12" rx="2" fill="#C49A0E"/>'), 'moeda'),
+    ('espinhos', svg32('<path d="M0 32 L5 14 L10 32 L16 12 L22 32 L27 14 L32 32 Z" fill="#B0BEC5" stroke="#546E7A" stroke-width="1.5"/>'
+                       '<path d="M3.5 19 L5 14 L6.5 19Z M14.5 17 L16 12 L17.5 17Z M25.5 19 L27 14 L28.5 19Z" fill="#E53935"/>'), 'perigo'),
+    ('bandeira', svg32('<rect x="6" y="2" width="3" height="30" fill="#616161"/><path d="M9 3 L28 9 L9 16 Z" fill="#2CB24A"/>'), 'fim'),
+    ('nuvem', svg32('<g fill="#FFFFFF" opacity=".95"><circle cx="10" cy="19" r="7"/><circle cx="18" cy="14" r="9"/>'
+                    '<circle cx="25" cy="20" r="6"/><rect x="8" y="19" width="19" height="7" rx="3"/></g>'), 'nada'),
+    ('arbusto', svg32('<g fill="#3E9C35"><circle cx="9" cy="24" r="8"/><circle cx="18" cy="20" r="10"/><circle cx="25" cy="25" r="7"/></g>'
+                      '<rect x="2" y="28" width="28" height="4" fill="#3E9C35"/>'), 'nada'),
+    ('início', svg32(''), 'inicio'),
+    ('inimigo', svg32('<path d="M4 30 Q4 10 16 10 Q28 10 28 30 Z" fill="#9C4DCC"/><circle cx="12" cy="20" r="3" fill="#fff"/>'
+                      '<circle cx="21" cy="20" r="3" fill="#fff"/><circle cx="12" cy="21" r="1.5"/><circle cx="21" cy="21" r="1.5"/>'), 'inimigo'),
+    ('pedra', svg32('<rect width="32" height="32" rx="4" fill="#90A4AE"/><path d="M4 10 L12 6 M18 24 L28 20" stroke="#607D8B" stroke-width="2"/>'
+                    '<rect width="32" height="32" rx="4" fill="none" stroke="#607D8B" stroke-width="2"/>'), 'solido'),
+]
+GOSMA_SVG = (TILES[10][1].replace(b'width="32" height="32" viewBox="0 0 32 32">',
+                                   b'width="32" height="22" viewBox="0 0 32 22"><g transform="translate(0 -9)">')
+             .replace(b'</svg>', b'</g></svg>'))
+
+
+def montar_fase():
+    """Fase de 80×11 tiles de 32 px (2560×352 px do palco)."""
+    cols, lins = 80, 11
+    principal = [0] * (cols * lins)
+    fundo = [0] * (cols * lins)
+    t = {nome: i + 1 for i, (nome, _, _) in enumerate(TILES)}
+
+    def p(c, l, nome):
+        principal[l * cols + c] = t[nome]
+
+    def f(c, l, nome):
+        fundo[l * cols + c] = t[nome]
+
+    buracos = set(range(18, 21)) | set(range(41, 44)) | set(range(60, 62))
+    for c in range(cols):
+        if c in buracos:
+            continue
+        p(c, 8, 'grama')
+        p(c, 9, 'terra')
+        p(c, 10, 'terra')
+    for c in range(15, 23):
+        p(c, 6, 'madeira')            # ponte sobre o 1º buraco
+    for c in range(38, 46):
+        p(c, 5, 'madeira')            # ponte alta (pulo duplo)
+    for c in range(30, 34):
+        p(c, 5, 'tijolo')
+    for c in (30, 31, 32, 33):
+        p(c, 4, 'moeda')
+    for c, l in ((47, 7), (48, 7), (48, 6), (49, 7), (49, 6), (49, 5)):
+        p(c, l, 'pedra')              # escada de pedras
+    for c in (27, 28, 52, 53, 66):
+        p(c, 7, 'espinhos')
+    for c, l in ((8, 7), (9, 7), (10, 7), (17, 5), (19, 5), (21, 5), (39, 4), (41, 4), (43, 4), (49, 4),
+                 (57, 7), (64, 5), (65, 5), (72, 7), (73, 7)):
+        p(c, l, 'moeda')
+    for c in range(63, 66):
+        p(c, 6, 'madeira')
+    for c in (24, 35, 56, 70):
+        p(c, 7, 'inimigo')
+    p(2, 6, 'início')
+    p(77, 7, 'bandeira')
+    for c, l in ((4, 1), (5, 1), (16, 2), (17, 2), (29, 1), (45, 2), (46, 2), (58, 1), (59, 1), (74, 2)):
+        f(c, l, 'nuvem')
+    for c in (6, 12, 26, 37, 55, 68, 75):
+        f(c, 7, 'arbusto')
+    return {
+        'nome': 'fase 1', 'tamanho': 32, 'colunas': cols, 'linhas': lins, 'x': -240, 'y': 176, 'tileset': 'Tileset',
+        'camadas': {'fundo': fundo, 'principal': principal},
+        'tipos': {str(i + 1): tipo for i, (_, _, tipo) in enumerate(TILES) if tipo != 'nada'},
+    }
+
+
+CEU_SVG = (b'<svg xmlns="http://www.w3.org/2000/svg" width="480" height="360" viewBox="0 0 480 360">'
+           b'<defs><linearGradient id="c" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5DA9E9"/>'
+           b'<stop offset="1" stop-color="#C9EBFF"/></linearGradient></defs><rect width="480" height="360" fill="url(#c)"/></svg>')
+
+
+def fase_de_blocos():
+    p = Projeto()
+    k = Blocos(p)
+    p.var('moedas', 0, {'x': 5, 'y': 5})
+
+    p.alvo('Palco')
+    p.script(20, 20, k.bandeira(),
+             k.tm('mostrar', menus={'MAPA': ('mapas', 'fase 1')}),
+             k.p2('gravidadeMundo', G=-1),
+             k.p2('usarBordas', menus={'MODO': 'paredes'}))
+    p.comentario(360, 20, 'A fase foi desenhada no 🧱 Editor de tilemaps (categoria Tilemaps).\n'
+                          'Os tiles têm tipos: grama, terra e pedra são sólidos, a madeira é plataforma, '
+                          'moeda, espinhos (perigo), bandeira (fim) e o lugar de início.\n'
+                          'Com um tilemap no palco, as bordas da Plataforma 2D são as bordas do mapa: '
+                          '"paredes" deixa a coruja cair nos buracos.', 360, 190)
+
+    p.alvo('Coruja Sabida')
+    reiniciar = lambda: [k.tm('irPara', menus={'TIPO': ('tipos', 'inicio')}, N=1),
+                         k.p2('definirVel', menus={'EIXO': 'x'}, V=0), k.p2('definirVel', menus={'EIXO': 'y'}, V=0)]
+    p.script(20, 20, k.bandeira(), k.tamanho(40), k.mude('moedas', 0, 'num'),
+             k.espere(0.1), *reiniciar(),
+             k.p2('tornar', menus={'TIPO': 'personagem'}),
+             k.p2('pulosNoAr', N=1),
+             k.cam('seguir', menus={'ATOR': ('atoresSeguir', '_eu_')}, S=85),
+             k.cam('limitar', X1=k.tm('borda', campos={'LADO': 'esquerda'}), X2=k.tm('borda', campos={'LADO': 'direita'}),
+                   Y1=k.tm('borda', campos={'LADO': 'baixo'}), Y2=k.tm('borda', campos={'LADO': 'cima'})),
+             k.sempre(
+                 k.p2('controlar', menus={'TECLAS': 'ambos'}, V=5, F=12),
+                 k.se(k.ou(k.tm('tocando', menus={'TIPO': ('tipos', 'perigo')}),
+                           k.ou(k.tocando('Gosma'), k.menor(k.y_pos(), -200))),
+                      k.cam('tremer', F=8, T=0.3), *reiniciar()),
+                 k.se(k.tm('tocando', menus={'TIPO': ('tipos', 'fim')}),
+                      k.diga(k.junte('Você venceu! 🎉 Moedas: ', k.v('moedas')), 2), k.pare_tudo())))
+    p.script(20, 1100, k.tm('quandoTocar', menus={'TIPO': ('tipos', 'moeda')}),
+             k.tm('pegarTocado', menus={'TIPO': ('tipos', 'moeda')}),
+             k.adicione('moedas', 1), k.toque_som('Pio'))
+    p.comentario(520, 20, 'Setas/WASD andam, ↑ W ou Espaço pulam (2× = pulo duplo).\n\n'
+                          '"ir para o tile início" põe a coruja no começo da fase.\n'
+                          'A câmera segue a coruja e fica dentro das bordas do tilemap.\n'
+                          'Tocou em espinhos, numa Gosma ou caiu no buraco? Volta para o início.\n\n'
+                          'Desafio: abra o editor e desenhe mais fase! Os tiles que o jogo apaga (moedas) '
+                          'voltam quando o projeto para.', 360, 260)
+    p.comentario(520, 1100, '"apagar os tiles moeda que este ator toca" tira a moeda do mapa.', 300, 80)
+
+    p.alvo('Gosma')
+    p.script(20, 20, k.bandeira(), k.esconda(), k.espere(0.1),
+             k.tm('virarClones', menus={'TIPO': ('tipos', 'inimigo')}))
+    p.script(20, 300, k.quando_clone(), k.mostre(), k.aponte(90),
+             k.p2('tornar', menus={'TIPO': 'personagem'}),
+             k.sempre(
+                 k.se_senao(k.igual(k.direcao(), 90),
+                            [k.p2('definirVel', menus={'EIXO': 'x'}, V=1.5)],
+                            [k.p2('definirVel', menus={'EIXO': 'x'}, V=-1.5)]),
+                 k.se(k.menor(k.y_pos(), -220), k.apague_clone())))
+    p.script(20, 760, k.p2('quando', menus={'EVENTO': 'parede'}), k.gire(180))
+    p.comentario(420, 20, '"trocar cada tile inimigo por um clone deste ator": onde a fase tem o tile inimigo, '
+                          'nasce uma Gosma que anda e vira ao bater numa parede.', 320, 110)
+
+    tilemaps = {'ativo': 'fase 1', 'mapas': [montar_fase()]}
+    montar(p, 'fase-de-blocos.asp', [
+        {'nome': 'Tileset', 'fantasias': [(nome, svg, 16, 16) for (nome, svg, _) in TILES], 'visivel': False,
+         'sons': False},
+        {'nome': 'Gosma', 'fantasias': [('gosma', GOSMA_SVG, 16, 11)], 'visivel': False, 'estilo': 'left-right'},
+        dict(coruja(x=-160, y=0, tamanho=40), estilo='left-right'),
+    ], cenario=(CEU_SVG, 240, 180), extras={'tilemaps.json': json.dumps(tilemaps)})
+
+
+# ------------------------------------------------------------------ 10. Coruja Exploradora (Câmera)
+
+ARVORE_SVG = (b'<svg xmlns="http://www.w3.org/2000/svg" width="70" height="90" viewBox="0 0 70 90">'
+              b'<rect x="29" y="58" width="12" height="30" rx="3" fill="#8C5426"/>'
+              b'<circle cx="35" cy="34" r="28" fill="#2E8B3A"/><circle cx="20" cy="44" r="16" fill="#38A145"/>'
+              b'<circle cx="50" cy="44" r="16" fill="#38A145"/></svg>')
+PEDRA_SVG = (b'<svg xmlns="http://www.w3.org/2000/svg" width="50" height="34" viewBox="0 0 50 34">'
+             b'<path d="M4 32 Q2 14 16 8 Q30 0 42 10 Q50 20 46 32 Z" fill="#9EA7AD" stroke="#6B757B" stroke-width="2"/></svg>')
+FLOR_SVG = (b'<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">'
+            b'<g fill="#FF8AB4"><circle cx="10" cy="4" r="4"/><circle cx="16" cy="10" r="4"/><circle cx="10" cy="16" r="4"/>'
+            b'<circle cx="4" cy="10" r="4"/></g><circle cx="10" cy="10" r="3.5" fill="#FFD54A"/></svg>')
+GRAMA_SVG = (b'<svg xmlns="http://www.w3.org/2000/svg" width="480" height="360" viewBox="0 0 480 360">'
+             b'<rect width="480" height="360" fill="#7CC36B"/></svg>')
+LIMITE_SVG = (b'<svg xmlns="http://www.w3.org/2000/svg" width="2420" height="1820" viewBox="0 0 2420 1820">'
+              b'<rect x="10" y="10" width="2400" height="1800" fill="none" stroke="#8C5426" stroke-width="20" '
+              b'stroke-dasharray="40 20"/></svg>')
+PLACAR_SVG = (b'<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">'
+              b'<rect width="40" height="40" rx="12" fill="#1B1338" opacity=".75"/>'
+              b'<path d="M20 5 L24.5 15.5 L35.5 15.5 L26.5 22.5 L29.5 34 L20 27 L10.5 34 L13.5 22.5 L4.5 15.5 L15.5 15.5 Z" '
+              b'fill="#FFD54A"/></svg>')
+
+
+def coruja_exploradora():
+    import random
+    rnd = random.Random(7)
+    p = Projeto()
+    k = Blocos(p)
+    p.var('estrelas', 0, {'x': 52, 'y': 12})
+
+    p.alvo('Palco')
+    p.script(20, 20, k.bandeira(), k.cam('cenario', campos={'SIM': 'nao'}))
+    p.comentario(320, 20, 'O mundo é bem maior que o palco: vai de x -1200 a 1200 e de y -900 a 900.\n'
+                          'O cenário verde fica parado ("cenário anda com a câmera: não") e as árvores, pedras '
+                          'e estrelas andam com o mundo.', 340, 130)
+
+    p.alvo('Coruja Sabida')
+    def tecla_anda(tecla, dx, dy, direcao=None):
+        corpo = [k.mude_x(dx)] if dx else [k.mude_y(dy)]
+        if direcao is not None:
+            corpo.insert(0, k.aponte(direcao))
+        return k.se(k.tecla(tecla), *corpo)
+    p.script(20, 20, k.bandeira(), k.va_para(0, 0), k.tamanho(60), k.mude('estrelas', 0, 'num'),
+             k.cam('seguir', menus={'ATOR': ('atoresSeguir', '_eu_')}, S=85),
+             k.cam('limitar', X1=-1200, X2=1200, Y1=-900, Y2=900),
+             k.sempre(
+                 tecla_anda('right arrow', 6, 0, 90), tecla_anda('left arrow', -6, 0, -90),
+                 tecla_anda('up arrow', 0, 6), tecla_anda('down arrow', 0, -6),
+                 k.se(k.maior(k.x_pos(), 1170), k.mude_para_x(1170)),
+                 k.se(k.menor(k.x_pos(), -1170), k.mude_para_x(-1170)),
+                 k.se(k.maior(k.y_pos(), 860), k.mude_para_y(860)),
+                 k.se(k.menor(k.y_pos(), -860), k.mude_para_y(-860))))
+    p.script(20, 900, k.quando_tecla('z'), k.cam('mudarZoom', Z=10))
+    p.script(20, 1040, k.quando_tecla('x'), k.cam('mudarZoom', Z=-10))
+    p.script(300, 900, k.quando_tecla('q'), k.cam('girar', G=-10))
+    p.script(300, 1040, k.quando_tecla('e'), k.cam('girar', G=10))
+    p.script(580, 900, k.quando_tecla('space'), k.cam('tremer', F=10, T=0.4))
+    p.script(580, 1040, k.quando_tecla('r'), k.cam('resetarCamera'),
+             k.cam('seguir', menus={'ATOR': ('atoresSeguir', '_eu_')}, S=85),
+             k.cam('limitar', X1=-1200, X2=1200, Y1=-900, Y2=900))
+    p.script(20, 1200, k.quando_receber('achou todas'),
+             k.diga('Achei todas as estrelas! 🎉', 2), k.cam('definirZoom', Z=60), k.espere(1.5),
+             k.cam('definirZoom', Z=100))
+    p.comentario(560, 20, 'Setas andam. Z/X: zoom. Q/E: girar. Espaço: tremer. R: câmera normal.\n\n'
+                          '"câmera seguir este ator com suavidade 85%": a câmera vai atrás da coruja devagar.\n'
+                          '"limitar a câmera" não deixa mostrar fora do mundo.\n'
+                          'Com a câmera, os atores podem sair da área do palco (por isso a coruja '
+                          'para nas bordas do mundo com os blocos "se").', 380, 230)
+
+    p.alvo('Árvore')
+    arvores = []
+    while len(arvores) < 34:
+        x, y = rnd.randint(-1120, 1120), rnd.randint(-840, 840)
+        if abs(x) < 150 and abs(y) < 150:
+            continue
+        arvores.append((x, y))
+    criar = []
+    for (x, y) in arvores:
+        criar += [k.va_para(x, y), k.clone()]
+    p.script(20, 20, k.bandeira(), k.esconda(), *criar)
+    p.script(20, 200, k.quando_clone(), k.mostre())
+
+    p.alvo('Pedra')
+    criar = []
+    for _ in range(16):
+        criar += [k.va_para(rnd.randint(-1100, 1100), rnd.randint(-820, 820)), k.clone()]
+    p.script(20, 20, k.bandeira(), k.esconda(), *criar)
+    p.script(20, 200, k.quando_clone(), k.mostre())
+
+    p.alvo('Flor')
+    criar = []
+    for _ in range(40):
+        criar += [k.va_para(rnd.randint(-1150, 1150), rnd.randint(-860, 860)), k.clone()]
+    p.script(20, 20, k.bandeira(), k.esconda(), *criar)
+    p.script(20, 200, k.quando_clone(), k.mostre())
+
+    p.alvo('Estrela')
+    criar = []
+    for (x, y) in ((900, 700), (-1000, 650), (1050, -760), (-950, -700), (0, 820), (300, -400)):
+        criar += [k.va_para(x, y), k.clone()]
+    p.script(20, 20, k.bandeira(), k.esconda(), k.tamanho(80), *criar)
+    p.script(20, 360, k.quando_clone(), k.mostre(),
+             k.sempre(k.gire(3),
+                      k.se(k.tocando('Coruja Sabida'),
+                           k.adicione('estrelas', 1), k.toque_som('Pio'),
+                           k.se(k.igual(k.v('estrelas'), 6), k.envie('achou todas')),
+                           k.apague_clone())))
+    p.comentario(420, 20, 'Seis estrelas escondidas pelo mundo. Procure!', 260, 70)
+
+    p.alvo('Limite')
+    p.script(20, 20, k.bandeira(), k.va_para(0, 0))
+
+    p.alvo('Placar')
+    p.script(20, 20, k.bandeira(), k.cam('fixarAtor', campos={'SIM': 'sim'}), k.va_para(-214, 154))
+    p.comentario(320, 20, '"fixar este ator na tela": o placar não anda com a câmera.', 280, 70)
+
+    montar(p, 'coruja-exploradora.asp', [
+        {'nome': 'Limite', 'fantasias': [('limite', LIMITE_SVG, 1210, 910)], 'sons': False},
+        {'nome': 'Flor', 'fantasias': [('flor', FLOR_SVG, 10, 10)], 'visivel': False, 'sons': False},
+        {'nome': 'Pedra', 'fantasias': [('pedra', PEDRA_SVG, 25, 17)], 'visivel': False, 'sons': False},
+        {'nome': 'Árvore', 'fantasias': [('árvore', ARVORE_SVG, 35, 70)], 'visivel': False, 'sons': False},
+        {'nome': 'Estrela', 'fantasias': [('estrela', ESTRELA_SVG, 24, 24)], 'visivel': False},
+        dict(coruja(tamanho=60), estilo='left-right'),
+        {'nome': 'Placar', 'fantasias': [('placar', PLACAR_SVG, 20, 20)], 'x': -214, 'y': 154, 'sons': False},
+    ], cenario=(GRAMA_SVG, 240, 180))
+
+
+# ------------------------------------------------------------------ 11. Coruja Animada (Animações)
+
+def quadro_coruja(rot=0.0, sx=1.0, sy=1.0, dy=0.0):
+    """Fantasia da coruja inclinada/esticada (os quadros das animações), presa pelos pés."""
+    interno = CORUJA.decode('utf-8')
+    if interno.startswith('<?xml'):
+        interno = interno[interno.index('?>') + 2:]
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" width="90" height="100" viewBox="0 0 90 100">'
+            f'<g transform="translate(45 {96 - dy}) rotate({rot}) scale({sx} {sy}) translate(-27 -76)">{interno}</g>'
+            f'</svg>').encode()
+
+
+def quadro_estrela(rot):
+    interno = ESTRELA_SVG.decode('utf-8')
+    if interno.startswith('<?xml'):
+        interno = interno[interno.index('?>') + 2:]
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60">'
+            f'<g transform="translate(30 30) rotate({rot}) translate(-24 -24)">{interno}</g></svg>').encode()
+
+
+def coruja_animada():
+    p = Projeto()
+    k = Blocos(p)
+
+    p.alvo('Palco')
+    p.script(20, 20, k.bandeira(), k.p2('gravidadeMundo', G=-1), k.p2('usarBordas', menus={'MODO': 'chao-paredes'}))
+
+    p.alvo('Coruja Sabida')
+    p.script(20, 20, k.bandeira(), k.va_para(-150, -60), k.tamanho(70), k.aponte(90),
+             k.p2('tornar', menus={'TIPO': 'personagem'}), k.p2('pulosNoAr', N=1),
+             k.sempre(
+                 k.p2('controlar', menus={'TECLAS': 'ambos'}, V=4, F=12),
+                 k.an('definirParametro', menus={'P': ('parametros', 'velocidade')},
+                      V=k.mat('abs', k.p2('velocidade', menus={'EIXO': 'x'}))),
+                 k.an('definirParametro', menus={'P': ('parametros', 'no chão')},
+                      V=k.p2('esta', menus={'ESTADO': 'chao'})),
+                 k.se(k.maior(k.p2('velocidade', menus={'EIXO': 'x'}), 0.1), k.aponte(90)),
+                 k.se(k.menor(k.p2('velocidade', menus={'EIXO': 'x'}), -0.1), k.aponte(-90))))
+    p.script(20, 760, k.an('quandoEntrar', campos={'ESTADO': 'Pulando'}), k.toque_som('Pio'))
+    p.comentario(560, 20, 'As fantasias parado1…4, andar1…6 e pular1…2 viram as animações "parado", "andar" e "pular".\n\n'
+                          'Quem escolhe a animação é o CONTROLADOR (categoria Animações → 🎛 Controlador de animação…):\n'
+                          '• Parado → Andando quando velocidade > 0.5\n'
+                          '• Andando → Parado quando velocidade < 0.5\n'
+                          '• Qualquer estado → Pulando quando "no chão" é falso\n'
+                          '• Pulando → Parado quando "no chão" é verdadeiro\n\n'
+                          'O script só conta para o controlador como a coruja está (os parâmetros).', 400, 270)
+
+    p.alvo('Estrela')
+    p.script(20, 20, k.bandeira(), k.va_para(150, 60), k.tamanho(90),
+             k.an('tocar', menus={'ANIM': ('animacoes', 'estrela')}, campos={'MODO': 'loop'}, QPS=12))
+    p.comentario(320, 20, 'Sem controlador: "tocar animação estrela em loop" e pronto.\n'
+                          'Para usar uma spritesheet (.png + .xml do FNF), use 🖼️ Importar spritesheet.', 320, 110)
+
+    p.alvo('Chão')
+    p.script(20, 20, k.bandeira(), k.va_para(0, -160), k.p2('tornar', menus={'TIPO': 'solido'}))
+    p.alvo('Plataforma')
+    p.script(20, 20, k.bandeira(), k.va_para(60, -60), k.p2('tornar', menus={'TIPO': 'plataforma'}),
+             k.clone(), k.va_para(-60, 20))
+
+    quadros = []
+    for i, sy in enumerate((1.0, 0.98, 0.96, 0.98), start=1):
+        quadros.append((f'parado{i}', quadro_coruja(sx=1 + (1 - sy) * 0.6, sy=sy), 45, 50))
+    for i, (rot, dy) in enumerate(((-8, 0), (-4, 3), (0, 5), (8, 0), (4, 3), (0, 5)), start=1):
+        quadros.append((f'andar{i}', quadro_coruja(rot=rot, dy=dy), 45, 50))
+    quadros.append(('pular1', quadro_coruja(sx=0.9, sy=1.12), 45, 50))
+    quadros.append(('pular2', quadro_coruja(rot=-10, sx=1.05, sy=0.95, dy=4), 45, 50))
+
+    controlador = {'Coruja Sabida': {
+        'parametros': [{'nome': 'velocidade', 'tipo': 'numero', 'valor': 0},
+                       {'nome': 'no chão', 'tipo': 'booleano', 'valor': True}],
+        'estados': [{'id': 'parado', 'nome': 'Parado', 'animacao': 'parado', 'qps': 6, 'loop': True, 'x': 60, 'y': 60},
+                    {'id': 'andando', 'nome': 'Andando', 'animacao': 'andar', 'qps': 12, 'loop': True, 'x': 330, 'y': 60},
+                    {'id': 'pulando', 'nome': 'Pulando', 'animacao': 'pular', 'qps': 6, 'loop': False, 'x': 200, 'y': 240}],
+        'inicial': 'parado',
+        'transicoes': [
+            {'id': 't1', 'de': 'parado', 'para': 'andando', 'condicoes': [{'param': 'velocidade', 'op': '>', 'valor': 0.5}]},
+            {'id': 't2', 'de': 'andando', 'para': 'parado', 'condicoes': [{'param': 'velocidade', 'op': '<', 'valor': 0.5}]},
+            {'id': 't3', 'de': 'qualquer', 'para': 'pulando', 'condicoes': [{'param': 'no chão', 'op': 'falso'}]},
+            {'id': 't4', 'de': 'pulando', 'para': 'parado', 'condicoes': [{'param': 'no chão', 'op': 'verdadeiro'}]}],
+        'qualquer': {'x': 40, 'y': 240}}}
+
+    montar(p, 'coruja-animada.asp', [
+        {'nome': 'Chão', 'fantasias': [('chão', svg_retangulo(480, 40, '#A0521D', '#5BBF4A', 0), 240, 20)],
+         'x': 0, 'y': -160, 'sons': False},
+        {'nome': 'Plataforma', 'fantasias': [('plataforma', svg_retangulo(100, 14, '#E8742C', '#F9B26B'), 50, 7)],
+         'x': 60, 'y': -60, 'sons': False},
+        {'nome': 'Estrela', 'fantasias': [(f'estrela{i + 1}', quadro_estrela(i * 9), 30, 30) for i in range(8)],
+         'x': 150, 'y': 60, 'sons': False},
+        dict(coruja(x=-150, y=-60, tamanho=70), fantasias=quadros, estilo='left-right'),
+    ], extras={'controladores.json': json.dumps(controlador, ensure_ascii=False)})
+
+
+# ------------------------------------------------------------------ 12. Sala dos Amigos (Multiplayer)
+
+def sala_dos_amigos():
+    p = Projeto()
+    k = Blocos(p)
+    p.var('i', 0)
+    p.var('novo jogador', '')
+
+    p.alvo('Palco')
+    p.comentario(20, 20, 'MULTIPLAYER (só para membros)\n\n'
+                         'Precisa do servidor do Adventiblocks rodando e de uma conta: entre na sua conta '
+                         '(botão Entrar, em cima) antes de clicar na bandeira.\n'
+                         'Para testar sozinho: abra o editor em DUAS janelas (uma normal e uma anônima), '
+                         'entre com duas contas diferentes e clique na bandeira nas duas.\n\n'
+                         'No GitHub Pages (versão de teste, sem servidor) o multiplayer não funciona.', 420, 230)
+
+    p.alvo('Coruja Sabida')
+    p.script(20, 20, k.bandeira(), k.va_para(k.aleatorio(-180, 180), k.aleatorio(-120, 100)), k.tamanho(55),
+             k.diga('Entrando na sala…'),
+             k.mp('conectar', SALA='amigos', MAX=8),
+             k.se_senao(k.mp('naSala'),
+                        [k.diga(k.junte('Olá, ', k.junte(k.mp('meuNome'), '! Setas andam, 1 2 3 mandam emojis.')), 3),
+                         k.mp('compartilharPosicao', campos={'SIM': 'sim'})],
+                        [k.diga(k.junte('⚠ ', k.mp('ultimoErro')))]),
+             k.sempre(
+                 k.se(k.tecla('right arrow'), k.mude_x(5)), k.se(k.tecla('left arrow'), k.mude_x(-5)),
+                 k.se(k.tecla('up arrow'), k.mude_y(5)), k.se(k.tecla('down arrow'), k.mude_y(-5))))
+    for i, (tecla, emoji) in enumerate((('1', '👋'), ('2', '😂'), ('3', '❤️'))):
+        p.script(20 + i * 300, 900, k.quando_tecla(tecla),
+                 k.mp('enviar', MSG='emoji', DADO=emoji), k.diga(emoji, 1))
+    p.comentario(560, 20, '"compartilhar a posição deste ator" manda x, y, direção e fantasia para os outros '
+                          'jogadores (até 20 vezes por segundo).\n"enviar mensagem" manda um aviso com um dado.', 340, 120)
+
+    p.alvo('Amigo')
+    p.var_local('jogador', '')
+    criar = [k.mude('novo jogador', k.mp('jogadorEvento')), k.clone()]
+    p.script(20, 20, k.bandeira(), k.esconda())
+    p.script(20, 160, k.mp('quandoEntrar'), *criar)
+    p.script(20, 340, k.mp('quandoConectar'), k.mude('i', 0, 'num'),
+             k.repita(k.mp('quantos'),
+                      k.adicione('i', 1),
+                      k.se(k.nao(k.igual(k.mp('jogadorN', N=k.v('i')), k.mp('meuId'))),
+                           k.mude('novo jogador', k.mp('jogadorN', N=k.v('i'))), k.clone())))
+    p.script(20, 760, k.quando_clone(), k.mude('jogador', k.v('novo jogador')), k.efeito('COLOR', 60), k.mostre(),
+             k.diga(k.mp('nomeJogador', ID=k.v('jogador')), 2),
+             k.sempre(
+                 k.mp('imitar', ID=k.v('jogador')),
+                 k.se(k.nao(k.mp('jogadorExiste', ID=k.v('jogador'))), k.apague_clone())))
+    p.script(560, 760, k.mp('quandoReceber', MSG='emoji'),
+             k.se(k.igual(k.mp('quemEnviou'), k.v('jogador')), k.diga(k.mp('dadoRecebido'), 1.5)))
+    p.comentario(560, 20, 'Cada jogador que entra vira um clone deste ator, com a variável "jogador" '
+                          '(só para este ator) guardando o id dele.\n'
+                          '"ficar igual ao ator do jogador" copia a posição que ele compartilha.\n'
+                          'Quando ele sai, o clone some.', 360, 150)
+
+    montar(p, 'sala-dos-amigos.asp', [
+        {'nome': 'Amigo', 'fantasias': [('amigo', CORUJA, 27, 38)], 'visivel': False, 'tamanho': 55},
+        coruja(tamanho=55),
+    ], cenario=(GRAMA_SVG, 240, 180))
+
+
+EXEMPLOS = {
+    'coruja-coletora': lambda: coruja_coletora(),
+    'calculadora-coruja': lambda: calculadora(),
+    'mundo-3d': lambda: mundo_3d(),
+    'visualizador-modelos': lambda: visualizador(),
+    'corrida-3d': lambda: corrida_3d(),
+    'coruja-saltitante': lambda: coruja_saltitante(),
+    'show-da-coruja': lambda: show_da_coruja(),
+    'batalha-da-coruja': lambda: batalha_da_coruja(),
+    'fase-de-blocos': lambda: fase_de_blocos(),
+    'coruja-exploradora': lambda: coruja_exploradora(),
+    'coruja-animada': lambda: coruja_animada(),
+    'sala-dos-amigos': lambda: sala_dos_amigos(),
+}
+
 if __name__ == '__main__':
+    # sem argumentos gera todos; com nomes, só esses (ex.: python gerar_exemplos.py fase-de-blocos)
+    escolhidos = sys.argv[1:] or list(EXEMPLOS)
     print('Gerando exemplos em', SAIDA)
-    coruja_coletora()
-    calculadora()
-    mundo_3d()
-    visualizador()
-    corrida_3d()
-    coruja_saltitante()
-    show_da_coruja()
-    batalha_da_coruja()
+    for nome in escolhidos:
+        EXEMPLOS[nome]()

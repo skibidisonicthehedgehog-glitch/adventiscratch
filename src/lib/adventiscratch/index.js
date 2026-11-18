@@ -14,6 +14,7 @@ import {AdventiscratchCamera} from './camera-extension.js';
 import {AdventiscratchMultiplayer} from './multiplayer-extension.js';
 import {AdventiscratchTilemap} from './tilemap/tilemap-extension.js';
 import {renomearTileset} from './tilemap/dados.js';
+import {comBotaoDeExemplo} from './exemplos-prontos.js';
 import {patchVmForAsp} from './asp-format.js';
 import {iniciarContas} from './conta/conta.js';
 import {aoCarregarProjeto, iniciarNuvem} from './conta/nuvem.js';
@@ -33,6 +34,14 @@ const EXTENSIONS = {
     adventiscratchmulti: AdventiscratchMultiplayer,
     adventiscratchtilemap: AdventiscratchTilemap
 };
+
+// cada extensão ganha o botão "📦 Exemplo pronto" no topo da categoria
+Object.entries(EXTENSIONS).forEach(([id, Classe]) => {
+    const getInfo = Classe.prototype.getInfo;
+    Classe.prototype.getInfo = function () {
+        return comBotaoDeExemplo(id, getInfo.call(this));
+    };
+});
 
 /**
  * @param {VirtualMachine} vm VM do Scratch

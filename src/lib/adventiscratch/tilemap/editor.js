@@ -16,6 +16,7 @@ import {
     todosTilemaps
 } from './dados.js';
 import {ehCamadaDeColisao, ehCamadaDeFundo, lerMapaTiled, nomeBase} from './importar-tiled.js';
+import {TILESET_PRONTO} from './tileset-pronto.js';
 
 const CORES_TIPO = {
     solido: '#E53935', plataforma: '#FB8C00', perigo: '#C2185B', moeda: '#FDD835', escada: '#8D6E63',
@@ -186,6 +187,7 @@ export const abrirEditorTilemap = vm => {
     <p>As fantasias deste ator são os tiles (a 1ª fantasia é o tile 1).</p>
     <select class="tileset"></select>
     <button class="criarTileset">🖼 Criar tileset de uma imagem…</button>
+    <button class="tilesetPronto" title="Grama, terra, tijolo, madeira, moeda, espinhos, bandeira, nuvem, arbusto, início, inimigo e pedra">🎁 Usar tileset pronto</button>
     <input type="file" class="arqTileset" hidden accept="image/*">
     <div class="paleta"></div>
     <h3 class="tituloTile">Tile</h3>
@@ -1009,6 +1011,52 @@ export const abrirEditorTilemap = vm => {
             }
             jan.remove();
         };
+    };
+
+    // ---------------------------------------------------------------- tileset pronto
+    $('.tilesetPronto').onclick = async () => {
+        const botao = $('.tilesetPronto');
+        botao.disabled = true;
+        try {
+            const tiles = [];
+            for (const t of TILESET_PRONTO) {
+                const img = await carregarImagem(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(t.svg)}`);
+                const c = document.createElement('canvas');
+                c.width = 64;
+                c.height = 64;
+                if (img) c.getContext('2d').drawImage(img, 0, 0, 64, 64);
+                tiles.push({canvas: c, nome: t.nome});
+            }
+            const nome = await criarAtorTileset(vm, 'Tileset pronto', tiles);
+            const tipos = {};
+            TILESET_PRONTO.forEach((t, i) => {
+                if (t.tipo !== 'nada') tipos[i + 1] = t.tipo;
+            });
+            if (!est.mapa) {
+                const m = tilemapVazio(nomeLivre('mapa'), 30, 11, 32);
+                m.y = 176;
+                // chão de grama e terra, e o lugar de início
+                for (let c = 0; c < m.colunas; c++) {
+                    m.camadas.principal[(8 * m.colunas) + c] = 1;
+                    m.camadas.principal[(9 * m.colunas) + c] = 2;
+                    m.camadas.principal[(10 * m.colunas) + c] = 2;
+                }
+                m.camadas.principal[(6 * m.colunas) + 2] = 10;
+                gravarTilemap(m, null, true);
+                if (!nomeAtivo()) definirAtivo(m.nome, true);
+                est.mapa = m;
+            }
+            est.mapa.tileset = nome;
+            est.mapa.tamanho = 32;
+            est.mapa.tipos = tipos;
+            salvar();
+            abrirMapa(est.mapa);
+            aviso(`Tileset "${nome}" pronto, com os tipos já marcados. Escolha um tile e desenhe!`);
+        } catch (e) {
+            aviso(`Não deu para criar o tileset: ${e.message}`);
+        } finally {
+            botao.disabled = false;
+        }
     };
 
     // ---------------------------------------------------------------- importar do Tiled
