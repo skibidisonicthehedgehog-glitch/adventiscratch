@@ -1,5 +1,70 @@
 [
     {
+        "name": "Siom",
+        "tags": [
+            "fantasy",
+            "people"
+        ],
+        "isStage": false,
+        "variables": {},
+        "costumes": [
+            {
+                "assetId": "a7ad1a163497b92e2a0d83b6b8a474cb",
+                "name": "siom",
+                "bitmapResolution": 1,
+                "md5ext": "a7ad1a163497b92e2a0d83b6b8a474cb.svg",
+                "dataFormat": "svg",
+                "rotationCenterX": 35.3,
+                "rotationCenterY": 135.7
+            },
+            {
+                "assetId": "695c0d29717cfc449c422718917caa69",
+                "name": "siom clássico",
+                "bitmapResolution": 1,
+                "md5ext": "695c0d29717cfc449c422718917caa69.svg",
+                "dataFormat": "svg",
+                "rotationCenterX": 45,
+                "rotationCenterY": 137
+            }
+        ],
+        "sounds": [],
+        "blocks": {},
+        "currentCostume": 0,
+        "x": 0,
+        "y": 0,
+        "size": 45,
+        "rotationStyle": "all around",
+        "visible": true
+    },
+    {
+        "name": "mioS",
+        "tags": [
+            "fantasy",
+            "people"
+        ],
+        "isStage": false,
+        "variables": {},
+        "costumes": [
+            {
+                "assetId": "b6bd56e1ff1cb13590b80b6d9ffdaa4a",
+                "name": "mioS",
+                "bitmapResolution": 1,
+                "md5ext": "b6bd56e1ff1cb13590b80b6d9ffdaa4a.svg",
+                "dataFormat": "svg",
+                "rotationCenterX": 195,
+                "rotationCenterY": 137
+            }
+        ],
+        "sounds": [],
+        "blocks": {},
+        "currentCostume": 0,
+        "x": 0,
+        "y": 0,
+        "size": 45,
+        "rotationStyle": "all around",
+        "visible": true
+    },
+    {
         "name": "Coruja Sabida",
         "tags": [
             "animals"
@@ -61,8 +126,6 @@
         "x": 0,
         "y": 0,
         "size": 100,
-        "direction": 90,
-        "draggable": false,
         "rotationStyle": "all around",
         "visible": true
     },
@@ -99,8 +162,6 @@
         "x": 0,
         "y": 0,
         "size": 100,
-        "direction": 90,
-        "draggable": false,
         "rotationStyle": "all around",
         "visible": true
     },
@@ -138,8 +199,6 @@
         "x": 0,
         "y": 0,
         "size": 100,
-        "direction": 90,
-        "draggable": false,
         "rotationStyle": "all around",
         "visible": true
     },
@@ -176,8 +235,6 @@
         "x": 0,
         "y": 0,
         "size": 100,
-        "direction": 90,
-        "draggable": false,
         "rotationStyle": "all around",
         "visible": true
     },
@@ -214,8 +271,6 @@
         "x": 0,
         "y": 0,
         "size": 100,
-        "direction": 90,
-        "draggable": false,
         "rotationStyle": "all around",
         "visible": true
     },
@@ -253,8 +308,6 @@
         "x": 0,
         "y": 0,
         "size": 100,
-        "direction": 90,
-        "draggable": false,
         "rotationStyle": "all around",
         "visible": true
     },

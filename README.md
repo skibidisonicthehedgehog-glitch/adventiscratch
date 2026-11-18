@@ -246,10 +246,9 @@ de vida (e "ganhando" acima de 80%), e o do jogador fica espelhado, como no FNF.
   "Scratch Link" continua com esse nome porque é o aplicativo que precisa ser instalado para micro:bit e LEGO.
 - O gato, Gobo, Pico, Nano, Giga e Tera saíram das bibliotecas, e os tutoriais em cartões do Scratch (com as
   imagens e vídeos deles) foram removidos: o botão "Tutoriais" abre `tutoriais.html`.
-- A turma do Adventiblocks fica no começo da biblioteca de atores e de fantasias: Coruja Sabida, Bia Capivara,
-  Theo Tartaruga, Lumi Vagalume, Pipo Pinguim, Tito Tucano e Nina Robô, cada um com duas fantasias. Eles são
-  gerados por `scripts/personagens/gerar_personagens.py`. Para adicionar a mascote **Siom**, ponha o arquivo em
-  `scripts/personagens/siom.svg` (e `siom-2.svg`… para mais fantasias) e rode o script de novo.
+- A mascote **Siom** e o **mioS** abrem a biblioteca de atores, seguidos da turma: Coruja Sabida, Bia Capivara,
+  Theo Tartaruga, Lumi Vagalume, Pipo Pinguim, Tito Tucano e Nina Robô. Tudo é gerado por
+  `scripts/personagens/gerar_personagens.py` (os desenhos da Siom e do mioS ficam em `scripts/personagens/*.svg`).
 
 ## Extensão Tilemaps
 

@@ -6,8 +6,8 @@ Personagens originais do Adventiblocks (a turma da Coruja Sabida), no lugar dos 
 
 Gera os .svg em static/adventiscratch/atores/ (o nome é o md5 do arquivo, como no Scratch) e coloca os
 atores no começo da biblioteca de atores (sprites.json) e as fantasias na biblioteca de fantasias
-(costumes.json). Para pôr outro personagem (ex.: a mascote Siom), acrescente na lista PERSONAGENS:
-um .svg pode vir de um arquivo com ('arquivo', 'caminho/do/arquivo.svg').
+(costumes.json). A mascote Siom e o mioS vêm dos .svg desta pasta (lista MASCOTES); os outros são
+desenhados aqui mesmo (lista PERSONAGENS).
 """
 import hashlib
 import json
@@ -143,9 +143,12 @@ PERSONAGENS = [
     ('Nina Robô', ['people', 'fantasy'], [('nina-a', robo('a'), 45, 54), ('nina-b', robo('b'), 45, 54)]),
 ]
 
-# Siom, a mascote: quando o .svg chegar, ponha o arquivo em scripts/personagens/siom.svg (e siom-*.svg para
-# mais fantasias) e rode este script de novo.
-SIOM = os.path.join(os.path.dirname(__file__), 'siom.svg')
+# Siom, a mascote do Adventiblocks, e mioS (desenhos do Rene, em scripts/personagens/).
+# (nome, tags, [(fantasia, arquivo .svg, centro x, centro y)]); os centros são os que o Rene usou no editor.
+MASCOTES = [
+    ('Siom', ['fantasy', 'people'], [('siom', 'siom.svg', 35.3, 135.7), ('siom clássico', 'siom-classico.svg', 45, 137)]),
+    ('mioS', ['fantasy', 'people'], [('mioS', 'mios.svg', 195, 137)]),
+]
 
 
 def tamanho_svg(dados):
@@ -158,16 +161,14 @@ def tamanho_svg(dados):
 
 
 def main():
-    personagens = list(PERSONAGENS)
-    if os.path.exists(SIOM):
-        fantasias = []
-        base = os.path.dirname(SIOM)
-        arquivos = ['siom.svg'] + sorted(f for f in os.listdir(base) if re.match(r'siom-.+\.svg$', f))
-        for i, f in enumerate(arquivos):
-            dados = open(os.path.join(base, f), 'rb').read()
-            w, h = tamanho_svg(dados)
-            fantasias.append((f'siom-{chr(97 + i)}', dados, round(w / 2), round(h / 2)))
-        personagens.insert(0, ('Siom', ['fantasy', 'people'], fantasias))
+    personagens = []
+    base = os.path.dirname(__file__)
+    for nome, tags, fantasias in MASCOTES:
+        fs = [(f, open(os.path.join(base, arq), 'rb').read(), cx, cy) for f, arq, cx, cy in fantasias
+              if os.path.exists(os.path.join(base, arq))]
+        if fs:
+            personagens.append((nome, tags, fs))
+    personagens += PERSONAGENS
 
     os.makedirs(ATORES, exist_ok=True)
     caminho_lista = os.path.join(LIB, 'adventiblocks-assets.json')
@@ -197,13 +198,20 @@ def main():
             novas_fantasias.append(dict(c, tags=tags))
         novos_sprites.append({
             'name': nome, 'tags': tags, 'isStage': False, 'variables': {}, 'costumes': fs, 'sounds': [],
-            'blocks': {}, 'currentCostume': 0, 'x': 0, 'y': 0, 'size': 100, 'direction': 90, 'draggable': False,
+            'blocks': {}, 'currentCostume': 0, 'x': 0, 'y': 0,
+            'size': 45 if nome in ('Siom', 'mioS') else 100,  # os desenhos da Siom são grandes (quase 300 px) 'direction': 90, 'draggable': False,
             'rotationStyle': 'all around', 'visible': True})
-    # a turma fica logo depois da Coruja Sabida
+    # Siom primeiro, depois a Coruja Sabida e o resto da turma
+    siom = [x for x in novos_sprites if x['name'] in ('Siom', 'mioS')]
+    turma = [x for x in novos_sprites if x not in siom]
     pos = 1 if sprites and sprites[0]['name'] == 'Coruja Sabida' else 0
-    sprites[pos:pos] = novos_sprites
+    sprites[pos:pos] = turma
+    sprites[0:0] = siom
+    fs_siom = [c for c in novas_fantasias if c['name'] in ('siom', 'siom clássico', 'mioS')]
+    fs_turma = [c for c in novas_fantasias if c not in fs_siom]
     pos = 1 if costumes and costumes[0]['name'] == 'Coruja Sabida' else 0
-    costumes[pos:pos] = novas_fantasias
+    costumes[pos:pos] = fs_turma
+    costumes[0:0] = fs_siom
     for nome_arq, dados in (('sprites.json', sprites), ('costumes.json', costumes),
                             ('adventiblocks-assets.json', lista)):
         with open(os.path.join(LIB, nome_arq), 'w', encoding='utf-8') as f:

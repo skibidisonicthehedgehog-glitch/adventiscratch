@@ -1,5 +1,44 @@
 [
     {
+        "assetId": "a7ad1a163497b92e2a0d83b6b8a474cb",
+        "name": "siom",
+        "bitmapResolution": 1,
+        "md5ext": "a7ad1a163497b92e2a0d83b6b8a474cb.svg",
+        "dataFormat": "svg",
+        "rotationCenterX": 35.3,
+        "rotationCenterY": 135.7,
+        "tags": [
+            "fantasy",
+            "people"
+        ]
+    },
+    {
+        "assetId": "695c0d29717cfc449c422718917caa69",
+        "name": "siom clássico",
+        "bitmapResolution": 1,
+        "md5ext": "695c0d29717cfc449c422718917caa69.svg",
+        "dataFormat": "svg",
+        "rotationCenterX": 45,
+        "rotationCenterY": 137,
+        "tags": [
+            "fantasy",
+            "people"
+        ]
+    },
+    {
+        "assetId": "b6bd56e1ff1cb13590b80b6d9ffdaa4a",
+        "name": "mioS",
+        "bitmapResolution": 1,
+        "md5ext": "b6bd56e1ff1cb13590b80b6d9ffdaa4a.svg",
+        "dataFormat": "svg",
+        "rotationCenterX": 195,
+        "rotationCenterY": 137,
+        "tags": [
+            "fantasy",
+            "people"
+        ]
+    },
+    {
         "assetId": "f5f2cfb7a7c2b68338e584543145b416",
         "name": "Coruja Sabida",
         "bitmapResolution": 1,
