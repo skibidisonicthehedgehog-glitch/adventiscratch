@@ -13,6 +13,7 @@
 export const PASSOS_POR_BATIDA = 4;
 export const BATIDAS_POR_COMPASSO = 4;
 export const PASSOS_POR_COMPASSO = PASSOS_POR_BATIDA * BATIDAS_POR_COMPASSO;
+export const MAX_COMPASSOS = 64;
 export const LINHAS_BATERIA = ['bumbo', 'caixa', 'chimbal', 'palmas', 'tom', 'prato'];
 export const NOMES_BATERIA = {
     bumbo: 'Bumbo', caixa: 'Caixa', chimbal: 'Chimbal', palmas: 'Palmas', tom: 'Tom', prato: 'Prato'
@@ -50,7 +51,7 @@ export const normalizar = m => {
     const base = musicaVazia(String(m.nome || 'música'));
     const r = Object.assign(base, {
         bpm: Math.max(40, Math.min(240, Number(m.bpm) || 110)),
-        compassos: Math.max(1, Math.min(32, Math.round(Number(m.compassos) || 4)))
+        compassos: Math.max(1, Math.min(MAX_COMPASSOS, Math.round(Number(m.compassos) || 4)))
     });
     if (Array.isArray(m.faixas)) {
         r.faixas = base.faixas.map(f => {

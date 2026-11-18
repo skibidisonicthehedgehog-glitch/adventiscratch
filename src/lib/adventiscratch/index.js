@@ -13,6 +13,9 @@ import {AdventiscratchRitmo, ligarRitmoNaVm} from './ritmo/ritmo-extension.js';
 import {AdventiscratchCamera} from './camera-extension.js';
 import {AdventiscratchMultiplayer} from './multiplayer-extension.js';
 import {AdventiscratchTilemap} from './tilemap/tilemap-extension.js';
+import {AdventiscratchDataWin} from './datawin/datawin-extension.js';
+import {ouvirPalavraSecreta} from './datawin/segredo.js';
+import bibliotecaDeExtensoes from '../libraries/extensions/index.jsx';
 import {renomearTileset} from './tilemap/dados.js';
 import {comBotaoDeExemplo} from './exemplos-prontos.js';
 import {patchVmForAsp} from './asp-format.js';
@@ -32,7 +35,8 @@ const EXTENSIONS = {
     adventiscratchritmo: AdventiscratchRitmo,
     adventiscratchcamera: AdventiscratchCamera,
     adventiscratchmulti: AdventiscratchMultiplayer,
-    adventiscratchtilemap: AdventiscratchTilemap
+    adventiscratchtilemap: AdventiscratchTilemap,
+    adventiscratchdatawin: AdventiscratchDataWin
 };
 
 // cada extensão ganha o botão "📦 Exemplo pronto" no topo da categoria
@@ -99,6 +103,8 @@ const setupAdventiscratch = vm => {
     };
     // avisos rápidos pedidos por janelas que não dependem da Central (ex.: importar spritesheet)
     window.addEventListener('adventiscratch-aviso', e => toast(e.detail && e.detail.texto, 4500));
+    // extensão secreta: digitar a palavra secreta libera o GameMaker (data.win)
+    ouvirPalavraSecreta(vm, bibliotecaDeExtensoes, texto => toast(texto, 6000));
 };
 
 export default setupAdventiscratch;

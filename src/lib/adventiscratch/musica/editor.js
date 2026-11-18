@@ -10,11 +10,12 @@
  * O "colar" põe as notas no marcador amarelo (clique na régua ou num lugar vazio da grade para mudar).
  */
 import {
-    PASSOS_POR_BATIDA, PASSOS_POR_COMPASSO, LINHAS_BATERIA, NOMES_BATERIA,
+    PASSOS_POR_BATIDA, PASSOS_POR_COMPASSO, LINHAS_BATERIA, NOMES_BATERIA, MAX_COMPASSOS,
     nomesMusicas, obterMusica, copiarMusica, gravarMusica, apagarMusica, nomeLivre, totalPassos
 } from './dados.js';
 import {INSTRUMENTOS, Tocador, tocarNota, tocarBateria, nomeNota} from './sintetizador.js';
 import {MODELOS} from './modelos.js';
+import {lerMidi, midiParaMusica} from '../midi.js';
 import {instrumentosExtras, aoMudarInstrumentosExtras} from './soundfont-store.js';
 
 const NOTA_MAX = 96; // Dó7
@@ -118,6 +119,8 @@ export const abrirCriadorDeMusicas = (vm, nomeInicial) => {
         <button class="repetir ativo" title="Repetir">🔁</button>
         <span class="esp"></span>
         <label>Começar de <select class="modelo" style="max-width:190px"></select></label>
+        <button class="importarMidi" title="Transformar um arquivo MIDI (.mid) numa música">📂 Importar MIDI</button>
+        <input type="file" class="arquivoMidi" accept=".mid,.midi,.rmi,.kar,audio/midi" hidden>
         <button class="perigo apagar">🗑 Apagar música</button>
         <button class="salvar">✓ Salvar no projeto</button>
         <button class="fechar">✕ Fechar</button>
@@ -230,7 +233,10 @@ export const abrirCriadorDeMusicas = (vm, nomeInicial) => {
         atualizarFerramentas();
     };
     const selecionados = () => {
-        if (ehBateria()) return Array.from(sel).map(lerChave).filter(({l, p}) => temBatida(l, p));
+        if (ehBateria()) {
+            return Array.from(sel).map(lerChave)
+                .filter(({l, p}) => temBatida(l, p));
+        }
         const f = faixaAtual();
         return f.notas.filter(n => sel.has(n));
     };
@@ -268,10 +274,12 @@ export const abrirCriadorDeMusicas = (vm, nomeInicial) => {
         }
         const ini = Math.min(...itens.map(i => i.p));
         if (ehBateria()) {
-            areaTransferencia = {tipo: 'bateria', itens: itens.map(({l, p}) => ({l, p: p - ini})),
+            areaTransferencia = {tipo: 'bateria',
+                itens: itens.map(({l, p}) => ({l, p: p - ini})),
                 largura: Math.max(...itens.map(i => i.p)) - ini + 1};
         } else {
-            areaTransferencia = {tipo: 'notas', itens: itens.map(n => ({p: n.p - ini, n: n.n, d: n.d})),
+            areaTransferencia = {tipo: 'notas',
+                itens: itens.map(n => ({p: n.p - ini, n: n.n, d: n.d})),
                 largura: Math.max(...itens.map(n => n.p + n.d)) - ini};
         }
         atualizarFerramentas();
@@ -384,7 +392,12 @@ export const abrirCriadorDeMusicas = (vm, nomeInicial) => {
     };
 
     const ACOES = {
-        desfazer, refazer, copiar, recortar, colar, duplicar,
+        desfazer,
+        refazer,
+        copiar,
+        recortar,
+        colar,
+        duplicar,
         apagar: apagarSelecao,
         subir: () => moverSelecao(0, 1),
         descer: () => moverSelecao(0, -1),
@@ -447,8 +460,8 @@ export const abrirCriadorDeMusicas = (vm, nomeInicial) => {
         let html = INSTRUMENTOS.map(i => `<option value="${i.id}"${i.id === atual ? ' selected' : ''}>${i.nome}</option>`)
             .join('');
         if (extras.length) {
-            html += '<optgroup label="SoundFont (.sf2)">' + extras.map(i =>
-                `<option value="${i.id}"${i.id === atual ? ' selected' : ''}>🎚️ ${i.nome}</option>`).join('') + '</optgroup>';
+            html += `<optgroup label="SoundFont (.sf2)">${extras.map(i =>
+                `<option value="${i.id}"${i.id === atual ? ' selected' : ''}>🎚️ ${i.nome}</option>`).join('')}</optgroup>`;
         }
         html += '<option value="__importar__">📂 Importar instrumento .sf2…</option>';
         html += '<option value="__loja__">🛒 Loja de Instrumentos Virtuais…</option>';
@@ -538,10 +551,10 @@ export const abrirCriadorDeMusicas = (vm, nomeInicial) => {
         $('.bpm').value = m.bpm;
         const sc = $('.compassos');
         sc.innerHTML = '';
-        for (let i = 1; i <= 32; i++) sc.add(new Option(String(i), String(i)));
+        for (let i = 1; i <= MAX_COMPASSOS; i++) sc.add(new Option(String(i), String(i)));
         sc.value = String(m.compassos);
         const sm = $('.modelo');
-        sm.innerHTML = '<option value="">—</option>' + MODELOS.map(x => `<option value="${x.id}">${x.nome}</option>`).join('');
+        sm.innerHTML = `<option value="">—</option>${MODELOS.map(x => `<option value="${x.id}">${x.nome}</option>`).join('')}`;
         preencherLista();
         montarAbas();
         montarFaixa();
@@ -638,7 +651,12 @@ export const abrirCriadorDeMusicas = (vm, nomeInicial) => {
             if (tem) {
                 const estavaSelecionada = sel.has(k) && sel.size > 1;
                 if (!sel.has(k)) sel = new Set([k]);
-                arrastando = {tipo: 'moverBat', inicio: {l, p}, clicado: k, estavaSelecionada, d: {p: 0, l: 0}, moveu: false,
+                arrastando = {tipo: 'moverBat',
+                    inicio: {l, p},
+                    clicado: k,
+                    estavaSelecionada,
+                    d: {p: 0, l: 0},
+                    moveu: false,
                     flutuantes: null};
                 atualizarFerramentas();
                 return;
@@ -735,7 +753,9 @@ export const abrirCriadorDeMusicas = (vm, nomeInicial) => {
             if (linhaDoMundo(w.y) === a.l && !lista.includes(p)) lista.push(p);
         } else if (a.tipo === 'caixa') {
             a.b = w;
-            const r = {x: Math.min(a.a.x, a.b.x), y: Math.min(a.a.y, a.b.y), w: Math.abs(a.b.x - a.a.x),
+            const r = {x: Math.min(a.a.x, a.b.x),
+                y: Math.min(a.a.y, a.b.y),
+                w: Math.abs(a.b.x - a.a.x),
                 h: Math.abs(a.b.y - a.a.y)};
             const novo = new Set(a.base);
             if (ehBateria()) {
@@ -1088,6 +1108,34 @@ export const abrirCriadorDeMusicas = (vm, nomeInicial) => {
         preencherCampos();
         ajustarTamanho(true);
         aviso(`Modelo "${mod.nome}" carregado. Mude o que quiser! (Ctrl+Z desfaz)`);
+    });
+
+    $('.importarMidi').addEventListener('click', () => $('.arquivoMidi').click());
+    $('.arquivoMidi').addEventListener('change', async e => {
+        const arq = e.target.files[0];
+        e.target.value = '';
+        if (!arq) return;
+        try {
+            const midi = lerMidi(await arq.arrayBuffer());
+            if (alterado && !window.confirm(`Trocar as notas desta música pelas de "${arq.name}"?`)) return; // eslint-disable-line no-alert
+            registrar();
+            const nomeArq = arq.name.replace(/\.[^.]+$/, '').slice(0, 40) || 'música';
+            const vazia = !nomeOriginal && !m.faixas.some(f => f.notas.length);
+            const {musica, cortou} = midiParaMusica(midi, vazia ? nomeLivre(nomeArq) : m.nome);
+            m = musica;
+            sel = new Set();
+            tocador.trocarMusica(m);
+            if (tocador.estado !== 'parada') tocador.tocar(m, 0);
+            preencherCampos();
+            ajustarTamanho(true);
+            marcarAlterado();
+            const n = m.faixas.reduce((s, f) => s + f.notas.length, 0);
+            aviso(`${arq.name}: ${n} notas, BPM ${m.bpm}, ${m.compassos} compassos.${
+                cortou ? ` O MIDI era maior que ${MAX_COMPASSOS} compassos e o fim foi cortado.` : ''
+            } Clique em "Salvar no projeto" para guardar.`);
+        } catch (err) {
+            aviso(`⚠ ${err.message}`);
+        }
     });
 
     const carregar = nome => {

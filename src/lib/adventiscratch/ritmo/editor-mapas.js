@@ -6,7 +6,7 @@
  *    arraste para mover; na faixa de baixo, arraste para mudar o tempo.
  *  - ⏺ Gravar: com a música tocando, as teclas (setas, D F J K) ou cliques viram notas.
  *  - ✨ Gerar: cria notas a partir da melodia de uma música do Criador (ou pelo BPM).
- *  - 📂 Importar: .osu (osu!) e .json (Friday Night Funkin').
+ *  - 📂 Importar: .osu (osu!), .json (Friday Night Funkin') e MIDI (.mid, vira mapa + música sincronizada).
  *  - Itens: notas especiais (❤ vida, ⭐ bônus, ☠ perigo, 👻 fantasma ou um item com nome inventado).
  *    As notas novas usam o item escolhido; Shift+clique numa nota aplica o item nela.
  */
@@ -17,7 +17,8 @@ import {
 import {RelogioDoMapa, sonsDoProjeto} from './audio.js';
 import {lerArquivoDeMapa} from './importar-mapas.js';
 import {audioParaWav} from '../audio-ogg.js';
-import {nomesMusicas, obterMusica, PASSOS_POR_BATIDA} from '../musica/dados.js';
+import {nomesMusicas, obterMusica, PASSOS_POR_BATIDA, gravarMusica, nomeLivre} from '../musica/dados.js';
+import {ehMidi, lerMidi, midiParaMusica, midiParaMapa} from '../midi.js';
 
 const ESQ = 70; // coluna dos nomes das pistas
 const REGUA = 26;
@@ -121,8 +122,8 @@ export const abrirEditorMapas = vm => {
         <label title="Item das notas novas. Shift+clique numa nota aplica o item nela.">Item <select class="item"></select></label>
         <label>Zoom <input class="zoom" type="range" min="0.06" max="0.8" step="0.01" value="0.25" style="width:110px"></label>
         <button class="gerar" title="Criar notas a partir da música">✨ Gerar</button>
-        <button class="importar" title="Importar .osu ou .json do FNF">📂 Importar .osu / .json</button>
-        <input type="file" class="arquivo" accept=".osu,.json" hidden>
+        <button class="importar" title="Importar .osu, .json do FNF ou MIDI (.mid)">📂 Importar .osu / .json / .mid</button>
+        <input type="file" class="arquivo" accept=".osu,.json,.mid,.midi,.rmi,.kar" hidden>
         <button class="desfazer" title="Desfazer (Ctrl+Z)">↶</button>
         <button class="refazer" title="Refazer (Ctrl+Y)">↷</button>
         <span class="info"></span>
@@ -204,12 +205,12 @@ export const abrirEditorMapas = vm => {
         const s = $('.audio');
         const musicas = nomesMusicas();
         const sons = sonsDoProjeto(vm.runtime);
-        s.innerHTML = '<option value="nenhum:">(sem áudio, só o tempo)</option>' +
-            (musicas.length ? `<optgroup label="🎼 Músicas do Criador">${musicas.map(n =>
-                `<option value="musica:${n.replace(/"/g, '&quot;')}">${n.replace(/</g, '&lt;')}</option>`).join('')}</optgroup>` : '') +
-            (sons.length ? `<optgroup label="🔊 Sons do projeto">${sons.map(x =>
-                `<option value="som:${x.nome.replace(/"/g, '&quot;')}">${x.nome.replace(/</g, '&lt;')} (${x.ator
-                    .replace(/</g, '&lt;')})</option>`).join('')}</optgroup>` : '');
+        s.innerHTML = `<option value="nenhum:">(sem áudio, só o tempo)</option>${
+            musicas.length ? `<optgroup label="🎼 Músicas do Criador">${musicas.map(n =>
+                `<option value="musica:${n.replace(/"/g, '&quot;')}">${n.replace(/</g, '&lt;')}</option>`).join('')}</optgroup>` : ''
+        }${sons.length ? `<optgroup label="🔊 Sons do projeto">${sons.map(x =>
+            `<option value="som:${x.nome.replace(/"/g, '&quot;')}">${x.nome.replace(/</g, '&lt;')} (${x.ator
+                .replace(/</g, '&lt;')})</option>`).join('')}</optgroup>` : ''}`;
         s.value = `${m.audio.tipo}:${m.audio.nome}`;
         if (s.value !== `${m.audio.tipo}:${m.audio.nome}`) s.value = 'nenhum:';
     };
@@ -218,12 +219,17 @@ export const abrirEditorMapas = vm => {
         const s = $('.item');
         const pers = new Set([...itensPersonalizados([m, ...todosMapas()]), ...itensNovos]);
         if (itemAtual && !ITENS[itemAtual]) pers.add(itemAtual);
-        const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-        s.innerHTML = '<option value="">● comum</option>' +
+        const esc = t => String(t).replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/"/g, '&quot;');
+        s.innerHTML = `<option value="">● comum</option>${
             Object.keys(ITENS).map(k => `<option value="${k}" title="${esc(ITENS[k].descricao)}">${ITENS[k].icone} ${
-                ITENS[k].nome}</option>`).join('') +
-            Array.from(pers).sort().map(n => `<option value="${esc(n)}">🏷 ${esc(n)}</option>`).join('') +
-            '<option value="__novo__">＋ novo item…</option>';
+                ITENS[k].nome}</option>`)
+                .join('')
+        }${Array.from(pers).sort()
+            .map(n => `<option value="${esc(n)}">🏷 ${esc(n)}</option>`)
+            .join('')
+        }<option value="__novo__">＋ novo item…</option>`;
         s.value = itemAtual;
     };
     /** Põe (ou tira) o item numa nota/círculo. */
@@ -829,11 +835,22 @@ export const abrirEditorMapas = vm => {
         $('.arquivo').value = '';
         if (!f) return;
         try {
-            const novo = lerArquivoDeMapa(await f.text(), f.name);
+            let novo;
+            let musicaMidi = null;
+            if (ehMidi(f.name)) {
+                // MIDI: gera a música no Criador de Músicas e o mapa com os mesmos tempos
+                const midi = lerMidi(await f.arrayBuffer());
+                const base = f.name.replace(/\.[^.]+$/, '').slice(0, 40) || 'MIDI';
+                musicaMidi = midiParaMusica(midi, nomeLivre(base)).musica;
+                novo = midiParaMapa(midi, base, musicaMidi.bpm);
+            } else {
+                novo = lerArquivoDeMapa(await f.text(), f.name);
+            }
             const temNotas = m.notas.length || m.circulos.length;
             if (temNotas && !window.confirm(`Trocar o conteúdo deste mapa pelo de "${f.name}"?`)) return; // eslint-disable-line no-alert
             registrar();
-            const audio = m.audio;
+            if (musicaMidi) gravarMusica(musicaMidi);
+            const audio = musicaMidi ? {tipo: 'musica', nome: musicaMidi.nome} : m.audio;
             // mapa vazio e ainda não salvo: fica com o nome que veio no arquivo
             const nome = !temNotas && !nomeOriginal ? nomeLivreMapa(novo.nome) : m.nome;
             m = novo;
@@ -842,6 +859,11 @@ export const abrirEditorMapas = vm => {
             if (!nomeOriginal) $('.nome').value = nome;
             selecionado = null;
             preencher();
+            if (musicaMidi) {
+                aviso(`${f.name}: ${m.notas.length} notas e a música "${musicaMidi.nome}" (Criador de Músicas), ` +
+                    'já escolhida como áudio deste mapa.');
+                return;
+            }
             aviso(`${f.name}: ${m.modo === 'circulos' ? `${m.circulos.length} círculos` : `${m.notas.length} notas`}. ` +
                 'Agora use "🎵 Enviar áudio" com a música (.ogg, .mp3 ou .wav) e ajuste o "Ajuste (ms)" se precisar.');
         } catch (e) {
@@ -953,9 +975,11 @@ export const abrirEditorMapas = vm => {
     $('.oponente').onchange = e => {
         registrar();
         m.oponente = e.target.checked;
-        if (!m.oponente) m.notas.forEach(n => {
-            n.quem = 'eu';
-        });
+        if (!m.oponente) {
+            m.notas.forEach(n => {
+                n.quem = 'eu';
+            });
+        }
         preencher();
     };
     $('.encaixe').onchange = e => {

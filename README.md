@@ -121,9 +121,14 @@ dá acesso ao motor.
 
 Extensão **Músicas** → botão **🎼 Criador de Músicas…** abre um editor em tela cheia: grade de piano para
 **Melodia**, **Baixo** e **Acordes** (Dó2 a Dó7) e grade de **Bateria** (bumbo, caixa, chimbal, palmas, tom,
-prato). BPM, 1 a 32 compassos (4/4, passos de semicolcheia), tocar/pausar/parar/repetir, modelos prontos (Aventura,
+prato). BPM, 1 a 64 compassos (4/4, passos de semicolcheia), tocar/pausar/parar/repetir, modelos prontos (Aventura,
 Calma, Chefe, Fase 8-bit) e 8 instrumentos sintetizados com Web Audio (piano, órgão, baixo, cordas, flauta, sinos,
 sintetizador, 8-bit). As músicas ficam no `.asp` em `adventiscratch/musicas/<n>.json`.
+
+**📂 Importar MIDI** (`src/lib/adventiscratch/midi.js`): lê `.mid` (formatos 0 e 1) e monta a música — a faixa mais
+aguda vira a Melodia, a mais grave o Baixo, as outras os Acordes e o canal 10 a Bateria; notas arredondadas para
+semicolcheias, BPM do tempo principal. No **Editor de mapas de ritmo**, importar um `.mid` cria o mapa de setas
+(melodia = jogador, outra faixa = oponente) e a música no Criador, já escolhida como áudio e sincronizada.
 
 Edição: ferramentas **✏️ Desenhar** (B) e **⬚ Selecionar** (V); caixa de seleção (ou Shift+arrastar), Ctrl+clique
 soma à seleção; arrastar move (notas e batidas da bateria), puxar a ponta alonga; Ctrl+C/X/V (cola no marcador
