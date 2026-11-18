@@ -4,7 +4,8 @@
  */
 
 const ESTILO_ID = 'adventiscratch-conta-estilo';
-const MASCOTE = 'static/adventiscratch/siom.svg';
+const MASCOTE = 'static/adventiscratch/siom-feliz.svg';
+const MASCOTE_TENSA = 'static/adventiscratch/siom-tensa.svg';
 
 export const esc = s => String(s === null || typeof s === 'undefined' ? '' : s).replace(/[&<>"']/g, c => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -359,7 +360,7 @@ export const telaAdvertencia = (adv, nome, onCiente) => {
 export const telaSemConexao = (mensagem, onTentar) => {
     const tela = abrirTela(`
 <div class="adv-cartao">
-  <div class="adv-topo"><img src="${MASCOTE}" alt=""><h1>Sem conexão com o servidor</h1>
+  <div class="adv-topo"><img src="${MASCOTE_TENSA}" alt=""><h1>Sem conexão com o servidor</h1>
     <p>${esc(mensagem)}</p></div>
   <div class="adv-corpo">
     <p class="adv-pequeno">Confira a internet. Se você é o responsável pelo servidor, verifique se ele está ligado

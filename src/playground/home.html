@@ -149,6 +149,8 @@
     .aviso .emoji { font-size: 2.2rem; line-height: 1; }
     .aviso h3 { color: var(--tinta); font-weight: 800; margin-bottom: 6px; font-size: 1.2rem; }
 
+    .ico-siom { width: 22px; height: 25px; vertical-align: -6px; margin-right: 4px; }
+    .chamada .siom { width: 130px; display: block; margin: -10px auto 14px; filter: drop-shadow(0 12px 22px rgba(0,0,0,.25)); }
     .chamada {
       text-align: center; color: #fff; border-radius: 28px; padding: 56px 24px;
       background: linear-gradient(135deg, var(--roxo), var(--azul));
@@ -240,9 +242,9 @@
         <div class="blocos" aria-hidden="true">
           <div class="bloco evento">quando ⚑ for clicado</div>
           <div class="bloco aparencia">diga <span class="slot">Olá, turma!</span> por <span class="slot">2</span> segundos</div>
-          <div class="bloco aparencia">diga <span class="slot">🦉 2 elevado a 10</span></div>
+          <div class="bloco aparencia">diga <span class="slot">2 elevado a 10</span></div>
           <div class="bloco controle">se <span class="slot">pontos ≥ 100</span> então</div>
-          <div class="bloco extra">🦉 substitua <span class="slot">mundo</span> por <span class="slot">turma</span></div>
+          <div class="bloco extra"><img class="ico-siom" src="static/adventiscratch/siom-cabeca.svg" alt=""> substitua <span class="slot">mundo</span> por <span class="slot">turma</span></div>
         </div>
       </div>
     </section>
@@ -255,7 +257,7 @@
         </div>
         <div class="grade">
           <article class="cartao">
-            <div class="icone" style="background:#EDE7FF">🦉</div>
+            <div class="icone" style="background:#EDE7FF"><img src="static/adventiscratch/siom-cabeca.svg" alt="" style="width:70%;height:70%;object-fit:contain"></div>
             <h3>Blocos extras</h3>
             <p>A extensão <strong>Extras Adventiblocks</strong> traz potência, raiz, verdadeiro/falso, ≠ ≥ ≤, "se/senão" como valor, maiúsculas/minúsculas e mais.</p>
           </article>
@@ -326,6 +328,7 @@
     <section style="padding-top:0">
       <div class="container">
         <div class="chamada">
+          <img class="siom" src="static/adventiscratch/siom-feliz.svg" alt="Siom de capelo, sorrindo">
           <h2>Pronto para criar algo incrível?</h2>
           <p>Sua próxima ideia começa com um bloco.</p>
           <a class="botao primario" href="editor.html">▶ Abrir o editor</a>

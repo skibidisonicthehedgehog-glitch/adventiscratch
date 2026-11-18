@@ -249,6 +249,8 @@ de vida (e "ganhando" acima de 80%), e o do jogador fica espelhado, como no FNF.
 - A mascote **Siom** e o **mioS** abrem a biblioteca de atores, seguidos da turma: Coruja Sabida, Bia Capivara,
   Theo Tartaruga, Lumi Vagalume, Pipo Pinguim, Tito Tucano e Nina Robô. Tudo é gerado por
   `scripts/personagens/gerar_personagens.py` (os desenhos da Siom e do mioS ficam em `scripts/personagens/*.svg`).
+  As artes da marca (logo, ícone da aba, capa da extensão Extras e as versões da Siom usadas nas páginas)
+  saem de `scripts/personagens/gerar_marca.py`.
 
 ## Extensão Tilemaps
 
