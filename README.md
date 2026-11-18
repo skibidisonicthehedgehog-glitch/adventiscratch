@@ -240,6 +240,17 @@ de vida (e "ganhando" acima de 80%), e o do jogador fica espelhado, como no FNF.
 **Contagem regressiva**: `contagem regressiva (3, 2, 1, vai!) antes do mapa: sim` espera 4 batidas antes do
 áudio (o tempo do mapa começa negativo) e dispara `quando a contagem mostrar [3/2/1/vai!]` (para tocar os sons).
 
+## Marca e personagens
+
+- Nas mensagens do editor, a palavra "Scratch" aparece como **Screate** (`src/lib/adventiscratch/marca.js`).
+  "Scratch Link" continua com esse nome porque é o aplicativo que precisa ser instalado para micro:bit e LEGO.
+- O gato, Gobo, Pico, Nano, Giga e Tera saíram das bibliotecas, e os tutoriais em cartões do Scratch (com as
+  imagens e vídeos deles) foram removidos: o botão "Tutoriais" abre `tutoriais.html`.
+- A turma do Adventiblocks fica no começo da biblioteca de atores e de fantasias: Coruja Sabida, Bia Capivara,
+  Theo Tartaruga, Lumi Vagalume, Pipo Pinguim, Tito Tucano e Nina Robô, cada um com duas fantasias. Eles são
+  gerados por `scripts/personagens/gerar_personagens.py`. Para adicionar a mascote **Siom**, ponha o arquivo em
+  `scripts/personagens/siom.svg` (e `siom-2.svg`… para mais fantasias) e rode o script de novo.
+
 ## Extensão Tilemaps
 
 Fases feitas de blocos numa grade (`src/lib/adventiscratch/tilemap/`), com o **🧱 Editor de tilemaps**:

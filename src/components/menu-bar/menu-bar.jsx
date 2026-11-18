@@ -763,7 +763,7 @@ class MenuBar extends React.Component {
                                     onMouseUp={this.props.onOpenRegistration}
                                 >
                                     <FormattedMessage
-                                        defaultMessage="Join Scratch"
+                                        defaultMessage="Create account"
                                         description="Link for creating a Scratch account"
                                         id="gui.menuBar.joinScratch"
                                     />
@@ -826,7 +826,7 @@ class MenuBar extends React.Component {
                                                 src={profileIcon}
                                             />
                                             <span>
-                                                {'scratch-cat'}
+                                                {'siom'}
                                             </span>
                                             <img
                                                 className={styles.dropdownCaretIcon}

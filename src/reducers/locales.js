@@ -1,7 +1,10 @@
 import {addLocaleData} from 'react-intl';
 
 import {localeData, isRtl} from 'scratch-l10n';
-import editorMessages from 'scratch-l10n/locales/editor-msgs';
+import mensagensDoScratch from 'scratch-l10n/locales/editor-msgs';
+import {mensagensComMarca} from '../lib/adventiscratch/marca.js';
+
+const editorMessages = mensagensComMarca(mensagensDoScratch);
 
 addLocaleData(localeData);
 

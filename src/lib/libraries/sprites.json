@@ -29,6 +29,236 @@
         "visible": true
     },
     {
+        "name": "Bia Capivara",
+        "tags": [
+            "animals"
+        ],
+        "isStage": false,
+        "variables": {},
+        "costumes": [
+            {
+                "assetId": "79e84102ff23cef478c812e82e4c7705",
+                "name": "bia-a",
+                "bitmapResolution": 1,
+                "md5ext": "79e84102ff23cef478c812e82e4c7705.svg",
+                "dataFormat": "svg",
+                "rotationCenterX": 50,
+                "rotationCenterY": 50
+            },
+            {
+                "assetId": "b636ddccc2eff96dff98099bb5d3aa61",
+                "name": "bia-b",
+                "bitmapResolution": 1,
+                "md5ext": "b636ddccc2eff96dff98099bb5d3aa61.svg",
+                "dataFormat": "svg",
+                "rotationCenterX": 50,
+                "rotationCenterY": 50
+            }
+        ],
+        "sounds": [],
+        "blocks": {},
+        "currentCostume": 0,
+        "x": 0,
+        "y": 0,
+        "size": 100,
+        "direction": 90,
+        "draggable": false,
+        "rotationStyle": "all around",
+        "visible": true
+    },
+    {
+        "name": "Theo Tartaruga",
+        "tags": [
+            "animals"
+        ],
+        "isStage": false,
+        "variables": {},
+        "costumes": [
+            {
+                "assetId": "ebd7b439f55ce51a25be30e77bdafc9d",
+                "name": "theo-a",
+                "bitmapResolution": 1,
+                "md5ext": "ebd7b439f55ce51a25be30e77bdafc9d.svg",
+                "dataFormat": "svg",
+                "rotationCenterX": 52,
+                "rotationCenterY": 46
+            },
+            {
+                "assetId": "de51df2a0e835213eb2fbea3490c459b",
+                "name": "theo-b",
+                "bitmapResolution": 1,
+                "md5ext": "de51df2a0e835213eb2fbea3490c459b.svg",
+                "dataFormat": "svg",
+                "rotationCenterX": 52,
+                "rotationCenterY": 46
+            }
+        ],
+        "sounds": [],
+        "blocks": {},
+        "currentCostume": 0,
+        "x": 0,
+        "y": 0,
+        "size": 100,
+        "direction": 90,
+        "draggable": false,
+        "rotationStyle": "all around",
+        "visible": true
+    },
+    {
+        "name": "Lumi Vagalume",
+        "tags": [
+            "animals",
+            "fantasy"
+        ],
+        "isStage": false,
+        "variables": {},
+        "costumes": [
+            {
+                "assetId": "334f373219f2ddca6e2a939f24497328",
+                "name": "lumi-a",
+                "bitmapResolution": 1,
+                "md5ext": "334f373219f2ddca6e2a939f24497328.svg",
+                "dataFormat": "svg",
+                "rotationCenterX": 50,
+                "rotationCenterY": 48
+            },
+            {
+                "assetId": "131d8f71a72b48a55c3073e7c93baffd",
+                "name": "lumi-b",
+                "bitmapResolution": 1,
+                "md5ext": "131d8f71a72b48a55c3073e7c93baffd.svg",
+                "dataFormat": "svg",
+                "rotationCenterX": 50,
+                "rotationCenterY": 48
+            }
+        ],
+        "sounds": [],
+        "blocks": {},
+        "currentCostume": 0,
+        "x": 0,
+        "y": 0,
+        "size": 100,
+        "direction": 90,
+        "draggable": false,
+        "rotationStyle": "all around",
+        "visible": true
+    },
+    {
+        "name": "Pipo Pinguim",
+        "tags": [
+            "animals"
+        ],
+        "isStage": false,
+        "variables": {},
+        "costumes": [
+            {
+                "assetId": "7b1a630e0add081839b743cdd9de14cc",
+                "name": "pipo-a",
+                "bitmapResolution": 1,
+                "md5ext": "7b1a630e0add081839b743cdd9de14cc.svg",
+                "dataFormat": "svg",
+                "rotationCenterX": 42,
+                "rotationCenterY": 56
+            },
+            {
+                "assetId": "12b224ee4f585f9a34189a51f58ab069",
+                "name": "pipo-b",
+                "bitmapResolution": 1,
+                "md5ext": "12b224ee4f585f9a34189a51f58ab069.svg",
+                "dataFormat": "svg",
+                "rotationCenterX": 42,
+                "rotationCenterY": 56
+            }
+        ],
+        "sounds": [],
+        "blocks": {},
+        "currentCostume": 0,
+        "x": 0,
+        "y": 0,
+        "size": 100,
+        "direction": 90,
+        "draggable": false,
+        "rotationStyle": "all around",
+        "visible": true
+    },
+    {
+        "name": "Tito Tucano",
+        "tags": [
+            "animals"
+        ],
+        "isStage": false,
+        "variables": {},
+        "costumes": [
+            {
+                "assetId": "c01c6796a339609508926e370fa0b10a",
+                "name": "tito-a",
+                "bitmapResolution": 1,
+                "md5ext": "c01c6796a339609508926e370fa0b10a.svg",
+                "dataFormat": "svg",
+                "rotationCenterX": 46,
+                "rotationCenterY": 52
+            },
+            {
+                "assetId": "8d2ef255bcad68c6a279209a0d0e254a",
+                "name": "tito-b",
+                "bitmapResolution": 1,
+                "md5ext": "8d2ef255bcad68c6a279209a0d0e254a.svg",
+                "dataFormat": "svg",
+                "rotationCenterX": 46,
+                "rotationCenterY": 52
+            }
+        ],
+        "sounds": [],
+        "blocks": {},
+        "currentCostume": 0,
+        "x": 0,
+        "y": 0,
+        "size": 100,
+        "direction": 90,
+        "draggable": false,
+        "rotationStyle": "all around",
+        "visible": true
+    },
+    {
+        "name": "Nina Robô",
+        "tags": [
+            "people",
+            "fantasy"
+        ],
+        "isStage": false,
+        "variables": {},
+        "costumes": [
+            {
+                "assetId": "409d48bee4c72a9e449e913ff40f2aec",
+                "name": "nina-a",
+                "bitmapResolution": 1,
+                "md5ext": "409d48bee4c72a9e449e913ff40f2aec.svg",
+                "dataFormat": "svg",
+                "rotationCenterX": 45,
+                "rotationCenterY": 54
+            },
+            {
+                "assetId": "e83c58c7ed82ed65f5f2c48349a57ca5",
+                "name": "nina-b",
+                "bitmapResolution": 1,
+                "md5ext": "e83c58c7ed82ed65f5f2c48349a57ca5.svg",
+                "dataFormat": "svg",
+                "rotationCenterX": 45,
+                "rotationCenterY": 54
+            }
+        ],
+        "sounds": [],
+        "blocks": {},
+        "currentCostume": 0,
+        "x": 0,
+        "y": 0,
+        "size": 100,
+        "direction": 90,
+        "draggable": false,
+        "rotationStyle": "all around",
+        "visible": true
+    },
+    {
         "name": "Estrela",
         "tags": [
             "fantasy"

@@ -95,7 +95,7 @@ const AutoScanningStep = props => {
             {showUpdate && (
                 <Box className={classNames(styles.bottomAreaItem, styles.instructions)}>
                     <BalancedFormattedMessage
-                        defaultMessage="If you don't see your device, you may need to update it to work with Scratch."
+                        defaultMessage="If you don't see your device, you may need to update it to work with Screate."
                         description="Prompt for updating a peripheral device"
                         id="gui.connection.auto-scanning.updatePeripheralPrompt"
                     />

@@ -60,7 +60,15 @@ class TipsLibrary extends React.PureComponent {
 
         this.props.onActivateDeck(item.id);
     }
+    componentDidUpdate (prevProps) {
+        // Adventiblocks: sem os tutoriais do Scratch, a biblioteca de tutoriais abre os tutoriais do Adventiblocks
+        if (this.props.visible && !prevProps.visible && !Object.keys(decksLibraryContent).length) {
+            window.open('tutoriais.html', '_blank', 'noopener');
+            this.props.onRequestClose();
+        }
+    }
     render () {
+        if (!Object.keys(decksLibraryContent).length) return null;
         const decksLibraryThumbnailData = Object.keys(decksLibraryContent)
             .filter(id => {
                 if (notScratchDesktop()) return true; // Do not filter anything in online editor
