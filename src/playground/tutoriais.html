@@ -487,6 +487,46 @@
         <div class="dica"><b>Desafios</b>• Mude a gravidade do mundo para -0,5 (fase na Lua!).<br>• Faça um inimigo que anda de um lado para o outro.<br>• Crie uma plataforma que sobe e desce.</div>
       </article>
     </section>
+    <section data-id="tilemaps" data-titulo="Fases com tilemaps" data-nivel="intermediario" data-tempo="20 min">
+      <article>
+        <h3>O que é um tilemap</h3>
+        <p>Um tilemap é uma fase desenhada com <b>blocos (tiles)</b> numa grade, como nos jogos de plataforma clássicos.
+          Adicione a extensão <b>Tilemaps</b> e clique em <b>🧱 Editor de tilemaps</b>.</p>
+        <ul>
+          <li><b>🖼 Criar tileset de uma imagem</b>: escolha uma imagem com os blocos lado a lado e diga o tamanho de cada
+            bloco (ex.: 16 px). Cada bloco vira uma fantasia de um ator novo, o <b>Tileset</b>.</li>
+          <li>Escolha um tile na paleta e desenhe com o <b>lápis</b>, o <b>balde</b> ou o <b>retângulo</b>. Alt + clique pega
+            o tile do mapa.</li>
+          <li>Marque <b>mostrar no palco</b> para ver a fase no palco.</li>
+        </ul>
+        <div class="dica"><b>Importar do Tiled</b>Em 📥 Importar do Tiled, escolha o .tmj (ou .tmx) junto com as imagens dos tilesets.</div>
+      </article>
+      <article>
+        <h3>Tipos de tile</h3>
+        <p>Cada tile tem um <b>tipo</b>. Os tiles começam <b>sólidos</b>: com a extensão <b>Plataforma 2D</b>, o personagem
+          já anda e pula neles, sem nenhum bloco a mais. Mude na paleta: <b>plataforma</b> (atravessa por baixo),
+          <b>perigo</b>, <b>moeda</b>, <b>início</b>…</p>
+        <div class="pilha">
+          <span class="bl eve chapeu">quando ⚑ for clicado</span>
+          <span class="bl tm">mostrar tilemap <span class="s">fase 1 ▾</span></span>
+          <span class="bl tm">ir para o tile <span class="s">início ▾</span> número <span class="s">1</span></span>
+          <span class="bl p2">tornar este ator <span class="s">personagem ▾</span></span>
+          <span class="bl cam">câmera seguir <span class="s">este ator ▾</span> com suavidade <span class="s">80</span> %</span>
+        </div>
+      </article>
+      <article>
+        <h3>Moedas e perigos</h3>
+        <div class="pilha">
+          <span class="bl tm chapeu">quando tocar em tile <span class="s">moeda ▾</span></span>
+          <span class="bl tm">apagar os tiles <span class="s">moeda ▾</span> que este ator toca</span>
+          <span class="bl var">adicione <span class="s">1</span> a <span class="s">moedas ▾</span></span>
+        </div>
+        <p>E se tocar em <b>perigo</b>, volte para o início. Para inimigos andando, use
+          <b>trocar cada tile [inimigo] por um clone deste ator</b>: cada tile vira um clone no mesmo lugar.</p>
+        <div class="dica azul"><b>Fase maior que o palco?</b>Use a extensão Câmera: com um tilemap no palco, as bordas da
+          Plataforma 2D passam a ser as bordas do mapa. O que o jogo muda (moedas pegas) volta ao normal quando o projeto para.</div>
+      </article>
+    </section>
 
     <section data-id="musicas" data-titulo="Criador de Músicas" data-nivel="iniciante" data-tempo="15 min" data-exemplo="show-da-coruja">
       <article>

@@ -12,6 +12,8 @@ import {aoMudarControladores, renomearControlador} from './spritesheet/controlad
 import {AdventiscratchRitmo, ligarRitmoNaVm} from './ritmo/ritmo-extension.js';
 import {AdventiscratchCamera} from './camera-extension.js';
 import {AdventiscratchMultiplayer} from './multiplayer-extension.js';
+import {AdventiscratchTilemap} from './tilemap/tilemap-extension.js';
+import {renomearTileset} from './tilemap/dados.js';
 import {patchVmForAsp} from './asp-format.js';
 import {iniciarContas} from './conta/conta.js';
 import {aoCarregarProjeto, iniciarNuvem} from './conta/nuvem.js';
@@ -28,7 +30,8 @@ const EXTENSIONS = {
     adventiscratchanim: AdventiscratchAnimacoes,
     adventiscratchritmo: AdventiscratchRitmo,
     adventiscratchcamera: AdventiscratchCamera,
-    adventiscratchmulti: AdventiscratchMultiplayer
+    adventiscratchmulti: AdventiscratchMultiplayer,
+    adventiscratchtilemap: AdventiscratchTilemap
 };
 
 /**
@@ -80,7 +83,10 @@ const setupAdventiscratch = vm => {
         const alvo = vm.runtime.getTargetById(id);
         const antigo = alvo && alvo.getName();
         renomearOriginal(id, novoNome);
-        if (alvo && antigo !== alvo.getName()) renomearControlador(antigo, alvo.getName());
+        if (alvo && antigo !== alvo.getName()) {
+            renomearControlador(antigo, alvo.getName());
+            renomearTileset(antigo, alvo.getName());
+        }
     };
     // avisos rápidos pedidos por janelas que não dependem da Central (ex.: importar spritesheet)
     window.addEventListener('adventiscratch-aviso', e => toast(e.detail && e.detail.texto, 4500));

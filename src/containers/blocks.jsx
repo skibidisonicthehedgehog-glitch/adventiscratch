@@ -11,6 +11,7 @@ import {abrirCentral} from '../lib/adventiscratch/conta/telas-nuvem.js';
 import {CRIADOR_CALLBACK} from '../lib/adventiscratch/musica/musica-extension.js';
 import {CONTROLADOR_CALLBACK, SPRITESHEET_CALLBACK} from '../lib/adventiscratch/spritesheet/animacoes-extension.js';
 import {EDITOR_MAPAS_CALLBACK} from '../lib/adventiscratch/ritmo/ritmo-extension.js';
+import {EDITOR_TILEMAP_CALLBACK} from '../lib/adventiscratch/tilemap/tilemap-extension.js';
 import {definirWorkspaceDetector} from '../lib/adventiscratch/detector-erros.js';
 import VMScratchBlocks from '../lib/blocks';
 import VM from 'scratch-vm';
@@ -149,6 +150,10 @@ class Blocks extends React.Component {
         toolboxWorkspace.registerButtonCallback(EDITOR_MAPAS_CALLBACK, () => {
             import(/* webpackChunkName: "adventiscratch-ritmo" */ '../lib/adventiscratch/ritmo/editor-mapas.js')
                 .then(m => m.abrirEditorMapas(this.props.vm));
+        });
+        toolboxWorkspace.registerButtonCallback(EDITOR_TILEMAP_CALLBACK, () => {
+            import(/* webpackChunkName: "adventiscratch-tilemap" */ '../lib/adventiscratch/tilemap/editor.js')
+                .then(m => m.abrirEditorTilemap(this.props.vm));
         });
         // Adventiblocks: detector de erros (brilho vermelho + ⚠ nos blocos com problema)
         definirWorkspaceDetector(this.workspace);

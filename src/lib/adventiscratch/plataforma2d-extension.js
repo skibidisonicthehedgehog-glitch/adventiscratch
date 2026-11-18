@@ -452,6 +452,7 @@ class AdventiscratchPlataforma2D {
         const e = this.estado(util.target);
         if (!e.noChao) return '';
         if (!e.chao) return 'chão do palco';
+        if (String(e.chao).startsWith('tile:')) return 'tilemap';
         const t = this.runtime.getTargetById(e.chao);
         return t ? t.getName() : '';
     }
@@ -549,9 +550,20 @@ class AdventiscratchPlataforma2D {
             const vivos = new Set(solidos.map(s => s.id));
             for (const id of this.posAnterior.keys()) if (!vivos.has(id)) this.posAnterior.delete(id);
         }
+        // tilemap ativo (extensão Tilemaps): os tiles sólidos e plataformas perto de cada personagem entram aqui
+        const tm = this.runtime.adventiscratchTilemap;
         for (const t of personagens) {
             if (t.dragging) continue;
-            this.moverPersonagem(t, t.getCustomState(ID), solidos);
+            const e = t.getCustomState(ID);
+            let lista = solidos;
+            if (tm && tm.temMapa()) {
+                const b = t.getBounds();
+                if (b) {
+                    const m = Math.abs(e.vx) + Math.abs(e.vy) + PASSO_MAX + e.degrau + 4;
+                    lista = solidos.concat(tm.solidosNaArea(b.left - m, b.right + m, b.bottom - m, b.top + m));
+                }
+            }
+            this.moverPersonagem(t, e, lista);
         }
     }
 
@@ -559,8 +571,12 @@ class AdventiscratchPlataforma2D {
         if (!e.caixaFixa && e.tamanhoCaixa !== target.size) this.medirCaixa(target, e);
         if (!e.caixa) this.medirCaixa(target, e);
         const c = e.caixa;
-        const meiaL = (this.runtime.stageWidth || 480) / 2;
-        const meiaA = (this.runtime.stageHeight || 360) / 2;
+        // bordas: as do palco, ou as do tilemap ativo (fases maiores que o palco, com a extensão Câmera)
+        const tm = this.runtime.adventiscratchTilemap;
+        const lim = tm && tm.temMapa() ? tm.limites() : null;
+        const bordaE = lim ? lim.l : -(this.runtime.stageWidth || 480) / 2;
+        const bordaD = lim ? lim.r : (this.runtime.stageWidth || 480) / 2;
+        const bordaB = lim ? lim.b : -(this.runtime.stageHeight || 360) / 2;
         const bordaChao = this.bordas === 'chao-paredes' || this.bordas === 'chao';
         const bordaParede = this.bordas === 'chao-paredes' || this.bordas === 'paredes';
 
@@ -619,12 +635,12 @@ class AdventiscratchPlataforma2D {
                 bateu = true;
             }
             if (bordaParede) {
-                if (nx + c.l < -meiaL) {
-                    nx = -meiaL - c.l;
+                if (nx + c.l < bordaE) {
+                    nx = bordaE - c.l;
                     e.paredeEsq = true;
                     bateu = true;
-                } else if (nx + c.r > meiaL) {
-                    nx = meiaL - c.r;
+                } else if (nx + c.r > bordaD) {
+                    nx = bordaD - c.r;
                     e.paredeDir = true;
                     bateu = true;
                 }
@@ -659,8 +675,8 @@ class AdventiscratchPlataforma2D {
                 }
                 bateu = true;
             }
-            if (bordaChao && ny + c.b < -meiaA) {
-                ny = -meiaA - c.b;
+            if (bordaChao && ny + c.b < bordaB) {
+                ny = bordaB - c.b;
                 e.noChao = true;
                 chao = null;
                 bateu = true;

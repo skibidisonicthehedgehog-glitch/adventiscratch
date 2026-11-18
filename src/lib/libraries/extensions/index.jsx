@@ -13,6 +13,7 @@ import adventiscratchAnimIconURL from '../../adventiscratch/spritesheet/capa-ani
 import adventiscratchRitmoIconURL from '../../adventiscratch/ritmo/capa-ritmo.png';
 import adventiscratchCameraIconURL from '../../adventiscratch/capa-camera.png';
 import adventiscratchMultiIconURL from '../../adventiscratch/capa-multiplayer.png';
+import adventiscratchTilemapIconURL from '../../adventiscratch/tilemap/capa-tilemap.png';
 import musicIconURL from './music/music.png';
 import musicInsetIconURL from './music/music-small.svg';
 
@@ -103,6 +104,13 @@ export default [
         extensionId: 'adventiscratchritmo',
         iconURL: adventiscratchRitmoIconURL,
         description: 'Crie jogos de ritmo com setas (estilo FNF) ou círculos (estilo osu!): editor de mapas, pontos e combos.',
+        featured: true
+    },
+    {
+        name: 'Tilemaps',
+        extensionId: 'adventiscratchtilemap',
+        iconURL: adventiscratchTilemapIconURL,
+        description: 'Desenhe fases com blocos numa grade (ou importe do Tiled). Funciona com a Plataforma 2D e a Câmera.',
         featured: true
     },
     {

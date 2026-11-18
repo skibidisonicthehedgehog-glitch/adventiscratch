@@ -9,6 +9,7 @@
  *   adventiscratch/instrumentos/<n>.json + <n>.pcm  -> instrumentos .sf2 (só o preset escolhido)
  *   adventiscratch/controladores.json  -> controladores de animação (pelo nome do ator)
  *   adventiscratch/mapas/<n>.json  -> mapas do Jogo de Ritmo
+ *   adventiscratch/tilemaps.json  -> tilemaps (fases de blocos) e qual está no palco
  *
  * Por isso o Adventiblocks abre .asp e .sb3, e um .asp renomeado para .sb3 ainda abre
  * no Scratch comum (os blocos 3D só não funcionam lá).
@@ -19,6 +20,7 @@ import {gravarMusica, limparMusicas, normalizar, todasMusicas} from './musica/da
 import {adicionarInstrumento, instrumentosExtras, limparInstrumentos} from './musica/soundfont-store.js';
 import {carregarControladores, limparControladores, serializarControladores} from './spritesheet/controladores.js';
 import {gravarMapa, limparMapas, normalizarMapa, todosMapas} from './ritmo/dados.js';
+import {carregarTilemaps, limparTilemaps, serializarTilemaps, todosTilemaps} from './tilemap/dados.js';
 
 export const PROJECT_EXTENSION = 'asp';
 export const ACCEPTED_PROJECT_EXTENSIONS = '.asp,.sb,.sb2,.sb3';
@@ -65,6 +67,7 @@ export const patchVmForAsp = (vm, onProjectChanged) => {
         }, null, 2));
         todasMusicas().forEach((m, i) => zip.file(`${ASP_DIR}musicas/${i}.json`, JSON.stringify(m)));
         todosMapas().forEach((m, i) => zip.file(`${ASP_DIR}mapas/${i}.json`, JSON.stringify(m)));
+        if (todosTilemaps().length) zip.file(`${ASP_DIR}tilemaps.json`, JSON.stringify(serializarTilemaps()));
         const controladores = serializarControladores(vm.runtime);
         if (Object.keys(controladores).length) {
             zip.file(`${ASP_DIR}controladores.json`, JSON.stringify(controladores));
@@ -95,6 +98,7 @@ export const patchVmForAsp = (vm, onProjectChanged) => {
         limparInstrumentos(true);
         limparControladores();
         limparMapas();
+        limparTilemaps();
         if (isZip(input)) {
             try {
                 const zip = await JSZip.loadAsync(input);
@@ -131,6 +135,14 @@ export const patchVmForAsp = (vm, onProjectChanged) => {
                                 new Int16Array(await p.async('arraybuffer')), {silencioso: true, id: item.id});
                         } catch (e) {
                             console.warn('Adventiblocks: instrumento .sf2 danificado no projeto', e); // eslint-disable-line no-console
+                        }
+                    }
+                    const tms = zip.file(`${ASP_DIR}tilemaps.json`);
+                    if (tms) {
+                        try {
+                            carregarTilemaps(JSON.parse(await tms.async('string')));
+                        } catch (e) {
+                            console.warn('Adventiblocks: tilemaps danificados', e); // eslint-disable-line no-console
                         }
                     }
                     const ctrl = zip.file(`${ASP_DIR}controladores.json`);

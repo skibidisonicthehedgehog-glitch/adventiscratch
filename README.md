@@ -240,6 +240,28 @@ de vida (e "ganhando" acima de 80%), e o do jogador fica espelhado, como no FNF.
 **Contagem regressiva**: `contagem regressiva (3, 2, 1, vai!) antes do mapa: sim` espera 4 batidas antes do
 áudio (o tempo do mapa começa negativo) e dispara `quando a contagem mostrar [3/2/1/vai!]` (para tocar os sons).
 
+## Extensão Tilemaps
+
+Fases feitas de blocos numa grade (`src/lib/adventiscratch/tilemap/`), com o **🧱 Editor de tilemaps**:
+
+- **Tileset**: as fantasias de um ator são os tiles (tile 1 = 1ª fantasia). **Criar tileset de uma imagem** corta uma
+  imagem (ex.: pixel art de 16×16) em tiles e cria esse ator, escondido no palco.
+- **Ferramentas**: lápis (P), borracha (E), balde (B), retângulo (R), conta-gotas (I ou Alt + clique), desfazer
+  (Ctrl+Z); rodinha rola, Ctrl + rodinha dá zoom, botão direito arrasta. Camadas **principal** e **fundo** (enfeite).
+- **Tipos**: cada tile tem um tipo (começa **sólido**): `sólido` e `plataforma` funcionam sozinhos com a
+  **Plataforma 2D**; `perigo`, `moeda`, `escada`, `água`, `início`, `fim` ou qualquer nome servem para os blocos.
+- **Importar do Tiled**: `.tmj`/`.json` ou `.tmx`, com tilesets embutidos ou `.tsx`/`.tsj` e as imagens escolhidas
+  junto; camadas em CSV, lista ou base64 (sem compressão, zlib ou gzip). Camadas chamadas fundo/background vão para
+  o fundo; uma camada colisão/collision vira tiles sólidos invisíveis; as propriedades `tipo`/`type`/`class` ou
+  `solid`/`collides` dos tiles viram os tipos.
+
+O mapa é desenhado dentro do renderizador do Scratch (atrás dos atores), então anda com a **Câmera** e conta para
+"tocando na cor". Com um tilemap no palco, as bordas da Plataforma 2D passam a ser as bordas do mapa. Blocos:
+`mostrar tilemap`, `tocando em tile [tipo]?`, `quando tocar em tile`, `apagar os tiles [moeda] que este ator toca`,
+`tipo do tile embaixo deste ator`, `tile em x: y:`, `mudar tile em x: y: para`, `ir para o tile [início] número 1`,
+`trocar cada tile [inimigo] por um clone deste ator`, `borda [direita] do tilemap`… O que o jogo muda volta ao
+desenho do editor quando o projeto para ou recomeça. Fica no `.asp` em `adventiscratch/tilemaps.json`.
+
 ## Extensão Câmera
 
 Mova, aproxime (zoom) e gire a visão do palco, siga um ator e treme a tela (`src/lib/adventiscratch/camera-extension.js`).
