@@ -1,11 +1,11 @@
 import projectData from './project-data';
 
 /* eslint-disable import/no-unresolved */
-import hootWav from '!arraybuffer-loader!./d9e233bcc4ae423dffebd2027a59019f.wav?';
 // "pop": som do ator vazio (botão "Pintar"). Fica embutido para não depender da internet.
 import popWav from '!arraybuffer-loader!./83a9787d4cb6f3b7632b4ddfebf74367.wav?';
 import backdrop from '!raw-loader!./cd21514d0531fdffb22204e0ec5ed84a.svg?';
-import corujaSvg from '!raw-loader!./f5f2cfb7a7c2b68338e584543145b416.svg?';
+import siomCalm from '!raw-loader!./2bd04ed033cdabb560157420f696afc3.svg?';
+import siomTensa from '!raw-loader!./54a20f367ba6510055036e7b67b4e092.svg?';
 /* eslint-enable import/no-unresolved */
 
 const defaultProject = translator => {
@@ -24,11 +24,6 @@ const defaultProject = translator => {
         dataFormat: 'JSON',
         data: JSON.stringify(projectJson)
     }, {
-        id: 'd9e233bcc4ae423dffebd2027a59019f',
-        assetType: 'Sound',
-        dataFormat: 'WAV',
-        data: new Uint8Array(hootWav)
-    }, {
         id: '83a9787d4cb6f3b7632b4ddfebf74367',
         assetType: 'Sound',
         dataFormat: 'WAV',
@@ -39,10 +34,15 @@ const defaultProject = translator => {
         dataFormat: 'SVG',
         data: encoder.encode(backdrop)
     }, {
-        id: 'f5f2cfb7a7c2b68338e584543145b416',
+        id: '2bd04ed033cdabb560157420f696afc3',
         assetType: 'ImageVector',
         dataFormat: 'SVG',
-        data: encoder.encode(corujaSvg)
+        data: encoder.encode(siomCalm)
+    }, {
+        id: '54a20f367ba6510055036e7b67b4e092',
+        assetType: 'ImageVector',
+        dataFormat: 'SVG',
+        data: encoder.encode(siomTensa)
     }];
 };
 

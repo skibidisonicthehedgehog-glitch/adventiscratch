@@ -2,15 +2,10 @@ import {defineMessages} from 'react-intl';
 import sharedMessages from '../shared-messages';
 
 let messages = defineMessages({
-    hoot: {
-        defaultMessage: 'Pio',
-        description: 'Name for the owl hoot sound (Adventiblocks)',
-        id: 'adventiscratch.defaultProject.hoot'
-    },
-    owl: {
-        defaultMessage: 'Coruja Sabida',
-        description: 'Name for the default sprite (Adventiblocks)',
-        id: 'adventiscratch.defaultProject.owl'
+    mascote: {
+        defaultMessage: 'Siom',
+        description: 'Name for the default sprite, the Adventiblocks mascot',
+        id: 'adventiscratch.defaultProject.mascote'
     },
     variable: {
         defaultMessage: 'my variable',
@@ -61,7 +56,7 @@ const projectData = translateFunction => {
             },
             {
                 isStage: false,
-                name: translator(messages.owl),
+                name: translator(messages.mascote),
                 variables: {},
                 lists: {},
                 broadcasts: {},
@@ -69,31 +64,40 @@ const projectData = translateFunction => {
                 currentCostume: 0,
                 costumes: [
                     {
-                        assetId: 'f5f2cfb7a7c2b68338e584543145b416',
-                        name: translator(messages.costume, {index: 1}),
+                        assetId: '2bd04ed033cdabb560157420f696afc3',
+                        name: 'calm',
                         bitmapResolution: 1,
-                        md5ext: 'f5f2cfb7a7c2b68338e584543145b416.svg',
+                        md5ext: '2bd04ed033cdabb560157420f696afc3.svg',
                         dataFormat: 'svg',
-                        rotationCenterX: 27,
-                        rotationCenterY: 38
+                        rotationCenterX: 55.81578,
+                        rotationCenterY: 140.7237
+                    },
+                    {
+                        assetId: '54a20f367ba6510055036e7b67b4e092',
+                        name: 'Tense',
+                        bitmapResolution: 1,
+                        md5ext: '54a20f367ba6510055036e7b67b4e092.svg',
+                        dataFormat: 'svg',
+                        rotationCenterX: 55.49282,
+                        rotationCenterY: 140.7237
                     }
                 ],
                 sounds: [
                     {
-                        assetId: 'd9e233bcc4ae423dffebd2027a59019f',
-                        name: translator(messages.hoot),
+                        assetId: '83a9787d4cb6f3b7632b4ddfebf74367',
+                        name: translator(messages.pop),
                         dataFormat: 'wav',
                         format: '',
-                        rate: 48000,
-                        sampleCount: 35313,
-                        md5ext: 'd9e233bcc4ae423dffebd2027a59019f.wav'
+                        rate: 11025,
+                        sampleCount: 258,
+                        md5ext: '83a9787d4cb6f3b7632b4ddfebf74367.wav'
                     }
                 ],
                 volume: 100,
                 visible: true,
                 x: 0,
                 y: 0,
-                size: 100,
+                size: 45,
                 direction: 90,
                 draggable: false,
                 rotationStyle: 'all around'

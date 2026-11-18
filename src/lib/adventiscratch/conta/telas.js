@@ -4,7 +4,7 @@
  */
 
 const ESTILO_ID = 'adventiscratch-conta-estilo';
-const MASCOTE = 'static/adventiscratch/mascote.svg';
+const MASCOTE = 'static/adventiscratch/siom.svg';
 
 export const esc = s => String(s === null || typeof s === 'undefined' ? '' : s).replace(/[&<>"']/g, c => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
