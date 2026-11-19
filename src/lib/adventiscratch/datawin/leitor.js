@@ -523,7 +523,8 @@ export const lerDataWin = buffer => {
             const occ = u32(k + 4);
             const prim = i32(k + 8);
             funcoes.push(f);
-            if (occ > 0 && prim > 0) percorrer(prim, occ, refFuncao, funcoes.length - 1);
+            // GMS 2.3+: o primeiro endereço aponta para o operando (4 bytes depois da instrução)
+            if (occ > 0 && prim > 0) percorrer(v23 ? prim - 4 : prim, occ, refFuncao, funcoes.length - 1);
             k += 12;
         }
     }

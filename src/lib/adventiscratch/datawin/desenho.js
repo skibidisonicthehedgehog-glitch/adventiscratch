@@ -211,6 +211,11 @@ export class Desenhista {
     }
 
     glifo (f, g, x, y, cor) {
+        if (g.item) {
+            // fonte de sprite
+            this.item(g.item, x, y, 0, 0, 1, 1, 0, cor & 0xffffff, 1);
+            return;
+        }
         const it = f.pagina;
         if (!it) return;
         const sub = {textura: it.textura, sx: it.sx + g.x, sy: it.sy + g.y, sw: g.w, sh: g.h, tx: 0, ty: 0, tw: g.w, th: g.h};

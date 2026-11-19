@@ -160,6 +160,10 @@ class AdventiscratchDataWin {
                 continue;
             }
             const extra = {arquivo: f};
+            // arquivos de texto pequenos (idiomas, configurações) já ficam lidos: o jogo lê de forma síncrona
+            if (f.size < 4 * 1024 * 1024 && /\.(txt|ini|json|csv|cfg|lang|xml|yaml|yml)$/i.test(nome)) {
+                extra.texto = await f.text();
+            }
             extras.set(nome, extra);
             // também pelo caminho dentro da pasta (ex.: "mus/story.ogg")
             const rel = (f.webkitRelativePath || '').toLowerCase().split('/').slice(1).join('/');

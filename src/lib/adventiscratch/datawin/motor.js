@@ -234,6 +234,7 @@ export class MotorGM {
         this.vozes = new Map();
         this.buffers = new Map();
         this.musicasFaltando = new Set();
+        this.extensoesIgnoradas = new Set();
         this.ini = null;
         this.arquivosAbertos = new Map();
         this.prefixo = `adventiblocks.datawin.${dw.info.nome || 'jogo'}`;
@@ -296,7 +297,14 @@ export class MotorGM {
             if (this.globalBuiltin(nome)) return this.lerGlobal(nome);
             return dono.vars.get(nome);
         }
-        if (dono instanceof Struct) return dono.vars.get(nome);
+        if (dono instanceof Struct) {
+            if (dono.vars.has(nome)) return dono.vars.get(nome);
+            // statics do construtor (e dos construtores pais)
+            for (let e = dono.estaticos, k = 0; e && k < 32; e = e.pai, k++) {
+                if (e.vars.has(nome)) return e.vars.get(nome);
+            }
+            return undefined;
+        }
         if (dono.ehInstancia) {
             if (BUILTIN_INST.has(nome)) return this.lerBuiltin(dono, nome);
             if (dono.vars.has(nome)) return dono.vars.get(nome);
@@ -697,6 +705,7 @@ export class MotorGM {
             i.xprevious = i.x;
             i.yprevious = i.y;
         }
+        this.eventosAsync();
         this.todosComEvento(EV.STEP, 1);
         // alarmes
         this.todosComEvento(0, 0, i => {
@@ -724,6 +733,29 @@ export class MotorGM {
         this.mouse.apertados.clear();
         this.mouse.soltos.clear();
         this.quadros++;
+    }
+
+    // salvar/carregar assíncrono (buffer_save_async etc.): roda e dispara Async Save/Load (Other 72)
+    eventosAsync () {
+        const fila = this.asyncPendentes;
+        if (!fila || !fila.length) return;
+        this.asyncPendentes = [];
+        for (const op of fila) {
+            let ok = false;
+            try {
+                ok = !!op.fn();
+            } catch (e) {
+                ok = false;
+            }
+            const mapa = FUNCOES.ds_map_create(this, []);
+            FUNCOES.ds_map_set(this, [mapa, 'id', op.id]);
+            FUNCOES.ds_map_set(this, [mapa, 'status', ok ? 1 : 0]);
+            FUNCOES.ds_map_set(this, [mapa, 'error', ok ? 0 : -1]);
+            this.asyncAtual = mapa;
+            this.todosComEvento(EV.OTHER, 72);
+            this.asyncAtual = undefined;
+            FUNCOES.ds_map_destroy(this, [mapa]);
+        }
     }
 
     eventosDeTeclado () {
@@ -1205,6 +1237,11 @@ export class MotorGM {
     chamarNativa (nome, args, q) {
         const f = FUNCOES[nome];
         if (f) return f(this, args, q);
+        // extensões nativas do PC (FMOD, Steam, Discord, gameframe…) não rodam no navegador
+        if (/^(fmod_|steam_|gameframe_|discord_|np_|gog_|xbox_|psn_|switch_)/.test(nome)) {
+            this.extensoesIgnoradas.add(nome);
+            return 0;
+        }
         this.faltou(nome);
         return undefined;
     }
@@ -1339,7 +1376,7 @@ const GLOBAIS = {
     event_type: {ler: m => (m.eventoAtual.length ? m.eventoAtual[m.eventoAtual.length - 1].tipo : -1)},
     event_number: {ler: m => (m.eventoAtual.length ? m.eventoAtual[m.eventoAtual.length - 1].sub : -1)},
     event_object: {ler: m => (m.eventoAtual.length ? m.eventoAtual[m.eventoAtual.length - 1].nivel : -1)},
-    async_load: {ler: () => -1},
+    async_load: {ler: m => (m.asyncAtual === undefined ? -1 : m.asyncAtual)},
     browser_width: {ler: m => m.canvas.width},
     browser_height: {ler: m => m.canvas.height},
     display_aa: {ler: () => 0},

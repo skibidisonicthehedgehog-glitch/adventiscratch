@@ -314,6 +314,8 @@ export class MaquinaGML {
      */
     executar (indice, self, other, args = []) {
         const c = this.preparar(indice);
+        // o limite de passos (anti-travamento) vale para cada código chamado pelo motor
+        if (this.profundidade === 0) this.passos = 0;
         if (++this.profundidade > 400) {
             this.profundidade--;
             throw new ErroGML('recursão profunda demais');
@@ -584,7 +586,9 @@ export class MaquinaGML {
             case O.BT: if (verdade(pop())) pc = i.destino; break;
             case O.BF: if (!verdade(pop())) pc = i.destino; break;
             case O.PUSHENV: {
-                const alvo = pop();
+                let alvo = pop();
+                // GMS 2.3+: with (expressão) empilha o valor e depois -9 ("veio da pilha")
+                if (alvo === INST.STACKTOP) alvo = pop();
                 const lista = this.alvos(q, alvo).slice();
                 q.envs.push({lista, k: 0, self: q.self, other: q.other});
                 if (!lista.length) {
@@ -800,7 +804,15 @@ export class MaquinaGML {
         case '@@GetInstance@@': return args[0];
         case '@@NewGMLArray@@': return args;
         case '@@NullObject@@': return undefined;
-        case '@@CopyStatic@@': case '@@SetStatic@@': return undefined;
+        case '@@CopyStatic@@': {
+            // construtor filho (constructor : Pai()): as statics do pai valem para o filho
+            const fn = args[0];
+            const nomeP = fn instanceof Metodo ? fn.funcao : (typeof fn === 'number' ? this.nomeDaFuncao(fn) : String(fn));
+            const cod = this.codigoDaFuncao(nomeP);
+            if (cod >= 0 && cod !== q.codigo) this.estaticosDe(q.codigo).pai = this.estaticosDe(cod);
+            return undefined;
+        }
+        case '@@SetStatic@@': return undefined;
         case '@@try_hook@@': case '@@try_unhook@@': case '@@finish_catch@@': case '@@finish_finally@@':
             return undefined;
         case '@@throw@@': throw new ErroGML(`exceção do jogo: ${this.motor.texto(args[0])}`);
@@ -824,6 +836,11 @@ export class MaquinaGML {
         const codigo = this.codigoDaFuncao(nome);
         if (codigo >= 0) return this.executar(codigo, self, other, args);
         return this.motor.chamarNativa(nome, args, q);
+    }
+
+    nomeDaFuncao (indice) {
+        const f = this.dw.funcoes[paraInt(indice)];
+        return f ? f.nome : this.nomeDoScript(indice);
     }
 
     nomeDoScript (indice) {
@@ -852,6 +869,8 @@ export class MaquinaGML {
         const codigo = this.codigoDaFuncao(nome);
         if (codigo >= 0) {
             s.construtor = nome;
+            // as variáveis static do construtor (métodos, constantes) valem para todos os structs dele
+            s.estaticos = this.estaticosDe(codigo);
             this.executar(codigo, s, q.self, args);
         }
         return s;

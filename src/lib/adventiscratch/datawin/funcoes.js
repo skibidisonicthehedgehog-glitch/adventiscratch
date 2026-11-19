@@ -814,8 +814,46 @@ Object.assign(F, {
     gamepad_button_count: () => 0,
     gamepad_get_description: () => '',
     gamepad_button_value: () => 0,
-    font_add_sprite: () => -1,
-    font_add_sprite_ext: () => -1,
+    // fonte feita de sprite: cada quadro é uma letra (na ordem do texto do mapa)
+    font_add_sprite_ext: (m, a) => {
+        const s = m.dw.sprites[paraInt(a[0])];
+        if (!s) return -1;
+        const mapa = texto(m, a[1]);
+        const prop = verdade(a[2]);
+        const sep = num(a[3]);
+        const glifos = new Map();
+        let k = 0;
+        for (const ch of mapa) {
+            const it = s.quadros[k++];
+            if (!it) break;
+            const w = prop ? it.tw : s.largura;
+            glifos.set(ch.codePointAt(0), {c: ch.codePointAt(0), w, h: s.altura, avanco: w + sep, desloc: prop ? -it.tx : 0,
+                item: it});
+        }
+        if (!glifos.has(32)) glifos.set(32, {c: 32, w: 0, h: s.altura, avanco: Math.round(s.largura / (prop ? 2 : 1)) + sep, desloc: 0});
+        m.dw.fontes.push({nome: `${s.nome}_fonte`, glifos, altura: s.altura, sprite: true});
+        return m.dw.fontes.length - 1;
+    },
+    font_add_sprite: (m, a) => {
+        const s = m.dw.sprites[paraInt(a[0])];
+        if (!s) return -1;
+        const ini = paraInt(a[1]);
+        let mapa = '';
+        for (let k = 0; k < s.quadros.length; k++) mapa += String.fromCodePoint(ini + k);
+        return F.font_add_sprite_ext(m, [a[0], mapa, a[2], a[3]]);
+    },
+    font_delete: () => {},
+    font_add_enable_aa: () => {},
+    font_get_info: (m, a) => {
+        const f = m.dw.fontes[paraInt(a[0])];
+        const st = new Struct();
+        if (f) {
+            st.vars.set('name', f.exibido || f.nome);
+            st.vars.set('size', f.tamanho || f.altura);
+            st.vars.set('ascender', f.altura);
+        }
+        return st;
+    },
     font_exists: (m, a) => (m.dw.fontes[paraInt(a[0])] ? 1 : 0),
     font_get_name: (m, a) => (m.dw.fontes[paraInt(a[0])] || {}).nome || '',
     texture_set_interpolation: () => {},
@@ -889,6 +927,33 @@ Object.assign(F, {
 });
 
 // ---------------------------------------------------------------- desenho
+// área visível em coordenadas do mundo (para não desenhar ladrilhos fora da tela)
+const areaVisivel = m => {
+    if (m.alvoSuperficie.length) {
+        const c = m.alvoSuperficie[m.alvoSuperficie.length - 1].canvas;
+        return {l: 0, t: 0, r: c.width, b: c.height};
+    }
+    if (m.view_enabled) {
+        const cam = m.camera(m.view_current);
+        if (cam) return {l: cam.x, t: cam.y, r: cam.x + cam.w, b: cam.y + cam.h};
+    }
+    return {l: 0, t: 0, r: m.room_width || m.canvas.width, b: m.room_height || m.canvas.height};
+};
+const desenharLadrilhado = (m, sprite, sub, x, y, xs, ys, cor, alpha) => comCtx(m, () => {
+    const sp = m.dw.sprites[paraInt(sprite)];
+    if (!sp || !sp.quadros.length) return;
+    const w = sp.largura * Math.abs(xs || 1);
+    const h = sp.altura * Math.abs(ys || 1);
+    if (w < 1 || h < 1) return;
+    const v = areaVisivel(m);
+    const x0 = num(x) + (Math.floor((v.l - num(x)) / w) * w);
+    const y0 = num(y) + (Math.floor((v.t - num(y)) / h) * h);
+    for (let xx = x0; xx < v.r; xx += w) {
+        for (let yy = y0; yy < v.b; yy += h) {
+            m.d.sprite(paraInt(sprite), num(sub), xx + (sp.origemX * xs), yy + (sp.origemY * ys), xs, ys, 0, cor, alpha);
+        }
+    }
+});
 const D = m => m.d;
 const alvoCtx = m => (m.alvoSuperficie.length ? m.alvoSuperficie[m.alvoSuperficie.length - 1].ctx : m.ctx);
 const comCtx = (m, fn) => {
@@ -956,17 +1021,9 @@ Object.assign(F, {
         D(m).parte(it, num(a[2]), num(a[3]), num(a[4]), num(a[5]), num(a[6]), num(a[7]), num(a[8]), num(a[9]),
             paraInt(a[10]), num(a[11]));
     }),
-    draw_sprite_tiled: (m, a) => comCtx(m, () => {
-        const sp = spr(m, a[0]);
-        if (!sp || !sp.quadros.length) return;
-        const w = sp.largura;
-        const h = sp.altura;
-        const x0 = ((num(a[2]) % w) + w) % w - w;
-        const y0 = ((num(a[3]) % h) + h) % h - h;
-        for (let x = x0; x < m.room_width; x += w) {
-            for (let y = y0; y < m.room_height; y += h) D(m).sprite(paraInt(a[0]), num(a[1]), x + sp.origemX, y + sp.origemY);
-        }
-    }),
+    draw_sprite_tiled: (m, a) => desenharLadrilhado(m, a[0], a[1], a[2], a[3], 1, 1, 0xffffff, m.d.alpha),
+    draw_sprite_tiled_ext: (m, a) => desenharLadrilhado(m, a[0], a[1], a[2], a[3], num(a[4]), num(a[5]), paraInt(a[6]),
+        num(a[7])),
     draw_background: (m, a) => comCtx(m, () => D(m).item(fundo(m, a[0]), num(a[1]), num(a[2]), 0, 0, 1, 1, 0, 0xffffff, m.d.alpha)),
     draw_background_ext: (m, a) => comCtx(m, () => D(m).item(fundo(m, a[0]), num(a[1]), num(a[2]), 0, 0, num(a[3]),
         num(a[4]), num(a[5]), paraInt(a[6]), num(a[7]))),
@@ -1937,12 +1994,19 @@ const escreverIni = mapa => Array.from(mapa.entries()).map(([sec, kv]) =>
         .join('\r\n')}`)
     .join('\r\n');
 const nomeArq = (m, v) => texto(m, v).replace(/\\/g, '/')
+    .replace(/^(\.\/)+|^\/+/, '')
     .toLowerCase();
+// arquivo de texto: primeiro o que o jogo salvou, depois os arquivos da pasta do jogo (ex.: lang/english.txt)
+const textoDoArquivo = (m, n) => {
+    if (m.vfs.has(n)) return m.vfs.get(n);
+    const e = m.extras.get(n) || m.extras.get(n.split('/').pop());
+    return e && typeof e.texto === 'string' ? e.texto : undefined;
+};
 let proxArq = 1;
 Object.assign(F, {
     ini_open: (m, a) => {
         const n = nomeArq(m, a[0]);
-        m.ini = {nome: n, dados: lerIni(m.vfs.get(n)), mudou: false};
+        m.ini = {nome: n, dados: lerIni(textoDoArquivo(m, n)), mudou: false};
     },
     ini_open_from_string: (m, a) => {
         m.ini = {nome: null, dados: lerIni(texto(m, a[0])), mudou: false};
@@ -1995,7 +2059,8 @@ Object.assign(F, {
             m.ini.mudou = true;
         }
     },
-    file_exists: (m, a) => (m.vfs.has(nomeArq(m, a[0])) ? 1 : 0),
+    file_exists: (m, a) => (textoDoArquivo(m, nomeArq(m, a[0])) !== undefined ||
+        m.extras.has(nomeArq(m, a[0])) ? 1 : 0),
     file_delete: (m, a) => {
         m.vfs.delete(nomeArq(m, a[0]));
         m.salvarVfs();
@@ -2020,9 +2085,10 @@ Object.assign(F, {
     directory_create: () => {},
     file_text_open_read: (m, a) => {
         const n = nomeArq(m, a[0]);
-        if (!m.vfs.has(n)) return -1;
+        const t = textoDoArquivo(m, n);
+        if (t === undefined) return -1;
         const id = proxArq++;
-        m.arquivosAbertos.set(id, {nome: n, linhas: m.vfs.get(n).split(/\r?\n/), linha: 0, col: 0, escrita: false});
+        m.arquivosAbertos.set(id, {nome: n, linhas: t.split(/\r?\n/), linha: 0, col: 0, escrita: false});
         return id;
     },
     file_text_open_write: (m, a) => {
@@ -2353,20 +2419,450 @@ Object.assign(F, {
         return 1;
     },
     steam_file_read: (m, a) => m.vfs.get(nomeArq(m, a[0])) || '',
-    // buffers: só o necessário para não travar (salvar/carregar assíncrono vira "sem dados")
-    buffer_create: (m, a) => novoDs(m, 'buffer', {dados: new Uint8Array(Math.max(1, paraInt(a[0]))), pos: 0}),
+});
+
+// ---------------------------------------------------------------- busca de arquivos e outras do GM 2022+
+const curinga = mascara => new RegExp(`^${mascara.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')
+    .replace(/\?/g, '.')}$`, 'i');
+Object.assign(F, {
+    file_find_first: (m, a) => {
+        const masc = nomeArq(m, a[0]);
+        const pasta = masc.includes('/') ? masc.slice(0, masc.lastIndexOf('/') + 1) : '';
+        const re = curinga(masc);
+        m.busca = Array.from(new Set(Array.from(m.vfs.keys()).concat(Array.from(m.extras.keys())))).filter(k => re.test(k))
+            .map(k => k.slice(pasta.length));
+        return m.busca.length ? m.busca.shift() : '';
+    },
+    file_find_next: m => (m.busca && m.busca.length ? m.busca.shift() : ''),
+    file_find_close: m => {
+        m.busca = null;
+    },
+    layer_force_draw_depth: () => {},
+    window_get_cursor: () => 0,
+    shader_current: () => -1,
+    buffer_get_address: () => 0,
+    texture_flush: () => {},
+    get_buffer_group_name: () => ''
+});
+
+// ---------------------------------------------------------------- GameMaker 2022+ (Pizza Tower e outros)
+let proxPart = 1;
+Object.assign(F, {
+    instance_place_list: (m, a, q) => {
+        const i = eu(q);
+        const lista = pegaDs(m, 'lista', a[3]);
+        if (!i || !lista) return 0;
+        const c = caixaEm(i, num(a[0]), num(a[1]));
+        let n = 0;
+        const achados = candidatos(m, q, a[2]).filter(o => o !== i && sobre(c, o.caixa()));
+        if (verdade(a[4])) achados.sort((p1, p2) => Math.hypot(p1.x - i.x, p1.y - i.y) - Math.hypot(p2.x - i.x, p2.y - i.y));
+        for (const o of achados) {
+            lista.push(o.id);
+            n++;
+        }
+        return n;
+    },
+    instance_position_list: (m, a, q) => {
+        const lista = pegaDs(m, 'lista', a[3]);
+        if (!lista) return 0;
+        const achados = candidatos(m, q, a[2]).filter(o => contemPonto(o.caixa(), num(a[0]), num(a[1])));
+        achados.forEach(o => lista.push(o.id));
+        return achados.length;
+    },
+    collision_rectangle_list: (m, a, q) => {
+        const lista = pegaDs(m, 'lista', a[7]);
+        if (!lista) return 0;
+        const me = verdade(a[6]) ? eu(q) : null;
+        const c = {l: Math.min(num(a[0]), num(a[2])), r: Math.max(num(a[0]), num(a[2])),
+            t: Math.min(num(a[1]), num(a[3])), b: Math.max(num(a[1]), num(a[3]))};
+        const achados = candidatos(m, q, a[4]).filter(o => o !== me && sobre(c, o.caixa()));
+        achados.forEach(o => lista.push(o.id));
+        return achados.length;
+    },
+    display_get_dpi_x: () => 96,
+    display_get_dpi_y: () => 96,
+    display_set_gui_maximise: () => {},
+    display_set_gui_maximize: () => {},
+    display_set_timing_method: () => {},
+    display_get_timing_method: () => 0,
+    sprite_get_texture: () => -1,
+    sprite_get_uvs: () => [0, 0, 1, 1, 0, 0, 1, 1],
+    texture_set_stage: () => {},
+    texture_get_texel_width: () => 1 / 2048,
+    texture_get_texel_height: () => 1 / 2048,
+    texture_get_width: () => 1,
+    texture_get_height: () => 1,
+    gpu_set_texfilter_ext: () => {},
+    gpu_set_texrepeat: () => {},
+    gpu_get_texfilter: () => 0,
+    gpu_set_fog: () => {},
+    gpu_get_blendmode: m => (m.blend === 'lighter' ? 1 : 0),
+    texturegroup_get_textures: () => [],
+    texturegroup_unload: () => {},
+    texturegroup_get_status: () => 2,
+    window_handle: () => 0,
+    window_device: () => 0,
+    date_get_month: () => new Date().getMonth() + 1,
+    date_get_day: () => new Date().getDate(),
+    date_get_hour: () => new Date().getHours(),
+    date_get_minute: () => new Date().getMinutes(),
+    date_get_second: () => new Date().getSeconds(),
+    date_get_weekday: () => new Date().getDay(),
+    gamepad_set_vibration: () => {},
+    layer_get_all: m => m.camadas.map(c => c.id),
+    layer_get_name: (m, a) => {
+        const c = m.camadas.find(x => x.id === paraInt(a[0]));
+        return c ? c.nome : '';
+    },
+    layer_get_hspeed: (m, a) => {
+        const c = camadaPorNome(m, a[0]);
+        return c ? c.vx : 0;
+    },
+    layer_get_vspeed: (m, a) => {
+        const c = camadaPorNome(m, a[0]);
+        return c ? c.vy : 0;
+    },
+    layer_get_all_elements: (m, a) => {
+        const c = camadaPorNome(m, a[0]);
+        if (!c) return [];
+        if (c.tipo === 1 || c.tipo === 4) return [c.id];
+        if (c.tipo === 2) return (c.instancias || []).slice();
+        return [];
+    },
+    layer_get_element_type: (m, a) => {
+        const c = m.camadas.find(x => x.id === paraInt(a[0]));
+        if (!c) return 2; // instância
+        return c.tipo === 1 ? 1 : (c.tipo === 4 ? 5 : 0);
+    },
+    layer_background_get_sprite: (m, a) => {
+        const c = m.camadas.find(x => x.id === paraInt(a[0]));
+        return c && c.fundo ? c.fundo.sprite : -1;
+    },
+    layer_background_sprite: (m, a) => {
+        const c = m.camadas.find(x => x.id === paraInt(a[0]));
+        if (c && c.fundo) c.fundo.sprite = paraInt(a[1]);
+    },
+    layer_background_htiled: (m, a) => {
+        const c = m.camadas.find(x => x.id === paraInt(a[0]));
+        if (c && c.fundo) c.fundo.repeteX = verdade(a[1]);
+    },
+    layer_background_vtiled: (m, a) => {
+        const c = m.camadas.find(x => x.id === paraInt(a[0]));
+        if (c && c.fundo) c.fundo.repeteY = verdade(a[1]);
+    },
+    layer_background_alpha: (m, a) => {
+        const c = m.camadas.find(x => x.id === paraInt(a[0]));
+        if (c && c.fundo) c.fundo.cor = ((Math.round(Math.max(0, Math.min(1, num(a[1]))) * 255) << 24) | (c.fundo.cor & 0xffffff)) >>> 0;
+    },
+    layer_set_target_room: () => {},
+    layer_reset_target_room: () => {},
+    layer_script_begin: () => {},
+    layer_script_end: () => {},
+    layer_shader: () => {},
+    layer_destroy: (m, a) => {
+        const c = camadaPorNome(m, a[0]);
+        if (c) m.camadas = m.camadas.filter(x => x !== c);
+    },
+    // partículas: sem desenho por enquanto (só para os jogos não travarem)
+    part_system_create: () => proxPart++,
+    part_system_create_layer: () => proxPart++,
+    part_system_destroy: () => {},
+    part_system_depth: () => {},
+    part_system_layer: () => {},
+    part_system_automatic_draw: () => {},
+    part_system_automatic_update: () => {},
+    part_system_drawit: () => {},
+    part_system_update: () => {},
+    part_system_clear: () => {},
+    part_system_exists: () => 1,
+    part_type_create: () => proxPart++,
+    part_type_destroy: () => {},
+    part_emitter_create: () => proxPart++,
+    part_emitter_destroy: () => {},
+    part_emitter_region: () => {},
+    part_emitter_burst: () => {},
+    part_emitter_stream: () => {},
+    part_particles_create: () => {},
+    part_particles_create_color: () => {},
+    part_particles_create_colour: () => {},
+    part_particles_clear: () => {},
+    part_particles_count: () => 0
+});
+// as outras part_type_* só configuram o tipo
+for (const n of ['sprite', 'life', 'speed', 'direction', 'gravity', 'orientation', 'size', 'scale', 'alpha1', 'alpha2',
+    'alpha3', 'color1', 'color2', 'color3', 'colour1', 'colour2', 'colour3', 'blend', 'shape', 'step', 'death', 'color_mix',
+    'colour_mix', 'color_rgb', 'colour_rgb', 'color_hsv', 'colour_hsv']) {
+    F[`part_type_${n}`] = () => {};
+}
+
+// ---------------------------------------------------------------- buffers (binário) e salvar/carregar assíncrono
+const TAM_TIPO = {1: 1, 2: 1, 3: 2, 4: 2, 5: 4, 6: 4, 7: 2, 8: 4, 9: 8, 10: 1, 12: 8};
+const buf = (m, v) => pegaDs(m, 'buffer', v);
+const garantir = (b, n) => {
+    if (b.pos + n <= b.dados.length) return true;
+    if (b.tipo === 1) { // grow
+        let t = Math.max(1, b.dados.length);
+        while (t < b.pos + n) t *= 2;
+        const novo = new Uint8Array(t);
+        novo.set(b.dados);
+        b.dados = novo;
+        return true;
+    }
+    if (b.tipo === 2) { // wrap
+        b.pos %= Math.max(1, b.dados.length);
+        return b.pos + n <= b.dados.length;
+    }
+    return false;
+};
+const escreverNoBuffer = (b, tipo, v) => {
+    if (tipo === 11 || tipo === 13) {
+        const bytes = new TextEncoder().encode(String(v));
+        const n = bytes.length + (tipo === 11 ? 1 : 0);
+        if (!garantir(b, n)) return -1;
+        b.dados.set(bytes, b.pos);
+        if (tipo === 11) b.dados[b.pos + bytes.length] = 0;
+        b.pos += n;
+        b.usado = Math.max(b.usado, b.pos);
+        return 0;
+    }
+    const n = TAM_TIPO[tipo] || 1;
+    if (b.alin > 1) b.pos = Math.ceil(b.pos / Math.min(b.alin, n)) * Math.min(b.alin, n);
+    if (!garantir(b, n)) return -1;
+    const dv = new DataView(b.dados.buffer, b.dados.byteOffset, b.dados.byteLength);
+    const x = num(v);
+    switch (tipo) {
+    case 1: case 10: dv.setUint8(b.pos, x); break;
+    case 2: dv.setInt8(b.pos, x); break;
+    case 3: case 7: dv.setUint16(b.pos, x, true); break;
+    case 4: dv.setInt16(b.pos, x, true); break;
+    case 5: dv.setUint32(b.pos, x >>> 0, true); break;
+    case 6: dv.setInt32(b.pos, x | 0, true); break;
+    case 8: dv.setFloat32(b.pos, x, true); break;
+    case 9: dv.setFloat64(b.pos, x, true); break;
+    case 12: dv.setBigUint64(b.pos, BigInt.asUintN(64, BigInt(Math.trunc(x))), true); break;
+    default: dv.setUint8(b.pos, x); break;
+    }
+    b.pos += n;
+    b.usado = Math.max(b.usado, b.pos);
+    return 0;
+};
+const lerDoBuffer = (b, tipo) => {
+    if (tipo === 11 || tipo === 13) {
+        let fim = b.pos;
+        const limite = tipo === 11 ? b.dados.length : b.usado;
+        while (fim < limite && (tipo === 13 || b.dados[fim] !== 0)) fim++;
+        const t = new TextDecoder().decode(b.dados.subarray(b.pos, fim));
+        b.pos = tipo === 11 ? fim + 1 : fim;
+        return t;
+    }
+    const n = TAM_TIPO[tipo] || 1;
+    if (b.alin > 1) b.pos = Math.ceil(b.pos / Math.min(b.alin, n)) * Math.min(b.alin, n);
+    if (b.pos + n > b.dados.length) return 0;
+    const dv = new DataView(b.dados.buffer, b.dados.byteOffset, b.dados.byteLength);
+    let r;
+    switch (tipo) {
+    case 1: case 10: r = dv.getUint8(b.pos); break;
+    case 2: r = dv.getInt8(b.pos); break;
+    case 3: case 7: r = dv.getUint16(b.pos, true); break;
+    case 4: r = dv.getInt16(b.pos, true); break;
+    case 5: r = dv.getUint32(b.pos, true); break;
+    case 6: r = dv.getInt32(b.pos, true); break;
+    case 8: r = dv.getFloat32(b.pos, true); break;
+    case 9: r = dv.getFloat64(b.pos, true); break;
+    case 12: r = Number(dv.getBigUint64(b.pos, true)); break;
+    default: r = dv.getUint8(b.pos); break;
+    }
+    b.pos += n;
+    return r;
+};
+// arquivos binários no armazenamento do navegador viram base64
+const PREFIXO_BIN = '\u0000b64:';
+const paraBase64 = bytes => {
+    let t = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) t += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(t);
+};
+const bytesDoArquivo = (m, nome) => {
+    const t = textoDoArquivo(m, nome);
+    if (t === undefined) return null;
+    if (t.startsWith(PREFIXO_BIN)) {
+        const bin = atob(t.slice(PREFIXO_BIN.length));
+        const r = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) r[i] = bin.charCodeAt(i);
+        return r;
+    }
+    return new TextEncoder().encode(t);
+};
+const salvarBytes = (m, nome, bytes) => {
+    m.vfs.set(nome, PREFIXO_BIN + paraBase64(bytes));
+    m.salvarVfs();
+};
+const nomeNoGrupo = (m, v) => {
+    const n = nomeArq(m, v);
+    return m.grupoAsync ? `${m.grupoAsync.toLowerCase()}/${n}` : n;
+};
+let proxAsync = 1;
+const agendarAsync = (m, fn) => {
+    const id = proxAsync++;
+    m.asyncPendentes = m.asyncPendentes || [];
+    m.asyncPendentes.push({id, fn});
+    return id;
+};
+Object.assign(F, {
+    buffer_create: (m, a) => novoDs(m, 'buffer', {
+        dados: new Uint8Array(Math.max(1, paraInt(a[0]))), pos: 0, usado: 0, tipo: paraInt(a[1]), alin: Math.max(1, paraInt(a[2]))
+    }),
     buffer_delete: (m, a) => ds(m, 'buffer').itens.delete(paraInt(a[0])),
-    buffer_get_size: (m, a) => ((pegaDs(m, 'buffer', a[0]) || {dados: []}).dados.length),
-    buffer_write: () => 0,
-    buffer_read: () => 0,
-    buffer_seek: () => {},
-    buffer_tell: () => 0,
-    buffer_async_group_begin: () => {},
+    buffer_exists: (m, a) => (buf(m, a[0]) ? 1 : 0),
+    buffer_get_size: (m, a) => (buf(m, a[0]) ? buf(m, a[0]).dados.length : 0),
+    buffer_get_type: (m, a) => (buf(m, a[0]) ? buf(m, a[0]).tipo : 0),
+    buffer_get_alignment: (m, a) => (buf(m, a[0]) ? buf(m, a[0]).alin : 1),
+    buffer_sizeof: (m, a) => TAM_TIPO[paraInt(a[0])] || 1,
+    buffer_write: (m, a) => (buf(m, a[0]) ? escreverNoBuffer(buf(m, a[0]), paraInt(a[1]), a[2]) : -1),
+    buffer_read: (m, a) => (buf(m, a[0]) ? lerDoBuffer(buf(m, a[0]), paraInt(a[1])) : 0),
+    buffer_peek: (m, a) => {
+        const b = buf(m, a[0]);
+        if (!b) return 0;
+        const p = b.pos;
+        b.pos = paraInt(a[1]);
+        const r = lerDoBuffer(b, paraInt(a[2]));
+        b.pos = p;
+        return r;
+    },
+    buffer_poke: (m, a) => {
+        const b = buf(m, a[0]);
+        if (!b) return;
+        const p = b.pos;
+        b.pos = paraInt(a[1]);
+        escreverNoBuffer(b, paraInt(a[2]), a[3]);
+        b.pos = p;
+    },
+    buffer_seek: (m, a) => {
+        const b = buf(m, a[0]);
+        if (!b) return;
+        const base = paraInt(a[1]);
+        const d = paraInt(a[2]);
+        b.pos = Math.max(0, base === 0 ? d : (base === 1 ? b.pos + d : b.dados.length + d));
+    },
+    buffer_tell: (m, a) => (buf(m, a[0]) ? buf(m, a[0]).pos : 0),
+    buffer_resize: (m, a) => {
+        const b = buf(m, a[0]);
+        if (!b) return;
+        const novo = new Uint8Array(Math.max(1, paraInt(a[1])));
+        novo.set(b.dados.subarray(0, novo.length));
+        b.dados = novo;
+    },
+    buffer_fill: (m, a) => {
+        const b = buf(m, a[0]);
+        if (!b) return;
+        const p = b.pos;
+        b.pos = paraInt(a[1]);
+        const fim = b.pos + paraInt(a[4]);
+        while (b.pos < fim && escreverNoBuffer(b, paraInt(a[2]), a[3]) === 0);
+        b.pos = p;
+    },
+    buffer_copy: (m, a) => {
+        const o = buf(m, a[0]);
+        const d = buf(m, a[3]);
+        if (!o || !d) return;
+        const ini = paraInt(a[1]);
+        const n = Math.min(paraInt(a[2]), o.dados.length - ini);
+        const pd = paraInt(a[4]);
+        if (pd + n > d.dados.length) d.dados = Uint8Array.from({length: pd + n}, (x, i) => d.dados[i] || 0);
+        d.dados.set(o.dados.subarray(ini, ini + n), pd);
+    },
+    buffer_base64_encode: (m, a) => {
+        const b = buf(m, a[0]);
+        return b ? paraBase64(b.dados.subarray(paraInt(a[1]), paraInt(a[1]) + paraInt(a[2]))) : '';
+    },
+    buffer_base64_decode: (m, a) => {
+        try {
+            const bin = atob(texto(m, a[0]));
+            const id = F.buffer_create(m, [bin.length, 1, 1]);
+            const b = buf(m, id);
+            for (let i = 0; i < bin.length; i++) b.dados[i] = bin.charCodeAt(i);
+            b.usado = bin.length;
+            return id;
+        } catch (e) {
+            return -1;
+        }
+    },
+    buffer_md5: () => '',
+    buffer_sha1: () => '',
+    buffer_crc32: () => 0,
+    buffer_save: (m, a) => {
+        const b = buf(m, a[0]);
+        if (b) salvarBytes(m, nomeArq(m, a[1]), b.dados.subarray(0, Math.max(b.usado, b.dados.length)));
+    },
+    buffer_save_ext: (m, a) => {
+        const b = buf(m, a[0]);
+        if (b) salvarBytes(m, nomeArq(m, a[1]), b.dados.subarray(paraInt(a[2]), paraInt(a[2]) + paraInt(a[3])));
+    },
+    buffer_load: (m, a) => {
+        const bytes = bytesDoArquivo(m, nomeArq(m, a[0]));
+        if (!bytes) return -1;
+        const id = F.buffer_create(m, [Math.max(1, bytes.length), 1, 1]);
+        const b = buf(m, id);
+        b.dados.set(bytes);
+        b.usado = bytes.length;
+        return id;
+    },
+    buffer_load_ext: (m, a) => {
+        const b = buf(m, a[0]);
+        const bytes = bytesDoArquivo(m, nomeArq(m, a[1]));
+        if (!b || !bytes) return;
+        b.pos = paraInt(a[2]);
+        if (garantir(b, bytes.length)) b.dados.set(bytes.subarray(0, b.dados.length - b.pos), b.pos);
+        b.usado = Math.max(b.usado, b.pos + bytes.length);
+    },
+    // salvar/carregar assíncrono: acontece de verdade no próximo quadro e dispara o evento Async Save/Load
+    buffer_async_group_begin: (m, a) => {
+        m.grupoAsync = texto(m, a[0]);
+        m.opsGrupo = [];
+    },
     buffer_async_group_option: () => {},
-    buffer_async_group_end: () => -1,
-    buffer_save_async: () => -1,
-    buffer_load_async: () => -1,
-    buffer_exists: (m, a) => (pegaDs(m, 'buffer', a[0]) ? 1 : 0)
+    buffer_async_group_end: m => {
+        const ops = m.opsGrupo || [];
+        m.grupoAsync = null;
+        m.opsGrupo = null;
+        return agendarAsync(m, () => ops.every(op => op()));
+    },
+    buffer_save_async: (m, a) => {
+        const b = buf(m, a[0]);
+        const nome = nomeNoGrupo(m, a[1]);
+        const ini = paraInt(a[2]);
+        const n = paraInt(a[3]);
+        const op = () => {
+            if (!b) return false;
+            salvarBytes(m, nome, b.dados.subarray(ini, n > 0 ? ini + n : b.dados.length));
+            return true;
+        };
+        if (m.opsGrupo) {
+            m.opsGrupo.push(op);
+            return -1;
+        }
+        return agendarAsync(m, op);
+    },
+    buffer_load_async: (m, a) => {
+        const b = buf(m, a[0]);
+        const nome = nomeNoGrupo(m, a[1]);
+        const ini = paraInt(a[2]);
+        const op = () => {
+            const bytes = bytesDoArquivo(m, nome);
+            if (!b || !bytes) return false;
+            b.pos = ini;
+            garantir(b, bytes.length);
+            b.dados.set(bytes.subarray(0, b.dados.length - ini), ini);
+            b.usado = Math.max(b.usado, ini + bytes.length);
+            b.pos = 0;
+            return true;
+        };
+        if (m.opsGrupo) {
+            m.opsGrupo.push(op);
+            return -1;
+        }
+        return agendarAsync(m, op);
+    }
 });
 
 export const FUNCOES = F;

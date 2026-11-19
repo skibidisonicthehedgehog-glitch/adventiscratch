@@ -411,7 +411,8 @@ for i, (nome, inst) in enumerate(VARS):
 fecha(p)
 p = chunk('FUNC'); w.u32(len(FUNCS))
 for i, nome in enumerate(FUNCS):
-    w.ptr(S(nome)); w.u32(len(ocf[i])); w.i32(min(ocf[i])[0] if ocf[i] else -1)
+    # GMS 2.3+: o primeiro endereço das funções aponta para o operando (+4)
+    w.ptr(S(nome)); w.u32(len(ocf[i])); w.i32((min(ocf[i])[0] + (0 if GMS1 else 4)) if ocf[i] else -1)
 w.u32(0)
 fecha(p)
 
