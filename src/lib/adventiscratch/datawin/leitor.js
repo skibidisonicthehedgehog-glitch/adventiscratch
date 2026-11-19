@@ -528,6 +528,17 @@ export const lerDataWin = buffer => {
         }
     }
 
+    // caminhos (paths): pontos com velocidade (%), suave ou reto, aberto ou fechado
+    const caminhos = listaDoBloco('PATH').map(q => {
+        const n = u32(q + 16);
+        const pontos = [];
+        for (let i = 0; i < n && i < 100000; i++) {
+            const k = q + 20 + (i * 12);
+            pontos.push({x: f32(k), y: f32(k + 4), v: f32(k + 8)});
+        }
+        return {nome: str(u32(q)), suave: Boolean(u32(q + 4)), fechado: Boolean(u32(q + 8)), precisao: u32(q + 12), pontos};
+    });
+
     const scripts = listaDoBloco('SCPT').map(q => {
         let id = i32(q + 4);
         if (id < -1) id &= 0x7fffffff;
@@ -621,6 +632,7 @@ export const lerDataWin = buffer => {
         refVariavel,
         refFuncao,
         scripts,
+        caminhos,
         iniciaisGlobais,
         sons,
         audios,

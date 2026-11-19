@@ -15,6 +15,7 @@ import {AdventiscratchMultiplayer} from './multiplayer-extension.js';
 import {AdventiscratchTilemap} from './tilemap/tilemap-extension.js';
 import {AdventiscratchDataWin} from './datawin/datawin-extension.js';
 import {ouvirPalavraSecreta} from './datawin/segredo.js';
+import {instalarPalco} from './palco.js';
 import bibliotecaDeExtensoes from '../libraries/extensions/index.jsx';
 import {renomearTileset} from './tilemap/dados.js';
 import {comBotaoDeExemplo} from './exemplos-prontos.js';
@@ -51,6 +52,7 @@ Object.entries(EXTENSIONS).forEach(([id, Classe]) => {
  * @param {VirtualMachine} vm VM do Scratch
  */
 const setupAdventiscratch = vm => {
+    instalarPalco(vm);
     const manager = vm.extensionManager;
     if (manager.__adventiscratchPatched) return;
     manager.__adventiscratchPatched = true;

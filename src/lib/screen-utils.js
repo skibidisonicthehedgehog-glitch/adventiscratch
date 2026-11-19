@@ -1,4 +1,5 @@
 import layout, {STAGE_DISPLAY_SCALES, STAGE_SIZE_MODES, STAGE_DISPLAY_SIZES} from '../lib/layout-constants';
+import {tamanhoPalco} from './adventiscratch/palco.js';
 
 /**
  * @typedef {object} StageDimensions
@@ -42,9 +43,13 @@ const resolveStageSize = (stageSizeMode, isFullSize) => {
  * @return {StageDimensions} - an object describing the dimensions of the stage.
  */
 const getStageDimensions = (stageSize, isFullScreen) => {
+    // Adventiblocks: o palco pode ter outro tamanho (Opções do projeto). As coordenadas usam o tamanho
+    // real; na tela a largura continua a do Scratch e a altura segue a proporção.
+    const {largura, altura} = tamanhoPalco();
+    const proporcao = altura / largura;
     const stageDimensions = {
-        heightDefault: layout.standardStageHeight,
-        widthDefault: layout.standardStageWidth,
+        heightDefault: altura,
+        widthDefault: largura,
         height: 0,
         width: 0,
         scale: 0
@@ -55,18 +60,18 @@ const getStageDimensions = (stageSize, isFullScreen) => {
             STAGE_DIMENSION_DEFAULTS.menuHeightAdjustment -
             STAGE_DIMENSION_DEFAULTS.fullScreenSpacingBorderAdjustment;
 
-        stageDimensions.width = stageDimensions.height + (stageDimensions.height / 3);
+        stageDimensions.width = stageDimensions.height / proporcao;
 
         if (stageDimensions.width > window.innerWidth) {
             stageDimensions.width = window.innerWidth;
-            stageDimensions.height = stageDimensions.width * .75;
+            stageDimensions.height = stageDimensions.width * proporcao;
         }
 
         stageDimensions.scale = stageDimensions.width / stageDimensions.widthDefault;
     } else {
-        stageDimensions.scale = STAGE_DISPLAY_SCALES[stageSize];
-        stageDimensions.height = stageDimensions.scale * stageDimensions.heightDefault;
-        stageDimensions.width = stageDimensions.scale * stageDimensions.widthDefault;
+        stageDimensions.width = STAGE_DISPLAY_SCALES[stageSize] * layout.standardStageWidth;
+        stageDimensions.height = stageDimensions.width * proporcao;
+        stageDimensions.scale = stageDimensions.width / stageDimensions.widthDefault;
     }
 
     // Round off dimensions to prevent resampling/blurriness

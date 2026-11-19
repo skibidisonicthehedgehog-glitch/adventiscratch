@@ -21,6 +21,7 @@ import {adicionarInstrumento, instrumentosExtras, limparInstrumentos} from './mu
 import {carregarControladores, limparControladores, serializarControladores} from './spritesheet/controladores.js';
 import {gravarMapa, limparMapas, normalizarMapa, todosMapas} from './ritmo/dados.js';
 import {carregarTilemaps, limparTilemaps, serializarTilemaps, todosTilemaps} from './tilemap/dados.js';
+import {PALCO_PADRAO, aplicarTamanhoPalco, serializarPalco} from './palco.js';
 
 export const PROJECT_EXTENSION = 'asp';
 export const ACCEPTED_PROJECT_EXTENSIONS = '.asp,.sb,.sb2,.sb3';
@@ -68,6 +69,7 @@ export const patchVmForAsp = (vm, onProjectChanged) => {
         todasMusicas().forEach((m, i) => zip.file(`${ASP_DIR}musicas/${i}.json`, JSON.stringify(m)));
         todosMapas().forEach((m, i) => zip.file(`${ASP_DIR}mapas/${i}.json`, JSON.stringify(m)));
         if (todosTilemaps().length) zip.file(`${ASP_DIR}tilemaps.json`, JSON.stringify(serializarTilemaps()));
+        if (serializarPalco()) zip.file(`${ASP_DIR}palco.json`, JSON.stringify(serializarPalco()));
         const controladores = serializarControladores(vm.runtime);
         if (Object.keys(controladores).length) {
             zip.file(`${ASP_DIR}controladores.json`, JSON.stringify(controladores));
@@ -99,6 +101,7 @@ export const patchVmForAsp = (vm, onProjectChanged) => {
         limparControladores();
         limparMapas();
         limparTilemaps();
+        let palco = null;
         if (isZip(input)) {
             try {
                 const zip = await JSZip.loadAsync(input);
@@ -135,6 +138,14 @@ export const patchVmForAsp = (vm, onProjectChanged) => {
                                 new Int16Array(await p.async('arraybuffer')), {silencioso: true, id: item.id});
                         } catch (e) {
                             console.warn('Adventiblocks: instrumento .sf2 danificado no projeto', e); // eslint-disable-line no-console
+                        }
+                    }
+                    const pal = zip.file(`${ASP_DIR}palco.json`);
+                    if (pal) {
+                        try {
+                            palco = JSON.parse(await pal.async('string'));
+                        } catch (e) {
+                            console.warn('Adventiblocks: tamanho do palco danificado', e); // eslint-disable-line no-console
                         }
                     }
                     const tms = zip.file(`${ASP_DIR}tilemaps.json`);
@@ -178,6 +189,10 @@ export const patchVmForAsp = (vm, onProjectChanged) => {
             }
         }
         if (onProjectChanged) onProjectChanged();
-        return originalLoad(input);
+        const resultado = await originalLoad(input);
+        // tamanho do palco do projeto (ou o padrão, se o projeto não tiver)
+        const p = palco && palco.largura && palco.altura ? palco : PALCO_PADRAO;
+        aplicarTamanhoPalco(vm, p.largura, p.altura);
+        return resultado;
     };
 };

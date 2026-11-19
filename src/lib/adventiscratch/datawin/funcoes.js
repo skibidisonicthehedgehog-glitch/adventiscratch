@@ -5,6 +5,7 @@
  */
 import {Struct, Metodo, num, paraInt, verdade, igual, INST} from './vm.js';
 import {corCss} from './desenho.js';
+import {pontoNoCaminho, comprimentoDoCaminho} from './caminhos.js';
 
 const F = {};
 const rad = g => g * Math.PI / 180;
@@ -679,6 +680,31 @@ Object.assign(F, {
         if (lugar(m, q, i.x + i.hs, i.y)) i.hs = -i.hs;
         if (lugar(m, q, i.x, i.y + i.vs)) i.vs = -i.vs;
     }
+});
+
+// ---------------------------------------------------------------- caminhos (paths)
+const cam_ = (m, v) => m.dw.caminhos[paraInt(v)];
+Object.assign(F, {
+    path_start: (m, a, q) => {
+        if (eu(q)) m.iniciarCaminho(eu(q), paraInt(a[0]), num(a[1]), paraInt(a[2]), verdade(a[3]));
+    },
+    path_end: (m, a, q) => {
+        if (eu(q)) eu(q).path_index = -1;
+    },
+    path_exists: (m, a) => (cam_(m, a[0]) ? 1 : 0),
+    path_get_name: (m, a) => (cam_(m, a[0]) || {}).nome || '',
+    path_get_length: (m, a) => (cam_(m, a[0]) ? comprimentoDoCaminho(cam_(m, a[0])) : 0),
+    path_get_number: (m, a) => (cam_(m, a[0]) ? cam_(m, a[0]).pontos.length : 0),
+    path_get_closed: (m, a) => (cam_(m, a[0]) && cam_(m, a[0]).fechado ? 1 : 0),
+    path_get_kind: (m, a) => (cam_(m, a[0]) && cam_(m, a[0]).suave ? 1 : 0),
+    path_get_x: (m, a) => (cam_(m, a[0]) ? pontoNoCaminho(cam_(m, a[0]), num(a[1])).x : 0),
+    path_get_y: (m, a) => (cam_(m, a[0]) ? pontoNoCaminho(cam_(m, a[0]), num(a[1])).y : 0),
+    path_get_speed: (m, a) => (cam_(m, a[0]) ? pontoNoCaminho(cam_(m, a[0]), num(a[1])).v : 100),
+    path_get_point_x: (m, a) => ((cam_(m, a[0]) || {pontos: []}).pontos[paraInt(a[1])] || {x: 0}).x,
+    path_get_point_y: (m, a) => ((cam_(m, a[0]) || {pontos: []}).pontos[paraInt(a[1])] || {y: 0}).y,
+    path_get_point_speed: (m, a) => ((cam_(m, a[0]) || {pontos: []}).pontos[paraInt(a[1])] || {v: 100}).v,
+    action_path: (m, a, q) => F.path_start(m, [a[0], a[1], a[2], a[3]], q),
+    action_path_end: (m, a, q) => F.path_end(m, a, q)
 });
 
 // ---------------------------------------------------------------- salas e jogo
@@ -2142,7 +2168,6 @@ Object.assign(F, {
     },
     action_snap: (m, a, q) => F.move_snap(m, a, q),
     action_bounce: (m, a, q) => F.move_bounce_solid(m, a, q),
-    action_path_end: () => {},
     action_set_timeline: () => {},
     action_sprite_set: (m, a, q) => {
         const i = eu(q);
@@ -2228,6 +2253,120 @@ Object.assign(F, {
     action_draw_rectangle: (m, a) => F.draw_rectangle(m, [a[0], a[1], a[2], a[3], a[4]]),
     action_set_caption: () => {},
     action_wrap: (m, a, q) => F.move_wrap(m, [paraInt(a[0]) !== 1, paraInt(a[0]) !== 0, 0], q)
+});
+
+// ---------------------------------------------------------------- outras que o Undertale usa
+Object.assign(F, {
+    action_set_relative: () => {},
+    keyboard_key_press: (m, a) => m.teclaDown(paraInt(a[0])),
+    keyboard_key_release: (m, a) => m.teclaUp(paraInt(a[0])),
+    draw_set_circle_precision: () => {},
+    draw_point_color: (m, a) => comCtx(m, ctx => {
+        ctx.globalAlpha = m.d.alpha;
+        ctx.fillStyle = corCss(paraInt(a[2]));
+        ctx.fillRect(num(a[0]), num(a[1]), 1, 1);
+        ctx.globalAlpha = 1;
+    }),
+    draw_point_colour: (m, a) => F.draw_point_color(m, a),
+    draw_line_width_color: (m, a) => comCtx(m, ctx => {
+        ctx.beginPath();
+        ctx.moveTo(num(a[0]), num(a[1]));
+        ctx.lineTo(num(a[2]), num(a[3]));
+        ctx.lineWidth = num(a[4]);
+        ctx.globalAlpha = m.d.alpha;
+        ctx.strokeStyle = corCss(paraInt(a[5]));
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.lineWidth = 1;
+    }),
+    draw_line_width_colour: (m, a) => F.draw_line_width_color(m, a),
+    draw_triangle_color: (m, a) => comCtx(m, ctx => {
+        ctx.beginPath();
+        ctx.moveTo(num(a[0]), num(a[1]));
+        ctx.lineTo(num(a[2]), num(a[3]));
+        ctx.lineTo(num(a[4]), num(a[5]));
+        ctx.closePath();
+        preencher(m, ctx, verdade(a[9]), paraInt(a[6]));
+    }),
+    draw_triangle_colour: (m, a) => F.draw_triangle_color(m, a),
+    draw_ellipse_color: (m, a) => comCtx(m, ctx => {
+        ctx.beginPath();
+        ctx.ellipse((num(a[0]) + num(a[2])) / 2, (num(a[1]) + num(a[3])) / 2, Math.abs(num(a[2]) - num(a[0])) / 2,
+            Math.abs(num(a[3]) - num(a[1])) / 2, 0, 0, Math.PI * 2);
+        preencher(m, ctx, verdade(a[6]), paraInt(a[4]));
+    }),
+    draw_ellipse_colour: (m, a) => F.draw_ellipse_color(m, a),
+    draw_getpixel: (m, a) => {
+        try {
+            const d = alvoCtx(m).getImageData(paraInt(a[0]), paraInt(a[1]), 1, 1).data;
+            return d[0] | (d[1] << 8) | (d[2] << 16);
+        } catch (e) {
+            return 0;
+        }
+    },
+    sprite_delete: () => 1,
+    sprite_replace: () => {},
+    sprite_collision_mask: () => {},
+    sprite_create_from_surface: () => -1,
+    extension_stubfunc_real: () => 0,
+    get_string_async: () => -1,
+    ds_map_set_post: (m, a) => F.ds_map_set(m, a),
+    json_decode: (m, a) => {
+        let obj;
+        try {
+            obj = JSON.parse(texto(m, a[0]));
+        } catch (e) {
+            return -1;
+        }
+        const conv = v => {
+            if (Array.isArray(v)) {
+                const id = novoDs(m, 'lista', v.map(conv));
+                return id;
+            }
+            if (v && typeof v === 'object') {
+                const mapa = new Map();
+                for (const [k, x] of Object.entries(v)) mapa.set(chaveMapa(k), conv(x));
+                return novoDs(m, 'mapa', mapa);
+            }
+            return v === null ? undefined : v;
+        };
+        if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+            const mapa = new Map([[chaveMapa('default'), conv(obj)]]);
+            return novoDs(m, 'mapa', mapa);
+        }
+        return conv(obj);
+    },
+    // arquivos do Steam: usam o mesmo armazenamento do navegador
+    steam_file_exists: (m, a) => F.file_exists(m, a),
+    steam_file_delete: (m, a) => F.file_delete(m, a),
+    steam_file_write: (m, a) => {
+        m.vfs.set(nomeArq(m, a[0]), texto(m, a[1]));
+        m.salvarVfs();
+        return 1;
+    },
+    steam_file_write_file: (m, a) => {
+        const t = m.vfs.get(nomeArq(m, a[1]));
+        if (t !== undefined) {
+            m.vfs.set(nomeArq(m, a[0]), t);
+            m.salvarVfs();
+        }
+        return 1;
+    },
+    steam_file_read: (m, a) => m.vfs.get(nomeArq(m, a[0])) || '',
+    // buffers: só o necessário para não travar (salvar/carregar assíncrono vira "sem dados")
+    buffer_create: (m, a) => novoDs(m, 'buffer', {dados: new Uint8Array(Math.max(1, paraInt(a[0]))), pos: 0}),
+    buffer_delete: (m, a) => ds(m, 'buffer').itens.delete(paraInt(a[0])),
+    buffer_get_size: (m, a) => ((pegaDs(m, 'buffer', a[0]) || {dados: []}).dados.length),
+    buffer_write: () => 0,
+    buffer_read: () => 0,
+    buffer_seek: () => {},
+    buffer_tell: () => 0,
+    buffer_async_group_begin: () => {},
+    buffer_async_group_option: () => {},
+    buffer_async_group_end: () => -1,
+    buffer_save_async: () => -1,
+    buffer_load_async: () => -1,
+    buffer_exists: (m, a) => (pegaDs(m, 'buffer', a[0]) ? 1 : 0)
 });
 
 export const FUNCOES = F;

@@ -75,6 +75,9 @@ class Stage extends React.Component {
         this.attachMouseEvents(this.canvas);
         this.updateRect();
         this.props.vm.runtime.addListener('QUESTION', this.questionListener);
+        // Adventiblocks: tamanho do palco mudou (Opções do projeto) -> refaz o layout do palco
+        this.aoMudarPalco = () => this.forceUpdate();
+        window.addEventListener('adventiscratch-palco', this.aoMudarPalco);
     }
     shouldComponentUpdate (nextProps, nextState) {
         return this.props.stageSize !== nextProps.stageSize ||
@@ -95,6 +98,7 @@ class Stage extends React.Component {
         this.renderer.resize(this.rect.width, this.rect.height);
     }
     componentWillUnmount () {
+        window.removeEventListener('adventiscratch-palco', this.aoMudarPalco);
         this.detachMouseEvents(this.canvas);
         this.detachRectEvents();
         this.stopColorPickingLoop();

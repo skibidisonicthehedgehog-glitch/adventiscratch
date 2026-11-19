@@ -6,6 +6,7 @@ import {MaquinaGML, Struct, Metodo, INST, num, paraInt, verdade} from './vm.js';
 import {Desenhista, corCss} from './desenho.js';
 import {carregarTextura} from './texturas.js';
 import {FUNCOES} from './funcoes.js';
+import {pontoNoCaminho, comprimentoDoCaminho} from './caminhos.js';
 
 export const EV = {CREATE: 0,
     DESTROY: 1,
@@ -26,7 +27,9 @@ const BUILTIN_INST = new Set([
     'friction', 'gravity', 'gravity_direction', 'image_index', 'image_speed', 'image_xscale', 'image_yscale',
     'image_angle', 'image_alpha', 'image_blend', 'image_number', 'image_single', 'sprite_index', 'sprite_width',
     'sprite_height', 'sprite_xoffset', 'sprite_yoffset', 'mask_index', 'depth', 'visible', 'solid', 'persistent',
-    'object_index', 'id', 'alarm', 'bbox_left', 'bbox_right', 'bbox_top', 'bbox_bottom', 'layer'
+    'object_index', 'id', 'alarm', 'bbox_left', 'bbox_right', 'bbox_top', 'bbox_bottom', 'layer',
+    'path_index', 'path_position', 'path_positionprevious', 'path_speed', 'path_scale', 'path_orientation',
+    'path_endaction'
 ]);
 
 let proximoId = 100000;
@@ -67,6 +70,15 @@ export class Instancia {
         this.persistent = Boolean(o.persistente);
         this.alarm = new Array(12).fill(-1);
         this.layer = -1;
+        this.path_index = -1;
+        this.path_position = 0;
+        this.path_positionprevious = 0;
+        this.path_speed = 0;
+        this.path_scale = 1;
+        this.path_orientation = 0;
+        this.path_endaction = 0;
+        this.pathOX = 0;
+        this.pathOY = 0;
         this.destruida = false;
         this.desativada = false;
     }
@@ -730,9 +742,92 @@ export class MotorGM {
         }
     }
 
+    // começa um caminho (path_start)
+    iniciarCaminho (i, caminho, vel, acao, absoluto) {
+        const c = this.dw.caminhos[caminho];
+        if (!c) return;
+        const p0 = pontoNoCaminho(c, 0);
+        i.path_index = caminho;
+        i.path_speed = vel;
+        i.path_endaction = acao;
+        i.path_position = vel < 0 ? 1 : 0;
+        i.path_positionprevious = i.path_position;
+        i.pathOX = absoluto ? p0.x : i.x;
+        i.pathOY = absoluto ? p0.y : i.y;
+        if (absoluto) this.posicaoNoCaminho(i);
+    }
+
+    posicaoNoCaminho (i) {
+        const c = this.dw.caminhos[i.path_index];
+        if (!c) return;
+        const p0 = pontoNoCaminho(c, 0);
+        const p = pontoNoCaminho(c, i.path_position);
+        let dx = (p.x - p0.x) * i.path_scale;
+        let dy = (p.y - p0.y) * i.path_scale;
+        if (i.path_orientation) {
+            const a = -i.path_orientation * Math.PI / 180;
+            [dx, dy] = [(dx * Math.cos(a)) - (dy * Math.sin(a)), (dx * Math.sin(a)) + (dy * Math.cos(a))];
+        }
+        const nx = i.pathOX + dx;
+        const ny = i.pathOY + dy;
+        if (nx !== i.x || ny !== i.y) {
+            let d = Math.atan2(-(ny - i.y), nx - i.x) * 180 / Math.PI;
+            if (d < 0) d += 360;
+            i.dir = d;
+        }
+        i.x = nx;
+        i.y = ny;
+    }
+
+    // anda no caminho (cada quadro, junto com o movimento normal)
+    andarNoCaminho (i) {
+        const c = this.dw.caminhos[i.path_index];
+        if (!c) {
+            i.path_index = -1;
+            return;
+        }
+        const total = comprimentoDoCaminho(c) * Math.abs(i.path_scale || 1);
+        if (total <= 0) return;
+        const v = pontoNoCaminho(c, i.path_position).v / 100;
+        i.path_positionprevious = i.path_position;
+        i.path_position += (i.path_speed * (v > 0 ? v : 1)) / total;
+        // só chega ao fim andando na direção daquela ponta (velocidade 0 parado no começo não conta)
+        const passou = (i.path_speed > 0 && i.path_position >= 1) || (i.path_speed < 0 && i.path_position <= 0);
+        if (!passou) i.path_position = Math.max(0, Math.min(1, i.path_position));
+        if (passou) {
+            const fim = i.path_position >= 1 ? 1 : 0;
+            switch (i.path_endaction) {
+            case 1: // recomeçar
+                i.path_position = fim ? i.path_position - 1 : i.path_position + 1;
+                break;
+            case 2: { // continuar a partir do fim
+                const a = pontoNoCaminho(c, fim);
+                const b = pontoNoCaminho(c, 1 - fim);
+                i.pathOX += (a.x - b.x) * i.path_scale;
+                i.pathOY += (a.y - b.y) * i.path_scale;
+                i.path_position = fim ? i.path_position - 1 : i.path_position + 1;
+                break;
+            }
+            case 3: // voltar
+                i.path_position = fim ? 2 - i.path_position : -i.path_position;
+                i.path_speed = -i.path_speed;
+                break;
+            default: // parar
+                i.path_position = fim;
+                break;
+            }
+        }
+        this.posicaoNoCaminho(i);
+        if (passou) {
+            if (!i.path_endaction) i.path_index = -1;
+            this.evento(i, EV.OTHER, 8);
+        }
+    }
+
     mover () {
         for (const i of this.instancias) {
             if (i.destruida || i.desativada) continue;
+            if (i.path_index >= 0) this.andarNoCaminho(i);
             if (i.friction) {
                 const s = i.speed;
                 if (s > 0) i.speed = Math.max(0, s - i.friction);

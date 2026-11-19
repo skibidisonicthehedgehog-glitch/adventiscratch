@@ -563,8 +563,8 @@ class AdventiscratchCamera {
         if (!t || !t.visible) return false;
         const b = this.runtime.renderer.getBounds(t.drawableID);
         if (!b) return false;
-        if (t.sprite.adventiscratchFixo) return b.right > -240 && b.left < 240 && b.top > -180 && b.bottom < 180;
         const [w, h] = this.runtime.renderer.getNativeSize();
+        if (t.sprite.adventiscratchFixo) return b.right > -w / 2 && b.left < w / 2 && b.top > -h / 2 && b.bottom < h / 2;
         const cantos = [[b.left, b.top], [b.right, b.top], [b.left, b.bottom], [b.right, b.bottom]]
             .map(([x, y]) => this.paraTela(x, y));
         const xs = cantos.map(c => c[0]);

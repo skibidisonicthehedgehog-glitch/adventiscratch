@@ -214,7 +214,8 @@ class AdventiscratchDataWin {
         this.garantirDesenho();
         const c = this.motor.canvas;
         r.updateBitmapSkin(this.skin, c, 1, [c.width / 2, c.height / 2]);
-        const esc = Math.min(480 / c.width, 360 / c.height) * 100;
+        const [pw, ph] = this.runtime.renderer.getNativeSize();
+        const esc = Math.min(pw / c.width, ph / c.height) * 100;
         r.updateDrawableProperties(this.drawable, {
             position: [0, 0], scale: [esc, esc], visible: this.visivel, direction: 90
         });
@@ -237,7 +238,8 @@ class AdventiscratchDataWin {
         const m = this.motor;
         if (!mouse || !m) return;
         const c = m.canvas;
-        const s = Math.min(480 / c.width, 360 / c.height);
+        const [pw, ph] = this.runtime.renderer.getNativeSize();
+        const s = Math.min(pw / c.width, ph / c.height);
         const cx = (mouse.getScratchX() / s) + (c.width / 2);
         const cy = (-mouse.getScratchY() / s) + (c.height / 2);
         m.mouse.guiX = cx;

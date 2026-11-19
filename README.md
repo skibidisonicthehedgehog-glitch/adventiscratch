@@ -43,6 +43,13 @@ adventiscratch/models/<arquivo>   -> modelos 3D importados no projeto
 O editor salva sempre em `.asp` e abre `.asp`, `.sb3`, `.sb2` e `.sb`. Se um `.asp` for renomeado
 para `.sb3`, ele abre no Scratch comum (só os blocos do Adventiblocks não funcionam lá).
 
+## Opções do projeto: tamanho do palco
+
+Menu **Editar → ⚙️ Opções do projeto…** muda o tamanho do palco (480×360 do Scratch, 640×480, 960×540 16:9,
+1280×720, quadrado, celular em pé ou um tamanho qualquer de 120×90 a 1920×1080). As coordenadas passam a ir de
+−largura/2 a +largura/2; no editor o palco mantém a largura na tela e a altura segue a proporção. Fica salvo no `.asp`
+em `adventiscratch/palco.json`; projetos sem esse arquivo abrem em 480×360 (`src/lib/adventiscratch/palco.js`).
+
 ## Extensão 3D (Three.js)
 
 Clique no botão de extensões (canto inferior esquerdo) e escolha **3D (Three.js)**.

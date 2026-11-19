@@ -90,6 +90,7 @@ import debugIcon from '../debug-modal/icons/icon--debug.svg';
 import scratchLogo from './scratch-logo.svg';
 
 import sharedMessages from '../../lib/shared-messages';
+import {abrirOpcoesDoProjeto} from '../../lib/adventiscratch/opcoes-projeto.js';
 
 const ariaMessages = defineMessages({
     tutorials: {
@@ -552,6 +553,14 @@ class MenuBar extends React.Component {
                                             )}
                                         </MenuItem>
                                     )}</TurboMode>
+                                    <MenuItem
+                                        onClick={() => {
+                                            this.props.onRequestCloseEdit();
+                                            abrirOpcoesDoProjeto(this.props.vm);
+                                        }}
+                                    >
+                                        ⚙️ Opções do projeto…
+                                    </MenuItem>
                                 </MenuSection>
                             </MenuBarMenu>
 
