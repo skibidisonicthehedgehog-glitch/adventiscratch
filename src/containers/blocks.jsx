@@ -12,7 +12,9 @@ import {CRIADOR_CALLBACK} from '../lib/adventiscratch/musica/musica-extension.js
 import {CONTROLADOR_CALLBACK, SPRITESHEET_CALLBACK} from '../lib/adventiscratch/spritesheet/animacoes-extension.js';
 import {EDITOR_MAPAS_CALLBACK} from '../lib/adventiscratch/ritmo/ritmo-extension.js';
 import {EDITOR_TILEMAP_CALLBACK} from '../lib/adventiscratch/tilemap/tilemap-extension.js';
-import {ABRIR_CALLBACK as ABRIR_DATAWIN_CALLBACK} from '../lib/adventiscratch/datawin/datawin-extension.js';
+import {
+    ABRIR_CALLBACK as ABRIR_DATAWIN_CALLBACK, ABRIR_PASTA_CALLBACK as ABRIR_PASTA_DATAWIN_CALLBACK
+} from '../lib/adventiscratch/datawin/datawin-extension.js';
 import {abrirDataWin} from '../lib/adventiscratch/datawin/abrir.js';
 import {EXEMPLOS_PRONTOS, abrirExemploPronto, callbackExemplo} from '../lib/adventiscratch/exemplos-prontos.js';
 import {definirWorkspaceDetector} from '../lib/adventiscratch/detector-erros.js';
@@ -160,6 +162,7 @@ class Blocks extends React.Component {
         });
         // Adventiblocks: botão "Abrir data.win…" da extensão secreta
         toolboxWorkspace.registerButtonCallback(ABRIR_DATAWIN_CALLBACK, () => abrirDataWin(this.props.vm));
+        toolboxWorkspace.registerButtonCallback(ABRIR_PASTA_DATAWIN_CALLBACK, () => abrirDataWin(this.props.vm, true));
         // Adventiblocks: botões "📦 Exemplo pronto" de cada extensão
         Object.keys(EXEMPLOS_PRONTOS).forEach(id => {
             toolboxWorkspace.registerButtonCallback(callbackExemplo(id), () => abrirExemploPronto(id));

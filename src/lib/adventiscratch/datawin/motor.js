@@ -221,6 +221,7 @@ export class MotorGM {
         this.audio = opcoes.audio || null; // {ctx, destino}
         this.vozes = new Map();
         this.buffers = new Map();
+        this.musicasFaltando = new Set();
         this.ini = null;
         this.arquivosAbertos = new Map();
         this.prefixo = `adventiblocks.datawin.${dw.info.nome || 'jogo'}`;
@@ -246,6 +247,7 @@ export class MotorGM {
     }
 
     erro (msg) {
+        if (this.aoErro) this.aoErro(msg);
         if (this.erros.length > 50) this.erros.shift();
         this.erros.push(msg);
         console.warn('[data.win]', msg); // eslint-disable-line no-console
@@ -678,6 +680,11 @@ export class MotorGM {
             this.proxSala = -1;
             this.carregarSala(s);
         }
+        // a posição anterior é guardada no começo do quadro (antes de qualquer evento)
+        for (const i of this.instancias) {
+            i.xprevious = i.x;
+            i.yprevious = i.y;
+        }
         this.todosComEvento(EV.STEP, 1);
         // alarmes
         this.todosComEvento(0, 0, i => {
@@ -726,8 +733,6 @@ export class MotorGM {
     mover () {
         for (const i of this.instancias) {
             if (i.destruida || i.desativada) continue;
-            i.xprevious = i.x;
-            i.yprevious = i.y;
             if (i.friction) {
                 const s = i.speed;
                 if (s > 0) i.speed = Math.max(0, s - i.friction);

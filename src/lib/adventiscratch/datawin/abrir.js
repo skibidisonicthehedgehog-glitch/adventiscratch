@@ -4,13 +4,14 @@
  */
 const aviso = texto => window.dispatchEvent(new CustomEvent('adventiscratch-aviso', {detail: {texto}}));
 
-export const abrirDataWin = vm => {
+export const abrirDataWin = (vm, pasta = false) => {
     const ext = vm.runtime.adventiscratchDataWin;
     if (!ext) return;
     const input = document.createElement('input');
     input.type = 'file';
     input.multiple = true;
-    input.accept = '.win,.dat,.ogg,.wav,.unx,.droid,.ios';
+    if (pasta) input.webkitdirectory = true;
+    if (!pasta) input.accept = '.win,.dat,.ogg,.wav,.unx,.droid,.ios';
     input.onchange = async () => {
         const arquivos = Array.from(input.files || []);
         if (!arquivos.length) return;

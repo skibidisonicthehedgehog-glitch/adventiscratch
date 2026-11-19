@@ -13,6 +13,7 @@ const B = {COMMAND: 'command', REPORTER: 'reporter', BOOLEAN: 'Boolean', HAT: 'h
 const A = {STRING: 'string', NUMBER: 'number'};
 export const ID_DATAWIN = 'adventiscratchdatawin';
 export const ABRIR_CALLBACK = 'ADVENTISCRATCH_ABRIR_DATAWIN';
+export const ABRIR_PASTA_CALLBACK = 'ADVENTISCRATCH_ABRIR_PASTA_DATAWIN';
 
 const ehCampoDeTexto = el => el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
 
@@ -69,6 +70,7 @@ class AdventiscratchDataWin {
             menuIconURI: icone,
             blockIconURI: icone,
             blocks: [
+                {func: ABRIR_PASTA_CALLBACK, blockType: B.BUTTON, text: '📁 Abrir pasta do jogo…'},
                 {func: ABRIR_CALLBACK, blockType: B.BUTTON, text: '📂 Abrir data.win…'},
                 {opcode: 'iniciar', blockType: B.COMMAND, text: 'iniciar o jogo'},
                 {opcode: 'pararJogo', blockType: B.COMMAND, text: 'parar o jogo'},
@@ -140,15 +142,30 @@ class AdventiscratchDataWin {
         this.parar();
         const extras = new Map();
         let principal = null;
-        for (const f of arquivos) {
-            const dados = await f.arrayBuffer();
+        // o data.win é lido agora; os outros (músicas, audiogroupN.dat) só quando o jogo pedir
+        const ehForm = async f => {
+            const cab = new Uint8Array(await f.slice(0, 4).arrayBuffer());
+            return cab.length === 4 && String.fromCharCode(...cab) === 'FORM';
+        };
+        const candidatos = arquivos.slice().sort((a, b) => {
+            const pa = /^(data\.win|game\.unx|game\.droid|game\.ios)$/i.test(a.name) ? 0 : 1;
+            const pb = /^(data\.win|game\.unx|game\.droid|game\.ios)$/i.test(b.name) ? 0 : 1;
+            return pa - pb;
+        });
+        for (const f of candidatos) {
             const nome = f.name.toLowerCase();
-            const cab = new Uint8Array(dados, 0, Math.min(4, dados.byteLength));
-            const ehForm = cab.length === 4 && String.fromCharCode(...cab) === 'FORM';
-            if (!principal && ehForm && !/^audiogroup\d+\.dat$/.test(nome)) principal = {nome: f.name, dados};
-            else extras.set(nome, {dados});
+            if (!principal && !/^audiogroup\d+\.dat$/.test(nome) && /\.(win|unx|droid|ios|dat)$/.test(nome) &&
+                await ehForm(f)) {
+                principal = {nome: f.name, dados: await f.arrayBuffer()};
+                continue;
+            }
+            const extra = {arquivo: f};
+            extras.set(nome, extra);
+            // também pelo caminho dentro da pasta (ex.: "mus/story.ogg")
+            const rel = (f.webkitRelativePath || '').toLowerCase().split('/').slice(1).join('/');
+            if (rel && rel !== nome) extras.set(rel, extra);
         }
-        if (!principal) throw new Error('Escolha o arquivo data.win do jogo (pode escolher as músicas .ogg junto).');
+        if (!principal) throw new Error('Não achei o data.win. Escolha a pasta do jogo ou o arquivo data.win.');
         this.status = 'lendo o data.win…';
         const dw = lerDataWin(principal.dados);
         const audio = this.runtime.audioEngine ? {
@@ -158,6 +175,7 @@ class AdventiscratchDataWin {
         this.motor.aoMudarSala = () => {
             this.mudouSala = true;
         };
+        this.ligarAvisos();
         this.nome = dw.info.nomeExibido || dw.info.nome || principal.nome;
         this.status = 'carregando texturas…';
         await this.motor.carregarTexturas((i, n) => {
@@ -166,6 +184,19 @@ class AdventiscratchDataWin {
         this.status = 'pronto';
         return `${this.nome}: ${dw.salas.length} salas, ${dw.objetos.length} objetos, ${dw.sprites.length} sprites, ` +
             `${dw.codigos.length} scripts (bytecode ${dw.info.bytecode}).`;
+    }
+
+    // avisa uma vez quando o jogo pede uma música que não veio junto
+    ligarAvisos () {
+        let avisou = false;
+        this.motor.aoErro = msg => {
+            if (avisou || !/^música não encontrada/.test(msg)) return;
+            avisou = true;
+            window.dispatchEvent(new CustomEvent('adventiscratch-aviso', {detail: {
+                texto: '🎵 Este jogo guarda as músicas fora do data.win. Para ouvir, use "📁 Abrir pasta do jogo…" ' +
+                    'e escolha a pasta onde o data.win está.'
+            }}));
+        };
     }
 
     // ---------------------------------------------------------------- palco
@@ -274,6 +305,7 @@ class AdventiscratchDataWin {
         this.motor.aoMudarSala = () => {
             this.mudouSala = true;
         };
+        this.ligarAvisos();
         this.pausado = false;
         this.status = 'rodando';
         try {

@@ -359,6 +359,11 @@ export class MaquinaGML {
             ins.varTipo === VT.MULTIPUSH || ins.varTipo === VT.MULTIPUSHPOP || inst === INST.STACKTOP) {
             let v = pilhaPop();
             if (v === INST.STACKTOP) v = pilhaPop();
+            // o tipo de instância também pode vir pela pilha (ex.: arrays locais usam -7)
+            if (v === INST.LOCAL) return {lista: null, especial: 'local'};
+            if (v === INST.ARG) return {lista: null, especial: 'arg'};
+            if (v === INST.STATIC) return {lista: [this.estaticosDe(q.codigo)], especial: null};
+            if (v === INST.BUILTIN) return {lista: q.self === undefined ? [this.motor.global] : [q.self], especial: null};
             return {lista: this.alvos(q, v), especial: null};
         }
         if (ins.varTipo === VT.INSTANCE) return {lista: this.motor.instanciasDe(inst + 100000), especial: null};

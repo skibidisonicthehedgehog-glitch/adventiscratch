@@ -774,6 +774,20 @@ Object.assign(F, {
     gamepad_axis_value: () => 0,
     gamepad_set_axis_deadzone: () => {},
     joystick_exists: () => 0,
+    joystick_check_button: () => 0,
+    joystick_xpos: () => 0,
+    joystick_ypos: () => 0,
+    joystick_zpos: () => 0,
+    joystick_direction: () => 101,
+    joystick_has_pov: () => 0,
+    joystick_pov: () => -1,
+    joystick_buttons: () => 0,
+    joystick_axes: () => 0,
+    joystick_name: () => '',
+    gamepad_axis_count: () => 0,
+    gamepad_button_count: () => 0,
+    gamepad_get_description: () => '',
+    gamepad_button_value: () => 0,
     font_add_sprite: () => -1,
     font_add_sprite_ext: () => -1,
     font_exists: (m, a) => (m.dw.fontes[paraInt(a[0])] ? 1 : 0),
@@ -1465,13 +1479,22 @@ Object.assign(F, {
 
 // ---------------------------------------------------------------- som
 let proxVoz = 200000;
-const lerGrupo = (m, nomeArq) => {
+// arquivos extras (músicas .ogg, audiogroupN.dat): guardados como File e lidos só quando precisa
+const lerExtra = async (m, nome) => {
+    const e = m.extras.get(nome);
+    if (!e) return null;
+    if (!e.dados && e.arquivo) e.dados = await e.arquivo.arrayBuffer();
+    return e.dados || null;
+};
+const lerGrupo = async (m, nomeArq) => {
     // audiogroupN.dat: um FORM com o bloco AUDO
-    const buf = m.extras.get(nomeArq);
+    const e = m.extras.get(nomeArq);
+    if (!e) return null;
+    if (e.audos) return e.audos;
+    const buf = await lerExtra(m, nomeArq);
     if (!buf) return null;
-    if (buf.audos) return buf.audos;
-    const d = new Uint8Array(buf.dados);
-    const dv = new DataView(buf.dados);
+    const d = new Uint8Array(buf);
+    const dv = new DataView(buf);
     let p = 8;
     const lista = [];
     while (p + 8 <= d.length) {
@@ -1486,43 +1509,54 @@ const lerGrupo = (m, nomeArq) => {
         }
         p += 8 + t;
     }
-    buf.audos = lista;
+    e.audos = lista;
     return lista;
 };
-const bytesDoSom = (m, idx) => {
+const nomeArquivoDoSom = so => (so.externo || (so.arquivo || '').split(/[\\/]/).pop()).toLowerCase();
+const bytesDoSom = async (m, idx) => {
     const so = m.dw.sons[idx];
     if (!so) return null;
-    if (so.externo) {
-        const e = m.extras.get(so.externo);
-        return e ? new Uint8Array(e.dados) : null;
-    }
-    if (so.audio >= 0 && so.grupo > 0) {
-        const lista = lerGrupo(m, `audiogroup${so.grupo}.dat`);
+    if (!so.externo && so.audio >= 0 && so.grupo > 0) {
+        const lista = await lerGrupo(m, `audiogroup${so.grupo}.dat`);
         const a = lista && lista[so.audio];
         return a ? a.dados.subarray(a.ini, a.ini + a.tam) : null;
     }
-    if (so.audio >= 0 && (so.flags & 1)) {
+    if (!so.externo && so.audio >= 0 && (so.flags & 1)) {
         const a = m.dw.audios[so.audio];
         return a ? m.dw.bytes.subarray(a.ini, a.ini + a.tam) : null;
     }
-    // música em arquivo separado (ex.: mus_menu.ogg)
-    const nome = (so.arquivo || '').split(/[\\/]/).pop()
-        .toLowerCase();
-    const e = m.extras.get(nome) || m.extras.get(`${so.nome}.ogg`.toLowerCase());
-    return e ? new Uint8Array(e.dados) : null;
+    // música em arquivo separado (ex.: mus_story.ogg na pasta do jogo)
+    const nome = nomeArquivoDoSom(so);
+    const achado = m.extras.has(nome) ? nome : `${so.nome}.ogg`.toLowerCase();
+    const buf = await lerExtra(m, achado);
+    if (!buf) {
+        if (!m.musicasFaltando.has(nome)) {
+            m.musicasFaltando.add(nome);
+            m.erro(`música não encontrada: ${nome} (abra a pasta do jogo junto com o data.win)`);
+        }
+        return null;
+    }
+    return new Uint8Array(buf);
 };
 const buffer = (m, idx) => {
     if (m.buffers.has(idx)) return m.buffers.get(idx);
-    const bytes = bytesDoSom(m, idx);
-    if (!bytes || !m.audio) {
-        m.buffers.set(idx, Promise.resolve(null));
-        return m.buffers.get(idx);
-    }
-    const copia = bytes.slice().buffer;
-    const p = m.audio.ctx.decodeAudioData(copia).catch(() => null);
+    const p = (async () => {
+        if (!m.audio) return null;
+        const bytes = await bytesDoSom(m, idx);
+        if (!bytes) return null;
+        try {
+            return await m.audio.ctx.decodeAudioData(bytes.slice().buffer);
+        } catch (e) {
+            m.erro(`não consegui tocar o som ${(m.dw.sons[idx] || {}).nome}: ${e.message || e}`);
+            return null;
+        }
+    })();
     m.buffers.set(idx, p);
     return p;
 };
+// ganho/tom definidos no próprio som (audio_sound_gain com o índice do som) valem para as próximas vezes
+const ganhoDoSom = so => (so.ganhoAsset === undefined ? 1 : so.ganhoAsset);
+const tomDoSom = so => (so.tomAsset === undefined ? 1 : so.tomAsset);
 const tocar = (m, snd, loop, ganho = 1, tom = 1) => {
     const idx = paraInt(snd);
     const so = m.dw.sons[idx];
@@ -1531,10 +1565,12 @@ const tocar = (m, snd, loop, ganho = 1, tom = 1) => {
     const voz = {id,
         som: idx,
         loop,
-        ganho: ganho * (so.volume || 1),
-        tom: tom * (so.tom || 1),
+        ganho: ganho * ganhoDoSom(so),
+        base: so.volume > 0 ? so.volume : 1,
+        tom: tom * tomDoSom(so),
         fonte: null,
         no: null,
+        inicio: 0,
         pausada: false,
         acabou: false};
     m.vozes.set(id, voz);
@@ -1545,12 +1581,12 @@ const tocar = (m, snd, loop, ganho = 1, tom = 1) => {
         }
         const ctx = m.audio.ctx;
         const g = ctx.createGain();
-        g.gain.value = voz.ganho;
+        g.gain.value = voz.pausada ? 0 : voz.ganho * voz.base;
         g.connect(m.audio.destino);
         const f = ctx.createBufferSource();
         f.buffer = buf;
         f.loop = loop;
-        f.playbackRate.value = voz.tom;
+        f.playbackRate.value = voz.pausada ? 0.0001 : voz.tom;
         f.connect(g);
         f.onended = () => {
             if (!voz.pausada) {
@@ -1559,6 +1595,7 @@ const tocar = (m, snd, loop, ganho = 1, tom = 1) => {
             }
         };
         f.start();
+        voz.inicio = ctx.currentTime;
         voz.fonte = f;
         voz.no = g;
     });
@@ -1596,30 +1633,39 @@ Object.assign(F, {
     audio_exists: (m, a) => (m.dw.sons[paraInt(a[0])] ? 1 : 0),
     audio_get_name: (m, a) => (m.dw.sons[paraInt(a[0])] || {}).nome || '',
     audio_sound_gain: (m, a) => {
+        const so = m.dw.sons[paraInt(a[0])];
+        if (so && !m.vozes.has(paraInt(a[0]))) so.ganhoAsset = num(a[1]);
         for (const v of vozesDe(m, a[0])) {
             v.ganho = num(a[1]);
-            if (v.no) {
+            if (v.no && !v.pausada) {
                 const t = m.audio.ctx.currentTime;
                 const dur = Math.max(0, num(a[2])) / 1000;
                 v.no.gain.cancelScheduledValues(t);
                 v.no.gain.setValueAtTime(v.no.gain.value, t);
-                v.no.gain.linearRampToValueAtTime(v.ganho, t + dur);
+                if (dur > 0) v.no.gain.linearRampToValueAtTime(v.ganho * v.base, t + dur);
+                else v.no.gain.setValueAtTime(v.ganho * v.base, t);
             }
         }
     },
     audio_sound_get_gain: (m, a) => {
         const v = vozesDe(m, a[0])[0];
-        return v ? v.ganho : 1;
+        if (v) return v.ganho;
+        const so = m.dw.sons[paraInt(a[0])];
+        return so ? ganhoDoSom(so) : 1;
     },
     audio_sound_pitch: (m, a) => {
+        const so = m.dw.sons[paraInt(a[0])];
+        if (so && !m.vozes.has(paraInt(a[0]))) so.tomAsset = num(a[1]);
         for (const v of vozesDe(m, a[0])) {
             v.tom = num(a[1]);
-            if (v.fonte) v.fonte.playbackRate.value = v.tom;
+            if (v.fonte && !v.pausada) v.fonte.playbackRate.value = v.tom;
         }
     },
     audio_sound_get_pitch: (m, a) => {
         const v = vozesDe(m, a[0])[0];
-        return v ? v.tom : 1;
+        if (v) return v.tom;
+        const so = m.dw.sons[paraInt(a[0])];
+        return so ? tomDoSom(so) : 1;
     },
     audio_pause_sound: (m, a) => {
         for (const v of vozesDe(m, a[0])) {
@@ -1632,14 +1678,23 @@ Object.assign(F, {
         for (const v of vozesDe(m, a[0])) {
             v.pausada = false;
             if (v.fonte) v.fonte.playbackRate.value = v.tom;
-            if (v.no) v.no.gain.value = v.ganho;
+            if (v.no) v.no.gain.value = v.ganho * v.base;
         }
     },
     audio_pause_all: m => Array.from(m.vozes.keys()).forEach(id => F.audio_pause_sound(m, [id])),
     audio_resume_all: m => Array.from(m.vozes.keys()).forEach(id => F.audio_resume_sound(m, [id])),
-    audio_sound_get_track_position: () => 0,
+    audio_sound_get_track_position: (m, a) => {
+        const v = vozesDe(m, a[0])[0];
+        if (!v || !v.fonte || !v.fonte.buffer) return 0;
+        const d = v.fonte.buffer.duration;
+        const t = (m.audio.ctx.currentTime - v.inicio) * v.tom;
+        return v.loop ? t % d : Math.min(d, t);
+    },
     audio_sound_set_track_position: () => {},
-    audio_sound_length: (m, a) => 0,
+    audio_sound_length: (m, a) => {
+        const v = vozesDe(m, a[0])[0];
+        return v && v.fonte && v.fonte.buffer ? v.fonte.buffer.duration : 0;
+    },
     audio_master_gain: () => {},
     audio_set_master_gain: () => {},
     audio_channel_num: () => {},
@@ -2044,6 +2099,135 @@ Object.assign(F, {
             return undefined;
         }
     }
+});
+
+// ---------------------------------------------------------------- ações antigas (arrastar e soltar do GM)
+Object.assign(F, {
+    sprite_prefetch: () => 0,
+    sprite_prefetch_multi: () => 0,
+    texture_prefetch: () => 0,
+    texturegroup_load: () => 0,
+    // "000010000": 9 setas do GM antigo (linha de baixo primeiro, como o teclado numérico); o 5º é parar
+    action_move: (m, a, q) => {
+        const i = eu(q);
+        if (!i) return;
+        const dirs = [225, 270, 315, 180, -1, 0, 135, 90, 45];
+        const t = texto(m, a[0]);
+        const opcoes = [];
+        for (let k = 0; k < 9; k++) if (t[k] === '1') opcoes.push(dirs[k]);
+        if (!opcoes.length) return;
+        const d = opcoes[Math.floor(aleat() * opcoes.length)];
+        if (d < 0) {
+            i.hs = 0;
+            i.vs = 0;
+        } else {
+            i.dir = d;
+            i.speed = num(a[1]);
+        }
+    },
+    action_move_point: (m, a, q) => F.move_towards_point(m, a, q),
+    action_move_start: (m, a, q) => {
+        const i = eu(q);
+        if (i) {
+            i.x = i.xstart;
+            i.y = i.ystart;
+        }
+    },
+    action_move_random: (m, a, q) => {
+        const i = eu(q);
+        if (i) {
+            i.x = Math.floor(aleat() * m.room_width);
+            i.y = Math.floor(aleat() * m.room_height);
+        }
+    },
+    action_snap: (m, a, q) => F.move_snap(m, a, q),
+    action_bounce: (m, a, q) => F.move_bounce_solid(m, a, q),
+    action_path_end: () => {},
+    action_set_timeline: () => {},
+    action_sprite_set: (m, a, q) => {
+        const i = eu(q);
+        if (i) {
+            i.sprite_index = paraInt(a[0]);
+            if (num(a[1]) >= 0) i.image_index = num(a[1]);
+            i.image_speed = num(a[2]);
+        }
+    },
+    action_sprite_transform: (m, a, q) => {
+        const i = eu(q);
+        if (i) {
+            i.image_xscale = num(a[0]);
+            i.image_yscale = num(a[1]);
+            i.image_angle = num(a[2]);
+        }
+    },
+    action_sprite_color: (m, a, q) => {
+        const i = eu(q);
+        if (i) {
+            i.image_blend = paraInt(a[0]);
+            i.image_alpha = num(a[1]);
+        }
+    },
+    action_move_to: (m, a, q) => {
+        const i = eu(q);
+        if (i) {
+            i.x = num(a[0]);
+            i.y = num(a[1]);
+        }
+    },
+    action_kill_object: (m, a, q) => {
+        if (eu(q)) m.destruir(eu(q), true);
+    },
+    action_create_object: (m, a, q) => criarInstancia(m, q, a[0], a[1], a[2]),
+    action_set_alarm: (m, a, q) => {
+        const i = eu(q);
+        if (i) i.alarm[paraInt(a[1])] = num(a[0]);
+    },
+    action_sound: (m, a) => tocar(m, a[0], verdade(a[1])),
+    action_set_motion: (m, a, q) => F.motion_set(m, a, q),
+    action_set_hspeed: (m, a, q) => {
+        if (eu(q)) eu(q).hs = num(a[0]);
+    },
+    action_set_vspeed: (m, a, q) => {
+        if (eu(q)) eu(q).vs = num(a[0]);
+    },
+    action_set_friction: (m, a, q) => {
+        if (eu(q)) eu(q).friction = num(a[0]);
+    },
+    action_set_gravity: (m, a, q) => {
+        const i = eu(q);
+        if (i) {
+            i.gravity_direction = num(a[0]);
+            i.gravity = num(a[1]);
+        }
+    },
+    action_reverse_xdir: (m, a, q) => {
+        if (eu(q)) eu(q).hs = -eu(q).hs;
+    },
+    action_reverse_ydir: (m, a, q) => {
+        if (eu(q)) eu(q).vs = -eu(q).vs;
+    },
+    action_another_room: (m, a) => m.irPara(paraInt(a[0])),
+    action_next_room: m => F.room_goto_next(m),
+    action_previous_room: m => F.room_goto_previous(m),
+    action_restart_game: m => F.game_restart(m),
+    action_end_game: m => F.game_end(m),
+    action_set_score: (m, a) => {
+        m.score = num(a[0]);
+    },
+    action_inherited: (m, a, q) => F.event_inherited(m, a, q),
+    action_execute_script: (m, a, q) => m.vm.chamarValor(q, a[0], a.slice(1), q.self),
+    action_color: (m, a) => F.draw_set_color(m, a),
+    action_font: (m, a) => {
+        m.d.fonte = paraInt(a[0]);
+        m.d.halign = paraInt(a[1]);
+    },
+    action_draw_text: (m, a, q) => comCtx(m, () => D(m).texto(num(a[1]) + (eu(q) ? eu(q).x : 0),
+        num(a[2]) + (eu(q) ? eu(q).y : 0), texto(m, a[0]))),
+    action_draw_sprite: (m, a, q) => comCtx(m, () => D(m).sprite(paraInt(a[0]), num(a[3]),
+        num(a[1]) + (eu(q) ? eu(q).x : 0), num(a[2]) + (eu(q) ? eu(q).y : 0))),
+    action_draw_rectangle: (m, a) => F.draw_rectangle(m, [a[0], a[1], a[2], a[3], a[4]]),
+    action_set_caption: () => {},
+    action_wrap: (m, a, q) => F.move_wrap(m, [paraInt(a[0]) !== 1, paraInt(a[0]) !== 0, 0], q)
 });
 
 export const FUNCOES = F;
